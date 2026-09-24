@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { Tag, Copy, Plus, Activity } from 'lucide-react';
 
 const Promotions = () => {

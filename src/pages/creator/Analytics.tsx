@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
 
 const Analytics = () => {

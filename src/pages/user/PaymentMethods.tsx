@@ -1,4 +1,4 @@
-import UserLayout from '../components/UserLayout';
+import UserLayout from '../../components/UserLayout';
 import { Wallet, Smartphone, CreditCard as CardIcon, Plus } from 'lucide-react';
 
 const PaymentMethods = () => {

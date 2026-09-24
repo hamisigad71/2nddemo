@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { DollarSign, MessageCircle, Heart, UserPlus } from 'lucide-react';
 
 const Notifications = () => {

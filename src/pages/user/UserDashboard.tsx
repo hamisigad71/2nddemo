@@ -1,4 +1,4 @@
-import UserLayout from '../components/UserLayout';
+import UserLayout from '../../components/UserLayout';
 import { Heart, MessageCircle, Bookmark, MoreHorizontal } from 'lucide-react';
 
 const UserDashboard = () => {
@@ -16,7 +16,7 @@ const UserDashboard = () => {
                 {/* Post Header */}
                 <div className="p-4 flex items-center justify-between border-b border-border/50">
                    <div className="flex items-center gap-3 cursor-pointer">
-                      <img src={`https://i.pravatar.cc/150?img=${i+10}`} alt="creator" className="w-10 h-10 rounded-full object-cover border border-border" />
+                      <img src={`https://i.pinimg.com/1200x/6e/e3/66/6ee366544934ea9423263d4b8f9e9d80.jpg`} alt="creator" className="w-10 h-10 rounded-full object-cover border border-border" />
                       <div>
                          <div className="font-bold text-sm flex items-center gap-1 hover:underline">
                             Creator Name {i}
@@ -37,7 +37,7 @@ const UserDashboard = () => {
                 </div>
                 
                 <div className="relative bg-muted cursor-pointer group">
-                   <img src={`https://images.unsplash.com/photo-${1500000000000+i}?w=800&q=80`} alt="post media" className="w-full aspect-[4/5] object-cover" />
+                   <img src={`https://i.pinimg.com/1200x/6e/e3/66/6ee366544934ea9423263d4b8f9e9d80.jpg`} alt="post media" className="w-full aspect-[4/5] object-cover" />
                 </div>
 
                 {/* Post Actions */}

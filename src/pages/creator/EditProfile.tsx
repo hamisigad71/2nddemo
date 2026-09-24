@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { Camera, Save } from 'lucide-react';
 
 const EditProfile = () => {

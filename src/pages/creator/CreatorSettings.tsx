@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { Save, Shield, CreditCard } from 'lucide-react';
 
 const CreatorSettings = () => {

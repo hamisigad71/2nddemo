@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { DollarSign, ArrowUpRight, ArrowDownRight, Clock, Building } from 'lucide-react';
 
 const EarningsWallet = () => {

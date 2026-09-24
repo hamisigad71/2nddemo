@@ -1,4 +1,4 @@
-import UserLayout from '../components/UserLayout';
+import UserLayout from '../../components/UserLayout';
 import { CheckCircle2, XCircle, MoreVertical } from 'lucide-react';
 
 const Subscriptions = () => {

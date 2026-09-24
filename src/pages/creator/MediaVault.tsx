@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { UploadCloud, FolderHeart, Lock } from 'lucide-react';
 
 const MediaVault = () => {

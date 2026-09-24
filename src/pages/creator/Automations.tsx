@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { Bot, Save, Image as ImageIcon } from 'lucide-react';
 
 const Automations = () => {

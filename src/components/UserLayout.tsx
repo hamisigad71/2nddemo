@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Compass } from 'lucide-react';
+import BottomNav from './BottomNav';
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   const handleLogout = () => {
     setIsMobileMenuOpen(false);
@@ -98,11 +100,14 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full overflow-y-auto p-4 md:p-8 lg:p-12 pb-safe bg-muted/5">
+      <main ref={mainRef} className="flex-1 w-full overflow-y-auto p-4 md:p-8 lg:p-12 pb-24 md:pb-8 bg-muted/5">
         <div className="max-w-3xl mx-auto">
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav scrollRef={mainRef} />
     </div>
   );
 };

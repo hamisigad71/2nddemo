@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { ArrowLeft, CheckCircle, ShieldCheck, CreditCard, Banknote, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Checkout = () => {
+  const location = useLocation();
+  const creator = location.state?.creator || {
+    name: "Jane Doe",
+    price: "KES 500/mo",
+    avatar: "https://i.pravatar.cc/150?img=12"
+  };
+
   const [method, setMethod] = useState<'mpesa' | 'card'>('mpesa');
   const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle');
@@ -26,16 +33,16 @@ const Checkout = () => {
         
         <div className="bg-background border border-border p-6 rounded-2xl shadow-sm mb-6">
           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
-            <img src="https://i.pravatar.cc/150?img=12" alt="creator" className="w-16 h-16 rounded-full object-cover" />
+            <img src={creator.avatar} alt="creator" className="w-16 h-16 rounded-full object-cover" />
             <div>
-              <h2 className="text-xl font-bold">Jane Doe</h2>
+              <h2 className="text-xl font-bold">{creator.name}</h2>
               <p className="text-muted-foreground text-sm">Monthly Subscription</p>
             </div>
           </div>
           
           <div className="flex justify-between items-center mb-4 text-muted-foreground">
              <span>Subscription Fee</span>
-             <span>KES 500.00</span>
+             <span>{creator.price}</span>
           </div>
           <div className="flex justify-between items-center mb-6 text-muted-foreground">
              <span>Platform Fee</span>
@@ -43,7 +50,7 @@ const Checkout = () => {
           </div>
           <div className="flex justify-between items-center font-bold text-xl border-t border-border pt-6 text-foreground">
              <span>Total Due</span>
-             <span className="text-primary">KES 500.00</span>
+             <span className="text-primary">{creator.price}</span>
           </div>
         </div>
         
@@ -63,7 +70,7 @@ const Checkout = () => {
                 <CheckCircle className="w-12 h-12 text-primary" />
              </div>
              <h2 className="text-3xl font-bold mb-4">Payment Successful!</h2>
-             <p className="text-muted-foreground mb-8 text-lg max-w-sm">You are now subscribed to Jane Doe. Enjoy the premium content.</p>
+             <p className="text-muted-foreground mb-8 text-lg max-w-sm">You are now subscribed to {creator.name}. Enjoy the premium content.</p>
              <Link to="/creator/123" className="bg-primary text-primary-foreground font-bold px-8 py-4 rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-primary/20 text-lg">
                Return to Profile
              </Link>
@@ -119,7 +126,7 @@ const Checkout = () => {
                    Waiting for M-Pesa PIN...
                  </>
               ) : (
-                <>Pay KES 500 <ArrowRight className="w-5 h-5" /></>
+                <>Pay {creator.price.replace('/mo', '')} <ArrowRight className="w-5 h-5" /></>
               )}
             </button>
           </form>

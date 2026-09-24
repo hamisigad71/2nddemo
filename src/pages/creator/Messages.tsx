@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { Search, Image as ImageIcon, Send, MoreHorizontal, ArrowLeft } from 'lucide-react';
 
 const Messages = () => {

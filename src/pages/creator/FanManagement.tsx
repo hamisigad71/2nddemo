@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { Search, Filter, MessageSquareDiff, MoreHorizontal, ArrowUpDown } from 'lucide-react';
 
 const FanManagement = () => {

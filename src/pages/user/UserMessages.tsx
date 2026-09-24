@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import UserLayout from '../components/UserLayout';
+import UserLayout from '../../components/UserLayout';
 import { Search, Image as ImageIcon, Send, ArrowLeft, Lock, MessageCircle } from 'lucide-react';
 
 const UserMessages = () => {

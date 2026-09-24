@@ -1,4 +1,4 @@
-import UserLayout from '../components/UserLayout';
+import UserLayout from '../../components/UserLayout';
 import { PlayCircle, Image as ImageIcon } from 'lucide-react';
 
 const UserVault = () => {
@@ -14,7 +14,7 @@ const UserVault = () => {
             const isVideo = i % 2 === 0;
             return (
               <div key={i} className="group relative aspect-[3/4] bg-muted rounded-xl border border-border overflow-hidden cursor-pointer shadow-sm">
-                 <img src={`https://images.unsplash.com/photo-${1550000000000+i}?w=600&q=80`} alt="purchased media" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                 <img src={`https://i.pinimg.com/736x/ec/69/8d/ec698da362858bc36a6ab5a015cf9e34.jpg`} alt="purchased media" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                  
                  <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm p-1.5 rounded-md text-foreground border border-border/50">
                     {isVideo ? <PlayCircle className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}

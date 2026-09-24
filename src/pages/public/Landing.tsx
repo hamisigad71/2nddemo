@@ -4,17 +4,17 @@ import { useState, useEffect } from 'react';
 
 const heroImages = [
   "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg",
-  "https://i.pinimg.com/1200x/37/fd/dd/37fddd03ee8b2e1a05c297e20d261601.jpg",
+  "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg",
   "https://i.pinimg.com/736x/f6/b6/de/f6b6de8523e31a9f04f60ca66639c42f.jpg",
-  "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=1400&q=85",
+  "https://i.pinimg.com/736x/c7/63/a1/c763a17c42705d2b6b981adc1130ed91.jpg",
   "https://i.pinimg.com/736x/80/78/c3/8078c38f0cb612302707c7429e3ecf59.jpg",
 ];
 
 const creators = [
-  { name: "Amina K.", category: "Fitness", subs: "12k", price: "KES 500/mo", img: "https://images.unsplash.com/photo-1531123414780-f74242c2b052?w=800&q=80" },
-  { name: "Chef Kamau", category: "Culinary Arts", subs: "8.5k", price: "KES 1,000/mo", img: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=800&q=80" },
-  { name: "Wanjiku Tech", category: "Education", subs: "24k", price: "KES 300/mo", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80" },
-  { name: "ODC Music", category: "Entertainment", subs: "45k", price: "KES 800/mo", img: "https://images.unsplash.com/photo-1516280440502-6286fa6ef598?w=800&q=80" },
+  { name: "Amina K.", category: "Fitness", subs: "12k", price: "KES 500/mo", img: "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg" },
+  { name: "Chef Kamau", category: "Culinary Arts", subs: "8.5k", price: "KES 1,000/mo", img: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg" },
+  { name: "Wanjiku Tech", category: "Education", subs: "24k", price: "KES 300/mo", img: "https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg" },
+  { name: "ODC Music", category: "Entertainment", subs: "45k", price: "KES 800/mo", img: "https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg" },
 ];
 
 const testimonials = [
@@ -294,11 +294,14 @@ const Landing = () => {
                 View all creators <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
-            <div id="creators" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div 
+              id="creators" 
+              className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6"
+            >
               {creators.map((creator, i) => (
-                <div key={i} className="group relative bg-background border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 cursor-pointer">
-                  <div className="relative aspect-square overflow-hidden bg-muted">
-                    <img src={creator.img} alt={creator.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                <div key={i} className="flex-shrink-0 group relative bg-background border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 cursor-pointer">
+                  <div className="relative aspect-[4/5] sm:aspect-square overflow-hidden bg-muted">
+                    <img src={creator.img} alt={creator.name} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     {/* Category badge */}

@@ -1,4 +1,4 @@
-import UserLayout from '../components/UserLayout';
+import UserLayout from '../../components/UserLayout';
 import { Save, Camera, ShieldAlert, Bell } from 'lucide-react';
 
 const UserSettings = () => {

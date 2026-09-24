@@ -1,4 +1,4 @@
-import CreatorLayout from '../components/CreatorLayout';
+import CreatorLayout from '../../components/CreatorLayout';
 import { Calendar as CalendarIcon, Clock, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Scheduling = () => {
