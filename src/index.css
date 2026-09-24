@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  /* Deep obsidian background */
+  --color-background: hsl(0 0% 7%);
+  --color-foreground: hsl(30 15% 94%);
+
+  /* Primary: Deep Crimson / Ruby Red */
+  --color-primary: hsl(350 80% 50%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  /* Secondary: Rose Gold */
+  --color-secondary: hsl(15 65% 65%);
+  --color-secondary-foreground: hsl(0 0% 10%);
+
+  /* Surfaces */
+  --color-muted: hsl(0 0% 14%);
+  --color-muted-foreground: hsl(0 0% 60%);
+  --color-accent: hsl(15 65% 65%);
+  --color-accent-foreground: hsl(0 0% 10%);
+  --color-border: hsl(0 0% 16%);
+  --color-input: hsl(0 0% 14%);
+  --color-ring: hsl(350 80% 50%);
+  --radius: 0.75rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    scroll-behavior: smooth;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 7s ease-in-out infinite;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
