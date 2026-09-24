@@ -102,11 +102,40 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full overflow-y-auto p-4 md:p-8 lg:p-12 pb-safe">
+      <main className="flex-1 w-full overflow-y-auto p-4 md:p-8 lg:p-12 pb-24 md:pb-12">
         <div className="max-w-5xl mx-auto">
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navbar (quick access) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border flex items-center justify-around px-2 py-2 z-50">
+        {[
+          { name: 'Home', path: '/dashboard', icon: BarChart3 },
+          { name: 'Vault', path: '/vault', icon: FolderHeart },
+          { name: 'Post', path: '/create-post', icon: Plus, isAction: true },
+          { name: 'Messages', path: '/messages', icon: MessageCircle },
+          { name: 'Wallet', path: '/wallet', icon: DollarSign },
+        ].map((item) => {
+          const isActive = location.pathname === item.path;
+          const Icon = item.icon;
+          if (item.isAction) {
+            return (
+              <Link key={item.name} to={item.path}
+                className="flex items-center justify-center w-12 h-12 bg-primary text-primary-foreground rounded-full shadow-lg shadow-primary/30 -mt-5 hover:scale-105 transition-transform">
+                <Icon className="w-6 h-6" />
+              </Link>
+            );
+          }
+          return (
+            <Link key={item.name} to={item.path}
+              className={`flex flex-col items-center justify-center gap-1 w-14 h-12 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+              <Icon className={`w-6 h-6 ${isActive ? 'fill-primary/20' : ''}`} />
+              <span className="text-[10px] font-semibold">{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
     </div>
   );
