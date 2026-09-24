@@ -1,5 +1,5 @@
 import CreatorLayout from '../components/CreatorLayout';
-import { Bot, Save, Plus, Image as ImageIcon } from 'lucide-react';
+import { Bot, Save, Image as ImageIcon } from 'lucide-react';
 
 const Automations = () => {
   return (

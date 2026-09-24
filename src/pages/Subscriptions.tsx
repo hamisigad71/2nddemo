@@ -1,5 +1,5 @@
 import UserLayout from '../components/UserLayout';
-import { CreditCard, CheckCircle2, XCircle, MoreVertical } from 'lucide-react';
+import { CheckCircle2, XCircle, MoreVertical } from 'lucide-react';
 
 const Subscriptions = () => {
   return (

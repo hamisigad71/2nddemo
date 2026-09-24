@@ -259,7 +259,7 @@ const Landing = () => {
                 { step: "01", icon: Zap, title: "Create Your Page", body: "Sign up free, set your subscription price, and upload your first piece of content. Takes under 5 minutes." },
                 { step: "02", icon: Users, title: "Grow Your Fans", body: "Share your MALI link on Instagram, TikTok, Twitter. Fans subscribe with M-Pesa or card in seconds." },
                 { step: "03", icon: TrendingUp, title: "Get Paid Instantly", body: "Earnings hit your M-Pesa wallet instantly after each transaction. No hold periods, no minimums." },
-              ].map(({ step, icon: Icon, title, body }, i) => (
+              ].map(({ icon: Icon, title, body }, i) => (
                 <div key={i} className={`flex flex-col items-center text-center group ${i === 2 ? 'col-span-2 md:col-span-1 mx-auto px-4 md:px-0' : ''}`}>
                   <div className="relative mb-6">
                     <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:border-primary/40 group-hover:bg-primary/5 transition-all duration-300 shadow-sm">

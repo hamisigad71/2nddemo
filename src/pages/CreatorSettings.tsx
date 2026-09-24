@@ -1,5 +1,5 @@
 import CreatorLayout from '../components/CreatorLayout';
-import { Save, Shield, Image as ImageIcon, CreditCard } from 'lucide-react';
+import { Save, Shield, CreditCard } from 'lucide-react';
 
 const CreatorSettings = () => {
   return (
