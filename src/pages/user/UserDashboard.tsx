@@ -5,9 +5,9 @@ import TipModal from '../../components/TipModal';
 
 const mockPosts = [
   { id: 1, name: "@janedoe", time: "2h ago", avatar: "1534528741775-53994a69daeb", image: "https://i.pinimg.com/1200x/7e/b0/56/7eb056c0c86c3dcf22324e8071e87d61.jpg" },
-  { id: 2, name: "@alexsmith", time: "4h ago", avatar: "1506794778202-cad84cf45f1d", image: "https://i.pinimg.com/736x/aa/f4/5c/aaf45cd23fc53d552829bc05589744e4.jpg" },
-  { id: 3, name: "@creative_mind", time: "5h ago", avatar: "1494790108377-be9c29b29330", image: "https://i.pinimg.com/736x/f5/d2/ff/f5d2ff9093bd28e175a4825e9dd2e9fb.jpg" },
-  { id: 4, name: "@photo_guru", time: "8h ago", avatar: "1531746020798-e6953c6e8e04", image: "https://i.pinimg.com/736x/49/19/3d/49193d39772165c1817cbe5249ef2f0c.jpg" },
+  { id: 2, name: "@alexsmith", time: "4h ago", avatar: "1506794778202-cad84cf45f1d", image: "https://i.pinimg.com/736x/38/98/93/389893c7e361d5ff5b4485b0cb9dd68a.jpg" },
+  { id: 3, name: "@creative_mind", time: "5h ago", avatar: "1494790108377-be9c29b29330", image: "https://i.pinimg.com/736x/b4/a7/35/b4a7353ff06faa6382aa07be74958f89.jpg" },
+  { id: 4, name: "@photo_guru", time: "8h ago", avatar: "1531746020798-e6953c6e8e04", image: "https://i.pinimg.com/736x/b1/d7/f7/b1d7f77e40a9752be11d9b5ca372cf59.jpg" },
   { id: 5, name: "@artist_vibe", time: "12h ago", avatar: "1554151228-14d9def656e4", image: "https://i.pinimg.com/736x/c8/eb/9a/c8eb9a8bd20e1964d2d6e7b3a0404e0a.jpg" },
   { id: 6, name: "@daily_vlog", time: "18h ago", avatar: "1527980965255-d3b416303d12", image: "https://i.pinimg.com/736x/7c/a4/cf/7ca4cf27123cbec7fe3d1031149dd946.jpg" },
   { id: 7, name: "@fitness_pro", time: "1d ago", avatar: "1517841905240-472988babdf9", image: "https://i.pinimg.com/736x/55/cd/63/55cd63e0c8df641842d2a8834ecaf87b.jpg" },
