@@ -101,7 +101,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
 
       {/* Main Content Area */}
       <main ref={mainRef} className="flex-1 w-full overflow-y-auto p-4 md:p-8 lg:p-12 pb-24 md:pb-8 bg-muted/5">
-        <div className="max-w-3xl mx-auto">
+        <div className="w-full max-w-screen-2xl mx-auto">
           {children}
         </div>
       </main>
