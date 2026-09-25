@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ArrowLeft, Image as ImageIcon, Video, Lock, Globe } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const CreatePost = () => {
   const [isPremium, setIsPremium] = useState(true);
@@ -8,9 +7,9 @@ const CreatePost = () => {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center py-10 px-4">
        <div className="w-full max-w-2xl">
-         <Link to="/dashboard" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium mb-8">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-         </Link>
+         <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium mb-8">
+          <ArrowLeft className="w-4 h-4" /> Back
+         </button>
          
          <div className="bg-input/5 border border-border rounded-2xl p-6 md:p-8 shadow-sm">
             <h1 className="text-2xl font-bold mb-6 text-foreground">Create New Post</h1>

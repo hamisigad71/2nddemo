@@ -26,9 +26,9 @@ const Checkout = () => {
     <div className="min-h-screen bg-background text-foreground lg:flex">
       {/* Left side - Order Summary */}
       <div className="lg:w-1/2 p-6 md:p-12 lg:p-20 border-b lg:border-b-0 lg:border-r border-border bg-input/5">
-        <Link to="/creator/123" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium mb-12">
-          <ArrowLeft className="w-4 h-4" /> Back to Profile
-        </Link>
+        <button onClick={() => window.history.back()} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-medium mb-12">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
         <h1 className="text-3xl lg:text-4xl font-bold mb-8">Checkout</h1>
         
         <div className="bg-background border border-border p-6 rounded-2xl shadow-sm mb-6">
