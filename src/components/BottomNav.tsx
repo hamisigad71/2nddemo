@@ -11,7 +11,7 @@ const navItems = [
 ];
 
 interface BottomNavProps {
-  scrollRef?: React.RefObject<HTMLElement>;
+  scrollRef?: React.RefObject<HTMLElement | null>;
 }
 
 const BottomNav: React.FC<BottomNavProps> = ({ scrollRef }) => {
