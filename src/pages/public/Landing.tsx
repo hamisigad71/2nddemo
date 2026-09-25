@@ -248,8 +248,8 @@ const Landing = () => {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-6">
                 <TrendingUp className="w-3.5 h-3.5" /> Growth Calculator
               </div>
-              <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight">
-                Calculate your <br className="hidden md:block" />
+              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight whitespace-nowrap">
+                Calculate your{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">earning potential</span>
               </h2>
               <p className="text-muted-foreground mb-10 text-lg leading-relaxed max-w-lg">
