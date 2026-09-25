@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
 import Discover from "./pages/public/Discover";
 import Login from "./pages/public/Login";
@@ -27,40 +29,46 @@ import PaymentMethods from "./pages/user/PaymentMethods";
 import UserSettings from "./pages/user/UserSettings";
 
 function App() {
+  const [loading, setLoading] = useState(true);
+
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-background text-foreground font-sans">
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/discover" element={<Discover />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/creator/:id" element={<CreatorProfile />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/dashboard" element={<CreatorDashboard />} />
-          <Route path="/create-post" element={<CreatePost />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/vault" element={<MediaVault />} />
-          <Route path="/wallet" element={<EarningsWallet />} />
-          <Route path="/settings" element={<CreatorSettings />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/edit-profile" element={<EditProfile />} />
-          <Route path="/automations" element={<Automations />} />
-          <Route path="/fans" element={<FanManagement />} />
-          <Route path="/promotions" element={<Promotions />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/scheduling" element={<Scheduling />} />
-          <Route path="/user" element={<UserDashboard />} />
-          <Route path="/user/messages" element={<UserMessages />} />
-          <Route path="/user/vault" element={<UserVault />} />
-          <Route path="/user/subscriptions" element={<Subscriptions />} />
-          <Route path="/user/payments" element={<PaymentMethods />} />
-          <Route path="/user/settings" element={<UserSettings />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <>
+      {loading && <PageLoader onComplete={() => setLoading(false)} />}
+      <BrowserRouter>
+        <div className="min-h-screen bg-background text-foreground font-sans">
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/discover" element={<Discover />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/creator/:id" element={<CreatorProfile />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/dashboard" element={<CreatorDashboard />} />
+            <Route path="/create-post" element={<CreatePost />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/vault" element={<MediaVault />} />
+            <Route path="/wallet" element={<EarningsWallet />} />
+            <Route path="/settings" element={<CreatorSettings />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
+            <Route path="/automations" element={<Automations />} />
+            <Route path="/fans" element={<FanManagement />} />
+            <Route path="/promotions" element={<Promotions />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/scheduling" element={<Scheduling />} />
+            <Route path="/user" element={<UserDashboard />} />
+            <Route path="/user/messages" element={<UserMessages />} />
+            <Route path="/user/vault" element={<UserVault />} />
+            <Route path="/user/subscriptions" element={<Subscriptions />} />
+            <Route path="/user/payments" element={<PaymentMethods />} />
+            <Route path="/user/settings" element={<UserSettings />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </>
   );
 }
 
 export default App;
+

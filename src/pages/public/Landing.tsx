@@ -1,4 +1,4 @@
-import { ShieldCheck, TrendingUp, Users, CheckCircle, ArrowRight, Menu, Star, Zap, Lock, X } from 'lucide-react';
+import { ShieldCheck, TrendingUp, Users, CheckCircle, ArrowRight, Menu, Star, Zap, Lock, X, DollarSign, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
@@ -19,13 +19,13 @@ const creators = [
 
 const testimonials = [
   {
-    quote: "MALI changed everything for me. I went from zero to KES 120,000/month in 4 months. M-Pesa payouts hit instantly — no waiting, no friction.",
+    quote: "Hideaway changed everything for me. I went from zero to KES 120,000/month in 4 months. M-Pesa payouts hit instantly — no waiting, no friction.",
     name: "Amina K.",
     role: "Fitness Creator · 12k subscribers",
     img: "https://images.unsplash.com/photo-1531123414780-f74242c2b052?w=200&q=80",
   },
   {
-    quote: "I've tried other platforms but they didn't get Kenya. MALI speaks my fans' language — M-Pesa is all they need. My income tripled in 3 months.",
+    quote: "I've tried other platforms but they didn't get Kenya. Hideaway speaks my fans' language — M-Pesa is all they need. My income tripled in 3 months.",
     name: "Chef Kamau",
     role: "Culinary Creator · 8.5k subscribers",
     img: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=200&q=80",
@@ -41,6 +41,7 @@ const testimonials = [
 const Landing = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [followers, setFollowers] = useState(10000);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -56,7 +57,7 @@ const Landing = () => {
       <nav className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="text-2xl font-black tracking-tighter text-primary drop-shadow-[0_0_12px_rgba(0,200,110,0.4)]">
-            MALI<span className="text-secondary">.</span>
+            Hideaway<span className="text-secondary">.</span>
           </div>
         </div>
 
@@ -87,7 +88,7 @@ const Landing = () => {
             <button onClick={() => setMobileMenuOpen(false)} className="self-end text-muted-foreground hover:text-foreground">
               <X className="w-6 h-6" />
             </button>
-            <div className="text-2xl font-black tracking-tighter text-primary">MALI<span className="text-secondary">.</span></div>
+            <div className="text-2xl font-black tracking-tighter text-primary">Hideaway<span className="text-secondary">.</span></div>
             <div className="flex flex-col gap-4 text-base font-medium">
               <a href="#discover" onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors">Discover</a>
               <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors">How It Works</a>
@@ -202,18 +203,137 @@ const Landing = () => {
           </div>
         </section>
 
+        {/* Global Payment Partners / Trust Badges — Infinite Marquee */}
+        <section className="bg-background border-b border-border py-3 overflow-hidden">
+          <div
+            className="flex items-center gap-8"
+            style={{
+              display: 'flex',
+              width: 'max-content',
+              animation: 'marquee 18s linear infinite',
+            }}
+          >
+            {[
+              { name: "M-PESA", logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4NrGQhzTgIhXHqB15-5h3BWFd2hAVWucCZjleiDXKuA&s=10" },
+              { name: "VISA", logoUrl: "https://i.pinimg.com/236x/2c/2e/a2/2c2ea23f50347ec3cc8ec0d47536aee8.jpg" },
+              { name: "Mastercard", logoUrl: "https://i.pinimg.com/1200x/cf/01/7c/cf017c3df4b4b6ce716a19b6d146a93c.jpg" },
+              { name: "Airtel Money", logoUrl: "https://i.pinimg.com/1200x/fe/6d/5f/fe6d5fe2443668b417384ede46531bee.jpg" },
+              // duplicate set for seamless loop
+              { name: "M-PESA2", logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4NrGQhzTgIhXHqB15-5h3BWFd2hAVWucCZjleiDXKuA&s=10" },
+              { name: "VISA2", logoUrl: "https://i.pinimg.com/236x/2c/2e/a2/2c2ea23f50347ec3cc8ec0d47536aee8.jpg" },
+              { name: "Mastercard2", logoUrl: "https://i.pinimg.com/1200x/cf/01/7c/cf017c3df4b4b6ce716a19b6d146a93c.jpg" },
+              { name: "Airtel Money2", logoUrl: "https://i.pinimg.com/1200x/fe/6d/5f/fe6d5fe2443668b417384ede46531bee.jpg" },
+            ].map(({ name, logoUrl }) => (
+              <div key={name} className="flex items-center justify-center px-5 py-2 rounded-lg bg-white h-12 min-w-[110px] shadow-sm shrink-0">
+                <img src={logoUrl} alt={name.replace(/\d+$/, '')} className="h-8 max-w-[90px] object-contain" />
+              </div>
+            ))}
+          </div>
+          <style>{`
+            @keyframes marquee {
+              0%   { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+          `}</style>
+        </section>
+
+        {/* Earning Potential Calculator */}
+        <section className="px-6 py-28 relative overflow-hidden bg-background border-b border-border">
+          {/* Subtle background glow */}
+          <div className="absolute top-1/2 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -translate-y-1/2" />
+
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-16 relative z-10">
+            {/* Left Content */}
+            <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-6">
+                <TrendingUp className="w-3.5 h-3.5" /> Growth Calculator
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight">
+                Calculate your <br className="hidden md:block" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">earning potential</span>
+              </h2>
+              <p className="text-muted-foreground mb-10 text-lg leading-relaxed max-w-lg">
+                See what happens when you monetize directly. Estimate your revenue if just <strong>5%</strong> of your audience subscribes at KES 500/month.
+              </p>
+              
+              <div className="w-full bg-muted/30 border border-border rounded-3xl p-6 sm:p-8 shadow-sm">
+                <div className="flex justify-between items-end mb-6">
+                  <span className="font-bold text-foreground text-sm uppercase tracking-wider">Current Followers</span>
+                  <span className="text-3xl font-black text-primary">{followers.toLocaleString()}</span>
+                </div>
+                
+                <div className="relative pt-2 pb-2">
+                  <input 
+                    type="range" 
+                    min="1000" 
+                    max="1000000" 
+                    step="1000"
+                    value={followers}
+                    onChange={(e) => setFollowers(Number(e.target.value))}
+                    className="w-full h-2 bg-input rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
+                  />
+                </div>
+                
+                <div className="flex justify-between text-xs font-bold text-muted-foreground mt-2">
+                  <span>1k</span>
+                  <span>1M+</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right Content - Premium Card */}
+            <div className="w-full md:w-1/2">
+              <div className="relative group perspective-1000">
+                {/* Animated glow behind the card */}
+                <div className="absolute -inset-1 bg-gradient-to-b from-primary/40 to-background rounded-[2.5rem] blur-xl opacity-40 group-hover:opacity-70 transition duration-700" />
+                
+                <div className="relative bg-card border border-border p-8 sm:p-12 rounded-[2.5rem] text-center shadow-2xl z-10 transition-transform duration-500 group-hover:scale-[1.02] flex flex-col items-center overflow-hidden">
+                  
+                  {/* Subtle noise texture */}
+                  <div className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
+
+                  <div className="relative z-10 w-full flex flex-col items-center">
+                    <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 transform group-hover:-translate-y-1 group-hover:scale-110 transition-all duration-300 shadow-inner border border-primary/20">
+                      <DollarSign className="w-8 h-8" />
+                    </div>
+                    
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Estimated Monthly Income</h3>
+                    
+                    <div className="flex items-center justify-center gap-1.5 mb-2 w-full">
+                      <span className="text-xl md:text-2xl font-bold text-muted-foreground mt-2">KES</span>
+                      <span className="text-5xl md:text-6xl lg:text-7xl font-black text-foreground tracking-tighter">
+                        {(followers * 0.05 * 500).toLocaleString()}
+                      </span>
+                    </div>
+                    
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/60 border border-border text-xs font-semibold text-muted-foreground mt-4">
+                      <CheckCircle className="w-3.5 h-3.5 text-primary" /> Based on KES 500 sub price
+                    </div>
+                    
+                    <div className="mt-8 pt-8 border-t border-border w-full">
+                      <Link to="/signup" className="flex items-center justify-center w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold text-lg hover:brightness-110 hover:shadow-xl hover:shadow-primary/25 transition-all group/btn">
+                        Start Earning Free <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Stats Bar */}
-        <section className="border-y border-border bg-muted/20 py-6 px-6">
-          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <section className="border-y border-border bg-muted/20 py-4 px-3">
+          <div className="max-w-5xl mx-auto grid grid-cols-4 gap-1 text-center">
             {[
               { value: "2,400+", label: "Active Creators" },
               { value: "KES 12M+", label: "Paid Out Monthly" },
               { value: "180k+", label: "Happy Fans" },
               { value: "90%", label: "Revenue to Creators" },
             ].map((stat, i) => (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <div className="text-2xl md:text-3xl font-black text-foreground">{stat.value}</div>
-                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{stat.label}</div>
+              <div key={i} className="flex flex-col items-center gap-0.5 px-1">
+                <div className="text-base sm:text-2xl md:text-3xl font-black text-foreground leading-tight">{stat.value}</div>
+                <div className="text-[9px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide leading-tight">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -223,7 +343,7 @@ const Landing = () => {
         <section className="px-6 py-24 bg-muted/20 border-b border-border">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-black mb-3">Why creators choose MALI</h2>
+              <h2 className="text-3xl md:text-4xl font-black mb-3">Why creators choose Hideaway</h2>
               <p className="text-muted-foreground max-w-xl mx-auto">Built from the ground up for the African creator — not just adapted from Western platforms.</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
@@ -251,26 +371,26 @@ const Landing = () => {
               <h2 className="text-3xl md:text-4xl font-black mb-3">Start earning in 3 steps</h2>
               <p className="text-muted-foreground max-w-lg mx-auto">From signup to your first M-Pesa payout — it takes less than 10 minutes.</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-8 relative">
+            <div className="grid grid-cols-3 gap-3 sm:gap-8 relative">
               {/* Connector line (desktop) */}
               <div className="hidden md:block absolute top-10 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
               {[
                 { step: "01", icon: Zap, title: "Create Your Page", body: "Sign up free, set your subscription price, and upload your first piece of content. Takes under 5 minutes." },
-                { step: "02", icon: Users, title: "Grow Your Fans", body: "Share your MALI link on Instagram, TikTok, Twitter. Fans subscribe with M-Pesa or card in seconds." },
+                { step: "02", icon: Users, title: "Grow Your Fans", body: "Share your Hideaway link on Instagram, TikTok, Twitter. Fans subscribe with M-Pesa or card in seconds." },
                 { step: "03", icon: TrendingUp, title: "Get Paid Instantly", body: "Earnings hit your M-Pesa wallet instantly after each transaction. No hold periods, no minimums." },
               ].map(({ icon: Icon, title, body }, i) => (
-                <div key={i} className={`flex flex-col items-center text-center group ${i === 2 ? 'col-span-2 md:col-span-1 mx-auto px-4 md:px-0' : ''}`}>
-                  <div className="relative mb-6">
-                    <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:border-primary/40 group-hover:bg-primary/5 transition-all duration-300 shadow-sm">
-                      <Icon className="w-8 h-8 text-primary" />
+                <div key={i} className="flex flex-col items-center text-center group">
+                  <div className="relative mb-3 sm:mb-6">
+                    <div className="w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:border-primary/40 group-hover:bg-primary/5 transition-all duration-300 shadow-sm">
+                      <Icon className="w-5 h-5 sm:w-8 sm:h-8 text-primary" />
                     </div>
-                    <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-secondary text-secondary-foreground text-xs font-black flex items-center justify-center shadow-md">
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white text-black text-[10px] sm:text-xs font-black flex items-center justify-center shadow-md">
                       {i + 1}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold mb-2">{title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{body}</p>
+                  <h3 className="text-[11px] sm:text-lg font-bold mb-1 sm:mb-2 leading-tight">{title}</h3>
+                  <p className="text-muted-foreground text-[9px] sm:text-sm leading-relaxed">{body}</p>
                 </div>
               ))}
             </div>
@@ -287,7 +407,7 @@ const Landing = () => {
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
               <div>
-                <h2 className="text-3xl md:text-4xl font-black mb-2">Trending on Mali</h2>
+                <h2 className="text-3xl md:text-4xl font-black mb-2">Trending on Hideaway</h2>
                 <p className="text-muted-foreground">Top Kenyan creators sharing premium content right now.</p>
               </div>
               <Link to="/discover" className="text-sm font-bold text-primary hover:text-emerald-300 flex items-center gap-1 transition-colors">
@@ -332,12 +452,12 @@ const Landing = () => {
         <section className="px-6 py-24 border-b border-border">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-black mb-3">Creators love MALI</h2>
+              <h2 className="text-3xl md:text-4xl font-black mb-3">Creators love Hideaway</h2>
               <p className="text-muted-foreground">Real stories from creators earning real money.</p>
             </div>
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-4 md:gap-6 pb-6 md:pb-0 snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {testimonials.map((t, i) => (
-                <div key={i} className="bg-muted/30 border border-border rounded-2xl p-7 flex flex-col gap-5 hover:border-primary/20 transition-colors hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 duration-300">
+                <div key={i} className="flex-shrink-0 w-[85vw] sm:w-[60vw] md:w-auto snap-center bg-muted/30 border border-border rounded-2xl p-7 flex flex-col gap-5 hover:border-primary/20 transition-colors hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 duration-300">
                   <div className="flex gap-1">
                     {[...Array(5)].map((_, si) => (
                       <Star key={si} className="w-4 h-4 fill-secondary text-secondary" />
@@ -358,31 +478,75 @@ const Landing = () => {
         </section>
 
         {/* Payments / Designed for Kenya */}
-        <section className="px-6 py-24 bg-primary text-primary-foreground overflow-hidden relative">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(0,0,0,0.15),transparent_60%)]" />
+        <section className="px-6 py-24 bg-background border-t border-border overflow-hidden relative">
+          {/* Subtle Primary Glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[100px] rounded-full pointer-events-none" />
+          
           <div className="max-w-4xl mx-auto text-center relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-semibold mb-8">
-              <Lock className="w-3.5 h-3.5" /> Secure & Encrypted
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/10 text-primary text-sm font-semibold mb-8">
+              <Lock className="w-4 h-4" /> Secure & Encrypted
             </div>
             <h2 className="text-4xl md:text-5xl font-black mb-6">Designed for Kenya 🇰🇪</h2>
-            <p className="text-emerald-100 text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
-              We process payments through M-Pesa instantly — zero friction for your fans. International subscribers can use Visa or Mastercard seamlessly.
+            <p className="text-muted-foreground text-lg md:text-xl mb-12 max-w-2xl mx-auto leading-relaxed">
+              We process payments through <strong className="text-foreground">M-Pesa instantly</strong> — zero friction for your fans. International subscribers can use Visa or Mastercard seamlessly.
             </p>
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 items-center mb-10">
-              {["M-PESA", "VISA", "Mastercard", "Airtel Money"].map((method) => (
-                <div key={method} className="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/20 font-bold tracking-wider text-base shadow-lg">
-                  {method}
+            
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 items-center mb-12">
+              {[
+                { name: "M-PESA", logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4NrGQhzTgIhXHqB15-5h3BWFd2hAVWucCZjleiDXKuA&s=10" },
+                { name: "VISA", logoUrl: "https://i.pinimg.com/236x/2c/2e/a2/2c2ea23f50347ec3cc8ec0d47536aee8.jpg" },
+                { name: "Mastercard", logoUrl: "https://i.pinimg.com/1200x/cf/01/7c/cf017c3df4b4b6ce716a19b6d146a93c.jpg" },
+                { name: "Airtel Money", logoUrl: "https://i.pinimg.com/1200x/fe/6d/5f/fe6d5fe2443668b417384ede46531bee.jpg" }
+              ].map(({ name, logoUrl }) => (
+                <div key={name} className="px-6 md:px-8 py-3 md:py-4 rounded-xl bg-white flex items-center justify-center min-w-[140px] h-[60px] shadow-lg hover:scale-105 transition-transform duration-300">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt={name} className="h-10 object-contain mix-blend-multiply" />
+                  ) : (
+                    <span className="font-bold text-black">{name}</span>
+                  )}
                 </div>
               ))}
             </div>
-            <Link to="/signup" className="inline-flex items-center gap-2 bg-white text-primary px-8 py-4 rounded-xl font-black hover:bg-emerald-50 transition-all shadow-xl hover:scale-[1.03]">
-              Start Earning Today <ArrowRight className="w-5 h-5" />
+            
+            <Link to="/signup" className="inline-flex items-center gap-2 bg-foreground text-background px-8 py-4 rounded-xl font-black hover:scale-[1.03] transition-transform shadow-xl shadow-foreground/10">
+              Start Earning Today <ArrowRight className="w-5 h-5 text-primary" />
             </Link>
           </div>
         </section>
 
       </main>
+
+      {/* FAQ Section */}
+      <section className="px-6 py-24 bg-background border-t border-border">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-black mb-3">Frequently Asked Questions</h2>
+            <p className="text-muted-foreground">Everything you need to know about earning on Hideaway.</p>
+          </div>
+          <div className="space-y-4">
+            {[
+              { q: "How long do payouts take?", a: "Instantly. Unlike other platforms that make you wait 30 days, Hideaway deposits your earnings directly to your M-Pesa immediately after a subscriber pays." },
+              { q: "What percentage does Hideaway take?", a: "We take a flat 10% platform fee, which covers hosting, payment processing fees (M-Pesa/Card), and features. You keep 90% of everything you earn." },
+              { q: "Can international fans subscribe?", a: "Yes! While built for Africa and M-Pesa natively, international followers can pay seamlessly using their Visa or Mastercard in USD." },
+              { q: "What type of content is allowed?", a: "Hideaway is a home for premium lifestyle, fitness, culinary, educational, and entertainment creators. Content must comply with our Terms of Service (no explicit adult content)." },
+            ].map((faq, i) => (
+              <details key={i} className="group bg-muted/20 border border-border rounded-2xl overflow-hidden open:bg-muted/40 transition-colors">
+                <summary className="font-bold text-lg p-6 cursor-pointer flex justify-between items-center hover:text-primary transition-colors list-none marker:hidden">
+                  {faq.q}
+                  <ChevronDown className="w-5 h-5 text-muted-foreground group-open:-rotate-180 transition-transform duration-300" />
+                </summary>
+                <div className="px-6 pb-6 text-muted-foreground leading-relaxed">
+                  {faq.a}
+                </div>
+              </details>
+            ))}
+          </div>
+          <div className="text-center mt-12">
+            <p className="text-muted-foreground mb-4">Still have questions?</p>
+            <a href="mailto:support@hideaway.co.ke" className="text-primary font-bold hover:underline">Contact Support</a>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="border-t border-border px-6 py-14 bg-background">
@@ -390,7 +554,7 @@ const Landing = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <div className="text-2xl font-black tracking-tighter text-primary mb-3">MALI<span className="text-secondary">.</span></div>
+              <div className="text-2xl font-black tracking-tighter text-primary mb-3">Hideaway<span className="text-secondary">.</span></div>
               <p className="text-sm text-muted-foreground leading-relaxed">The premium creator platform built for Kenya and all of Africa.</p>
             </div>
             {/* Creators */}
@@ -417,7 +581,7 @@ const Landing = () => {
             <div>
               <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-foreground">Company</h4>
               <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <a href="#" className="hover:text-primary transition-colors">About MALI</a>
+                <a href="#" className="hover:text-primary transition-colors">About Hideaway</a>
                 <a href="#" className="hover:text-primary transition-colors">Blog</a>
                 <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
                 <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
@@ -426,7 +590,7 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-muted-foreground">© 2026 MALI Technologies Ltd. All rights reserved.</div>
+            <div className="text-sm text-muted-foreground">© 2026 Hideaway Technologies Ltd. All rights reserved.</div>
             <div className="flex items-center gap-3">
               {["M-PESA", "VISA", "MC"].map((b) => (
                 <div key={b} className="px-2.5 py-1 rounded border border-border bg-muted text-xs font-bold text-muted-foreground">

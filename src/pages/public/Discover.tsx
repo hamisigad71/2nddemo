@@ -23,7 +23,7 @@ const Discover = () => {
       <div className="border-b border-border bg-background/95 sticky top-0 z-20 p-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex gap-4 items-center w-full md:w-auto">
-            <Link to="/" className="text-xl font-bold text-primary mr-2 md:hidden">MALI.</Link>
+            <Link to="/" className="text-xl font-bold text-primary mr-2 md:hidden">Hideaway.</Link>
             <div className="relative w-full md:w-96">
               <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
               <input 

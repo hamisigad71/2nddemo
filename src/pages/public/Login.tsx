@@ -5,7 +5,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center p-4 bg-background text-foreground">
       <div className="w-full max-w-md bg-input/10 border border-border p-8 rounded-2xl shadow-xl">
         <div className="text-center mb-8">
-          <Link to="/" className="text-3xl font-bold tracking-tighter text-primary">MALI<span className="text-muted-foreground">.</span></Link>
+          <Link to="/" className="text-3xl font-bold tracking-tighter text-primary">Hideaway<span className="text-muted-foreground">.</span></Link>
           <h2 className="text-2xl font-bold mt-6 mb-2 text-foreground">Welcome Back</h2>
           <p className="text-muted-foreground text-sm">Enter your credentials to access your account</p>
         </div>

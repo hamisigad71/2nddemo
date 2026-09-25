@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle, ShieldCheck, CreditCard, Banknote, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldCheck, CreditCard, ArrowRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const Checkout = () => {
@@ -77,23 +77,54 @@ const Checkout = () => {
           </div>
         ) : null}
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <button 
-            type="button" 
+        <div className="flex flex-col gap-3 mb-8">
+          {/* M-Pesa Option */}
+          <button
+            type="button"
             onClick={() => setMethod('mpesa')}
-            className={`flex-1 flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all ${method === 'mpesa' ? 'border-primary bg-primary/5' : 'border-border bg-input/10 hover:border-primary/50'}`}
+            className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${method === 'mpesa' ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-border bg-input/10 hover:border-primary/40'}`}
           >
-            <Banknote className={`w-8 h-8 ${method === 'mpesa' ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span className="font-bold">M-Pesa STK Push</span>
+            <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+              <img
+                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4NrGQhzTgIhXHqB15-5h3BWFd2hAVWucCZjleiDXKuA&s=10"
+                alt="M-Pesa"
+                className="w-12 h-12 object-contain"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-base text-foreground">M-Pesa STK Push</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Instant STK prompt to your phone. No card needed.</div>
+            </div>
+            <div className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${method === 'mpesa' ? 'border-primary' : 'border-border'}`}>
+              {method === 'mpesa' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+            </div>
           </button>
-          
-          <button 
-            type="button" 
+
+          {/* Card Option */}
+          <button
+            type="button"
             onClick={() => setMethod('card')}
-            className={`flex-1 flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all ${method === 'card' ? 'border-primary bg-primary/5' : 'border-border bg-input/10 hover:border-primary/50'}`}
+            className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${method === 'card' ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-border bg-input/10 hover:border-primary/40'}`}
           >
-            <CreditCard className={`w-8 h-8 ${method === 'card' ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span className="font-bold">Credit/Debit Card</span>
+            <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0 overflow-hidden gap-1 px-1">
+              <img
+                src="https://i.pinimg.com/236x/2c/2e/a2/2c2ea23f50347ec3cc8ec0d47536aee8.jpg"
+                alt="Visa"
+                className="h-5 object-contain"
+              />
+              <img
+                src="https://i.pinimg.com/1200x/cf/01/7c/cf017c3df4b4b6ce716a19b6d146a93c.jpg"
+                alt="Mastercard"
+                className="h-6 object-contain"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-base text-foreground">Credit / Debit Card</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Visa & Mastercard accepted. Secure 3D checkout.</div>
+            </div>
+            <div className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all ${method === 'card' ? 'border-primary' : 'border-border'}`}>
+              {method === 'card' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+            </div>
           </button>
         </div>
 

@@ -19,13 +19,13 @@ const creators = [
 
 const testimonials = [
   {
-    quote: "MALI changed everything for me. I went from zero to KES 120,000/month in 4 months. M-Pesa payouts hit instantly — no waiting, no friction.",
+    quote: "Hideaway changed everything for me. I went from zero to KES 120,000/month in 4 months. M-Pesa payouts hit instantly — no waiting, no friction.",
     name: "Amina K.",
     role: "Fitness Creator · 12k subscribers",
     img: "https://images.unsplash.com/photo-1531123414780-f74242c2b052?w=200&q=80",
   },
   {
-    quote: "I've tried other platforms but they didn't get Kenya. MALI speaks my fans' language — M-Pesa is all they need. My income tripled in 3 months.",
+    quote: "I've tried other platforms but they didn't get Kenya. Hideaway speaks my fans' language — M-Pesa is all they need. My income tripled in 3 months.",
     name: "Chef Kamau",
     role: "Culinary Creator · 8.5k subscribers",
     img: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=200&q=80",
@@ -56,7 +56,7 @@ const Landing = () => {
       <nav className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="text-2xl font-black tracking-tighter text-primary drop-shadow-[0_0_12px_rgba(0,200,110,0.4)]">
-            MALI<span className="text-secondary">.</span>
+            Hideaway<span className="text-secondary">.</span>
           </div>
         </div>
 
@@ -87,7 +87,7 @@ const Landing = () => {
             <button onClick={() => setMobileMenuOpen(false)} className="self-end text-muted-foreground hover:text-foreground">
               <X className="w-6 h-6" />
             </button>
-            <div className="text-2xl font-black tracking-tighter text-primary">MALI<span className="text-secondary">.</span></div>
+            <div className="text-2xl font-black tracking-tighter text-primary">Hideaway<span className="text-secondary">.</span></div>
             <div className="flex flex-col gap-4 text-base font-medium">
               <a href="#discover" onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors">Discover</a>
               <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors">How It Works</a>
@@ -223,7 +223,7 @@ const Landing = () => {
         <section className="px-6 py-24 bg-muted/20 border-b border-border">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-black mb-3">Why creators choose MALI</h2>
+              <h2 className="text-3xl md:text-4xl font-black mb-3">Why creators choose Hideaway</h2>
               <p className="text-muted-foreground max-w-xl mx-auto">Built from the ground up for the African creator — not just adapted from Western platforms.</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
@@ -257,7 +257,7 @@ const Landing = () => {
 
               {[
                 { step: "01", icon: Zap, title: "Create Your Page", body: "Sign up free, set your subscription price, and upload your first piece of content. Takes under 5 minutes." },
-                { step: "02", icon: Users, title: "Grow Your Fans", body: "Share your MALI link on Instagram, TikTok, Twitter. Fans subscribe with M-Pesa or card in seconds." },
+                { step: "02", icon: Users, title: "Grow Your Fans", body: "Share your Hideaway link on Instagram, TikTok, Twitter. Fans subscribe with M-Pesa or card in seconds." },
                 { step: "03", icon: TrendingUp, title: "Get Paid Instantly", body: "Earnings hit your M-Pesa wallet instantly after each transaction. No hold periods, no minimums." },
               ].map(({ icon: Icon, title, body }, i) => (
                 <div key={i} className={`flex flex-col items-center text-center group ${i === 2 ? 'col-span-2 md:col-span-1 mx-auto px-4 md:px-0' : ''}`}>
@@ -287,7 +287,7 @@ const Landing = () => {
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
               <div>
-                <h2 className="text-3xl md:text-4xl font-black mb-2">Trending on Mali</h2>
+                <h2 className="text-3xl md:text-4xl font-black mb-2">Trending on Hideaway</h2>
                 <p className="text-muted-foreground">Top Kenyan creators sharing premium content right now.</p>
               </div>
               <Link to="/discover" className="text-sm font-bold text-primary hover:text-emerald-300 flex items-center gap-1 transition-colors">
@@ -329,7 +329,7 @@ const Landing = () => {
         <section className="px-6 py-24 border-b border-border">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-black mb-3">Creators love MALI</h2>
+              <h2 className="text-3xl md:text-4xl font-black mb-3">Creators love Hideaway</h2>
               <p className="text-muted-foreground">Real stories from creators earning real money.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
@@ -387,7 +387,7 @@ const Landing = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <div className="text-2xl font-black tracking-tighter text-primary mb-3">MALI<span className="text-secondary">.</span></div>
+              <div className="text-2xl font-black tracking-tighter text-primary mb-3">Hideaway<span className="text-secondary">.</span></div>
               <p className="text-sm text-muted-foreground leading-relaxed">The premium creator platform built for Kenya and all of Africa.</p>
             </div>
             {/* Creators */}
@@ -414,7 +414,7 @@ const Landing = () => {
             <div>
               <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-foreground">Company</h4>
               <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <a href="#" className="hover:text-primary transition-colors">About MALI</a>
+                <a href="#" className="hover:text-primary transition-colors">About Hideaway</a>
                 <a href="#" className="hover:text-primary transition-colors">Blog</a>
                 <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
                 <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
@@ -423,7 +423,7 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-muted-foreground">© 2026 MALI Technologies Ltd. All rights reserved.</div>
+            <div className="text-sm text-muted-foreground">© 2026 Hideaway Technologies Ltd. All rights reserved.</div>
             <div className="flex items-center gap-3">
               {["M-PESA", "VISA", "MC"].map((b) => (
                 <div key={b} className="px-2.5 py-1 rounded border border-border bg-muted text-xs font-bold text-muted-foreground">

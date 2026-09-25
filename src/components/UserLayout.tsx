@@ -32,7 +32,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background sticky top-0 z-40 shadow-sm">
-        <Link to="/user" className="text-xl font-bold tracking-tighter text-primary">MALI<span className="text-muted-foreground">.</span></Link>
+        <Link to="/user" className="text-xl font-bold tracking-tighter text-primary">Hideaway<span className="text-muted-foreground">.</span></Link>
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -mr-2 text-foreground">
           <Menu className="w-7 h-7" />
         </button>
@@ -49,7 +49,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-background border-r border-border p-6 flex flex-col h-screen transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex justify-between items-center mb-6 md:mb-10">
-           <Link to="/user" className="text-2xl font-bold tracking-tighter text-primary hidden md:block">MALI<span className="text-muted-foreground">.</span></Link>
+           <Link to="/user" className="text-2xl font-bold tracking-tighter text-primary hidden md:block">Hideaway<span className="text-muted-foreground">.</span></Link>
            <span className="text-lg font-bold md:hidden">Menu</span>
            <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 -mr-2 text-muted-foreground hover:bg-muted rounded-full">
              <X className="w-6 h-6" />

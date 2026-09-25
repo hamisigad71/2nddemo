@@ -13,7 +13,7 @@ const CreatorProfile = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
         {/* Navigation */}
         <nav className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/50 to-transparent">
-           <Link to="/" className="text-xl font-bold tracking-tighter text-white">MALI<span className="text-primary">.</span></Link>
+           <Link to="/" className="text-xl font-bold tracking-tighter text-white">Hideaway<span className="text-primary">.</span></Link>
            <div className="flex gap-3">
              <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors">
                <Share className="w-5 h-5" />

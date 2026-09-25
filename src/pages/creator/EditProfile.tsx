@@ -43,7 +43,7 @@ const EditProfile = () => {
                  <div>
                    <label className="block text-sm font-bold mb-2">Username</label>
                    <div className="flex">
-                      <span className="bg-muted border border-border border-r-0 px-4 py-3 rounded-l-xl text-muted-foreground font-medium">mali.com/</span>
+                      <span className="bg-muted border border-border border-r-0 px-4 py-3 rounded-l-xl text-muted-foreground font-medium">hideaway.com/</span>
                       <input type="text" defaultValue="janedoe" className="w-full bg-muted/30 border border-border px-4 py-3 rounded-r-xl focus:outline-none focus:border-primary" />
                    </div>
                  </div>

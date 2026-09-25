@@ -16,23 +16,52 @@ const CreatorDashboard = () => {
        </div>
 
        {/* Stats Grid */}
-       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
+       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 w-full">
           {[
-            { label: "Total Earnings", value: "KES 145k", increase: "+12.5%", icon: <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-primary" /> },
-            { label: "Active Subs", value: "284", increase: "+4.2%", icon: <Users className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" /> },
-            { label: "Content Views", value: "12.4k", increase: "+22.1%", icon: <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-primary" /> },
-            { label: "Engagement", value: "8.4%", increase: "+1.9%", icon: <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" /> }
+            { 
+              label: "Total Earnings", value: "KES 145k", increase: "+12.5%", 
+              glowClass: "bg-emerald-500/10", iconWrapperClass: "from-emerald-500/20 border-emerald-500/20",
+              pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+              icon: <DollarSign className="w-5 h-5 text-emerald-500 drop-shadow-sm" /> 
+            },
+            { 
+              label: "Active Subs", value: "284", increase: "+4.2%", 
+              glowClass: "bg-secondary/10", iconWrapperClass: "from-secondary/20 border-secondary/20",
+              pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+              icon: <Users className="w-5 h-5 text-secondary drop-shadow-sm" /> 
+            },
+            { 
+              label: "Content Views", value: "12.4k", increase: "+22.1%", 
+              glowClass: "bg-primary/10", iconWrapperClass: "from-primary/20 border-primary/20",
+              pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+              icon: <Eye className="w-5 h-5 text-primary drop-shadow-sm" /> 
+            },
+            { 
+              label: "Engagement", value: "8.4%", increase: "+1.9%", 
+              glowClass: "bg-secondary/10", iconWrapperClass: "from-secondary/20 border-secondary/20",
+              pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+              icon: <BarChart3 className="w-5 h-5 text-secondary drop-shadow-sm" /> 
+            }
           ].map((stat, i) => (
-            <div key={i} className="bg-background border border-border p-4 sm:p-6 rounded-2xl shadow-sm flex flex-col">
-               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
-                  <div className="p-2 bg-input/30 rounded-lg w-max">{stat.icon}</div>
-                  <div className="self-start sm:self-auto flex items-center gap-1 text-[10px] sm:text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md">
-                    <ArrowUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {stat.increase}
+            <div key={i} className="group relative bg-card border border-border/60 hover:border-border/80 p-4 sm:p-7 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col w-full min-w-0">
+               {/* Subtle background glow on hover */}
+               <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none -translate-y-1/2 translate-x-1/3 ${stat.glowClass}`} />
+               
+               {/* Very subtle noise texture */}
+               <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
+
+               <div className="flex items-start justify-between gap-2 mb-4 relative z-10">
+                  <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br to-transparent border flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shrink-0 ${stat.iconWrapperClass}`}>
+                    {stat.icon}
+                  </div>
+                  <div className={`flex items-center gap-1 text-[9px] sm:text-[11px] font-bold border px-2 py-1 rounded-full shadow-sm backdrop-blur-sm ${stat.pillClass}`}>
+                    <ArrowUp className="w-2.5 h-2.5" /> {stat.increase}
                   </div>
                </div>
-               <div className="mt-auto">
-                 <p className="text-muted-foreground text-[11px] sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">{stat.label}</p>
-                 <h3 className="text-lg sm:text-2xl font-bold text-foreground truncate">{stat.value}</h3>
+               
+               <div className="mt-auto relative z-10">
+                 <p className="text-muted-foreground text-[9px] sm:text-[12px] font-bold tracking-wider uppercase mb-1 opacity-80 truncate">{stat.label}</p>
+                 <h3 className="text-xl sm:text-3xl font-black text-foreground tracking-tight">{stat.value}</h3>
                </div>
             </div>
           ))}

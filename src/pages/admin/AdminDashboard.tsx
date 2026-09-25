@@ -6,7 +6,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
       <aside className="w-64 bg-input/10 border-r border-border p-6 flex flex-col hidden lg:flex">
-         <Link to="/" className="text-2xl font-bold tracking-tighter text-primary mb-10 text-destructive">MALI <span className="text-xs uppercase tracking-widest text-muted-foreground">Admin</span></Link>
+         <Link to="/" className="text-2xl font-bold tracking-tighter text-primary mb-10 text-destructive">Hideaway <span className="text-xs uppercase tracking-widest text-muted-foreground">Admin</span></Link>
          <nav className="flex-1 space-y-2">
             <a href="#" className="flex items-center gap-3 px-4 py-3 bg-primary/10 text-primary rounded-xl font-bold">
               <Activity className="w-5 h-5" /> Platform Overview

@@ -63,7 +63,7 @@ const PaymentMethods = () => {
           <div className="flex gap-3">
              <Wallet className="w-5 h-5 text-muted-foreground shrink-0" />
              <p className="text-xs text-muted-foreground">
-               Transactions on your bank statement will appear as <strong>MALI TECH LTD</strong>. M-Pesa prompt will appear on your phone for verification when making new purchases.
+               Transactions on your bank statement will appear as <strong>Hideaway TECH LTD</strong>. M-Pesa prompt will appear on your phone for verification when making new purchases.
              </p>
           </div>
        </div>
