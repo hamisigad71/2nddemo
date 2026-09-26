@@ -154,7 +154,7 @@ const Landing = () => {
           <div className="relative z-10 flex flex-col justify-between md:justify-center items-center px-6 pt-19 pb-10 md:py-40 w-full max-w-4xl mx-auto flex-1">
 
             {/* TOP GROUP: Badge + Headline */}
-            <div className="flex flex-row items-center justify-center md:flex-col text-center md:text-center gap-4 md:gap-0 mb-6 md:mb-8">
+            <div className="flex flex-col items-center text-center">
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-6 md:mb-8 shadow-2xl backdrop-blur-md hover:bg-white/15 hover:border-white/30 transition-all cursor-default">
                 <span className="relative flex h-2 w-2">
