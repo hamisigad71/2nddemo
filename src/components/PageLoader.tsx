@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 
 interface PageLoaderProps {
   onComplete: () => void;
+  onReady?: () => void;
 }
 
-const PageLoader = ({ onComplete }: PageLoaderProps) => {
+const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
   const [progress, setProgress] = useState(0);
   const [fading, setFading] = useState(false);
 
@@ -21,6 +22,7 @@ const PageLoader = ({ onComplete }: PageLoaderProps) => {
     const runStep = (stepIndex: number) => {
       if (stepIndex >= steps.length) {
         setTimeout(() => {
+          if (onReady) onReady();
           setFading(true);
           setTimeout(onComplete, 600);
         }, 200);

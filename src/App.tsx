@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
 import Discover from "./pages/public/Discover";
@@ -28,15 +28,36 @@ import Subscriptions from "./pages/user/Subscriptions";
 import PaymentMethods from "./pages/user/PaymentMethods";
 import UserSettings from "./pages/user/UserSettings";
 
-function App() {
-  const [loading, setLoading] = useState(true);
+const AppRoutes = () => {
+  const location = useLocation();
+  const [displayLocation, setDisplayLocation] = useState(location);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  useEffect(() => {
+    if (location.pathname !== displayLocation.pathname || location.search !== displayLocation.search) {
+      if (!initialLoad) {
+        setIsTransitioning(true);
+      }
+    }
+  }, [location, displayLocation.pathname, displayLocation.search, initialLoad]);
+
+  const handleLoaderReady = () => {
+    setDisplayLocation(location);
+  };
+
+  const handleLoaderComplete = () => {
+    setIsTransitioning(false);
+    if (initialLoad) setInitialLoad(false);
+  };
 
   return (
     <>
-      {loading && <PageLoader onComplete={() => setLoading(false)} />}
-      <BrowserRouter>
-        <div className="min-h-screen bg-background text-foreground font-sans">
-          <Routes>
+      {(isTransitioning || initialLoad) && (
+        <PageLoader onReady={handleLoaderReady} onComplete={handleLoaderComplete} />
+      )}
+      <div className="min-h-screen bg-background text-foreground font-sans">
+        <Routes location={displayLocation}>
             <Route path="/" element={<Landing />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/login" element={<Login />} />
@@ -65,8 +86,15 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
         </div>
-      </BrowserRouter>
     </>
+  );
+};
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }
 

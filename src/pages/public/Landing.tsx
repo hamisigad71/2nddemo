@@ -151,67 +151,74 @@ const Landing = () => {
           </div>
 
           {/* Content */}
-          <div className="relative z-10 flex flex-col items-center justify-end md:justify-center px-6 pt-48 pb-10 md:py-40 w-full max-w-4xl mx-auto mt-auto md:mt-0">
+          <div className="relative z-10 flex flex-col justify-between md:justify-center items-center px-6 pt-19 pb-10 md:py-40 w-full max-w-4xl mx-auto flex-1">
 
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-6 md:mb-8 shadow-2xl backdrop-blur-md hover:bg-white/15 hover:border-white/30 transition-all cursor-default">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span>Kenyan Creator Economy — Built Different 🇰🇪</span>
+            {/* TOP GROUP: Badge + Headline */}
+            <div className="flex flex-row items-center justify-center md:flex-col text-center md:text-center gap-4 md:gap-0 mb-6 md:mb-8">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-6 md:mb-8 shadow-2xl backdrop-blur-md hover:bg-white/15 hover:border-white/30 transition-all cursor-default">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Kenyan Creator Economy — Built Different 🇰🇪</span>
+              </div>
+
+              {/* Headline */}
+              <h1 className="text-[1.35rem] sm:text-5xl md:text-7xl font-black tracking-tight mb-4 md:mb-6 leading-[1.05] whitespace-nowrap md:whitespace-normal">
+                <span className="text-white drop-shadow-lg">Your Content.</span>{' '}
+                <span className="text-white drop-shadow-lg">Your Fans.</span>{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-300 to-secondary drop-shadow-lg">
+                  Your Money.
+                </span>
+              </h1>
             </div>
 
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight mb-4 md:mb-6 leading-[1.05]">
-              <span className="text-white drop-shadow-lg">Your Content.</span><br />
-              <span className="text-white drop-shadow-lg">Your Fans.</span>{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-300 to-secondary drop-shadow-lg">
-                Your Money.
-              </span>
-            </h1>
+            {/* BOTTOM GROUP: Description + CTAs + Social Proof */}
+            <div className="flex flex-col items-center text-center w-full">
+              <p className="text-sm sm:text-base md:text-xl text-white/80 max-w-2xl mb-6 md:mb-10 leading-relaxed">
+                The premium subscription platform for African creators. Monetize your audience directly through{' '}
+                <span className="text-primary font-semibold">M-Pesa</span>, cards &amp; more. No middleman. No hassle.
+              </p>
 
-            <p className="text-sm sm:text-base md:text-xl text-white/80 max-w-2xl mb-6 md:mb-10 leading-relaxed">
-              The premium subscription platform for African creators. Monetize your audience directly through{' '}
-              <span className="text-primary font-semibold">M-Pesa</span>, cards &amp; more. No middleman. No hassle.
-            </p>
+              {/* CTA Buttons */}
+              <div className="flex flex-row items-center gap-3 w-full justify-center px-1 sm:px-0">
+                <Link to="/signup" className="group w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-primary text-primary-foreground px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold hover:bg-emerald-500 transition-all shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.03]">
+                  Start Earning
+                  <ArrowRight className="hidden sm:block w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link to="/discover" className="w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/25 hover:border-white/40 px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-semibold transition-all">
+                  Explore Creators
+                </Link>
+              </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-row items-center gap-3 w-full justify-center px-1 sm:px-0">
-              <Link to="/signup" className="group w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-primary text-primary-foreground px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold hover:bg-emerald-500 transition-all shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.03]">
-                Start Earning
-                <ArrowRight className="hidden sm:block w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link to="/discover" className="w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/25 hover:border-white/40 px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-semibold transition-all">
-                Explore Creators
-              </Link>
-            </div>
+              {/* Social Proof Mini */}
+              <div className="mt-10 flex items-center gap-2 text-sm text-white/70">
+                <div className="flex -space-x-2">
+                  {creators.slice(0, 3).map((c, i) => (
+                    <img key={i} src={c.img} alt={c.name} className="w-7 h-7 rounded-full border-2 border-white/30 object-cover" />
+                  ))}
+                </div>
+                <span>Join <strong className="text-white">2,400+</strong> creators already earning</span>
+              </div>
 
-            {/* Social Proof Mini */}
-            <div className="mt-10 flex items-center gap-2 text-sm text-white/70">
-              <div className="flex -space-x-2">
-                {creators.slice(0, 3).map((c, i) => (
-                  <img key={i} src={c.img} alt={c.name} className="w-7 h-7 rounded-full border-2 border-white/30 object-cover" />
+              {/* Carousel Dots */}
+              <div className="mt-8 hidden md:flex items-center gap-2">
+                {heroImages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setHeroIndex(i)}
+                    className={`rounded-full transition-all duration-500 ${
+                      i === heroIndex
+                        ? 'w-6 h-2 bg-primary'
+                        : 'w-2 h-2 bg-white/30 hover:bg-white/60'
+                    }`}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
                 ))}
               </div>
-              <span>Join <strong className="text-white">2,400+</strong> creators already earning</span>
             </div>
 
-            {/* Carousel Dots */}
-            <div className="mt-8 hidden md:flex items-center gap-2">
-              {heroImages.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setHeroIndex(i)}
-                  className={`rounded-full transition-all duration-500 ${
-                    i === heroIndex
-                      ? 'w-6 h-2 bg-primary'
-                      : 'w-2 h-2 bg-white/30 hover:bg-white/60'
-                  }`}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
-            </div>
           </div>
         </section>
 
