@@ -43,10 +43,24 @@ const PageLoader = ({ onComplete }: PageLoaderProps) => {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center transition-opacity duration-700 ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
+      {/* Base desktop background */}
+      <div className="hidden md:block absolute inset-0 bg-background" />
+
+      {/* Mobile background image */}
+      <img
+        src="https://i.pinimg.com/736x/b1/39/54/b13954cc1f7c47fac66562a002262af9.jpg"
+        alt=""
+        className="md:hidden absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+        loading="eager"
+      />
+      
+      {/* Mobile overlay - subtle dark gradient to ensure legibility while keeping image crisp */}
+      <div className="md:hidden absolute inset-0 bg-black/40 bg-gradient-to-t from-background/90 via-transparent to-background/50 pointer-events-none" />
+
       {/* Ambient background glow blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div

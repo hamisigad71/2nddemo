@@ -111,13 +111,14 @@ const Landing = () => {
 
           {/* Carousel Background Images */}
           <div className="absolute inset-0" style={{ zIndex: 0 }}>
+            {/* Desktop Carousel */}
             {heroImages.map((src, i) => (
               <img
                 key={i}
                 src={src}
                 alt=""
                 aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover object-center"
+                className="hidden md:block absolute inset-0 w-full h-full object-cover object-center"
                 style={{
                   opacity: i === heroIndex ? 1 : 0,
                   transition: 'opacity 1.5s ease-in-out',
@@ -125,10 +126,18 @@ const Landing = () => {
                 loading={i <= 1 ? 'eager' : 'lazy'}
               />
             ))}
+            {/* Mobile Static Background */}
+            <img
+              src="https://i.pinimg.com/736x/bc/aa/40/bcaa40faa1cee525632e139ddcaf709c.jpg"
+              alt=""
+              aria-hidden="true"
+              className="md:hidden absolute inset-0 w-full h-full object-cover object-center"
+              loading="eager"
+            />
             {/* Semi-transparent dark overlay — keeps images visible but text readable */}
             <div
               className="absolute inset-0 block md:hidden"
-              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.95) 100%)' }}
+              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.95) 100%)' }}
             />
             <div
               className="absolute inset-0 hidden md:block"
@@ -145,9 +154,12 @@ const Landing = () => {
           <div className="relative z-10 flex flex-col items-center justify-end md:justify-center px-6 pt-48 pb-10 md:py-40 w-full max-w-4xl mx-auto mt-auto md:mt-0">
 
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-secondary/15 border border-secondary/30 text-secondary text-xs md:text-sm font-semibold mb-6 md:mb-8 shadow-sm backdrop-blur-sm">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-              🇰🇪 Kenyan Creator Economy — Built Different
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-6 md:mb-8 shadow-2xl backdrop-blur-md hover:bg-white/15 hover:border-white/30 transition-all cursor-default">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Kenyan Creator Economy — Built Different 🇰🇪</span>
             </div>
 
             {/* Headline */}
@@ -186,7 +198,7 @@ const Landing = () => {
             </div>
 
             {/* Carousel Dots */}
-            <div className="mt-8 flex items-center gap-2">
+            <div className="mt-8 hidden md:flex items-center gap-2">
               {heroImages.map((_, i) => (
                 <button
                   key={i}
@@ -248,18 +260,18 @@ const Landing = () => {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-6">
                 <TrendingUp className="w-3.5 h-3.5" /> Growth Calculator
               </div>
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black mb-6 tracking-tight leading-tight">
+              <h2 className="text-xl md:text-5xl font-black mb-4 md:mb-6 tracking-tight leading-tight max-w-[280px] md:max-w-none mx-auto md:mx-0">
                 Calculate your{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">earning potential</span>
+                <span className="block md:inline text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">earning potential</span>
               </h2>
               <p className="text-muted-foreground mb-10 text-lg leading-relaxed max-w-lg">
                 See what happens when you monetize directly. Estimate your revenue if just <strong>5%</strong> of your audience subscribes at KES 500/month.
               </p>
               
-              <div className="w-full bg-muted/30 border border-border rounded-3xl p-6 sm:p-8 shadow-sm">
-                <div className="flex justify-between items-end mb-6">
-                  <span className="font-bold text-foreground text-sm uppercase tracking-wider">Current Followers</span>
-                  <span className="text-3xl font-black text-primary">{followers.toLocaleString()}</span>
+              <div className="w-full bg-muted/30 border border-border rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm">
+                <div className="flex justify-between items-center mb-5 md:mb-6">
+                  <span className="font-bold text-foreground text-xs md:text-sm uppercase tracking-wider">Current Followers</span>
+                  <span className="text-2xl md:text-3xl font-black text-primary">{followers.toLocaleString()}</span>
                 </div>
                 
                 <div className="relative pt-2 pb-2">
@@ -287,21 +299,21 @@ const Landing = () => {
                 {/* Animated glow behind the card */}
                 <div className="absolute -inset-1 bg-gradient-to-b from-primary/40 to-background rounded-[2.5rem] blur-xl opacity-40 group-hover:opacity-70 transition duration-700" />
                 
-                <div className="relative bg-card border border-border p-8 sm:p-12 rounded-[2.5rem] text-center shadow-2xl z-10 transition-transform duration-500 group-hover:scale-[1.02] flex flex-col items-center overflow-hidden">
+                <div className="relative bg-card border border-border p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] text-center shadow-2xl z-10 transition-transform duration-500 group-hover:scale-[1.02] flex flex-col items-center overflow-hidden">
                   
                   {/* Subtle noise texture */}
                   <div className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
 
                   <div className="relative z-10 w-full flex flex-col items-center">
-                    <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 transform group-hover:-translate-y-1 group-hover:scale-110 transition-all duration-300 shadow-inner border border-primary/20">
-                      <DollarSign className="w-8 h-8" />
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 text-primary rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 transform group-hover:-translate-y-1 group-hover:scale-110 transition-all duration-300 shadow-inner border border-primary/20">
+                      <DollarSign className="w-6 h-6 md:w-8 md:h-8" />
                     </div>
                     
-                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Estimated Monthly Income</h3>
+                    <h3 className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2 md:mb-4">Estimated Monthly Income</h3>
                     
-                    <div className="flex items-center justify-center gap-1.5 mb-2 w-full">
-                      <span className="text-xl md:text-2xl font-bold text-muted-foreground mt-2">KES</span>
-                      <span className="text-5xl md:text-6xl lg:text-7xl font-black text-foreground tracking-tighter">
+                    <div className="flex items-center justify-center gap-1 md:gap-1.5 mb-1 w-full">
+                      <span className="text-sm md:text-2xl font-bold text-muted-foreground mt-1 md:mt-2">KES</span>
+                      <span className="text-4xl md:text-6xl lg:text-7xl font-black text-foreground tracking-tight">
                         {(followers * 0.05 * 500).toLocaleString()}
                       </span>
                     </div>
