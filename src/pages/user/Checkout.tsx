@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, ShieldCheck, CreditCard, ArrowRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 const Checkout = () => {
   const location = useLocation();
@@ -10,16 +12,66 @@ const Checkout = () => {
     avatar: "https://i.pravatar.cc/150?img=12"
   };
 
+  const { user } = useAuth();
   const [method, setMethod] = useState<'mpesa' | 'card'>('mpesa');
   const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle');
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
 
-  const handleMpesaPay = (e: React.FormEvent) => {
+  // Poll for transaction status when checkoutId is present
+  useEffect(() => {
+    if (!checkoutId || status !== 'pending') return;
+    
+    const checkStatus = async () => {
+       const { data } = await supabase.from('transactions')
+          .select('status')
+          .eq('provider_reference', checkoutId)
+          .single();
+          
+       if (data?.status === 'completed') {
+          setStatus('success');
+       } else if (data?.status === 'failed') {
+          setStatus('failed');
+       }
+    };
+    
+    const interval = setInterval(checkStatus, 3000);
+    return () => clearInterval(interval);
+  }, [checkoutId, status]);
+
+  const handleMpesaPay = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setStatus('pending');
-    setTimeout(() => {
-      setStatus('success');
-    }, 3000);
+    
+    const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 500;
+
+    try {
+      // 1. Invoke the Daraja STK Push Edge Function
+      const { data, error } = await supabase.functions.invoke('daraja-stk-push', {
+        body: {
+          amount,
+          phoneNumber: phone,
+          userId: user.uid,
+          toCreatorId: creator.id || 'creator_dummy_id', // Fallback for prototype
+          type: 'subscription'
+        }
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      // 2. Set the checkout ID so the polling effect starts watching the DB
+      if (data.checkoutRequestId) {
+         setCheckoutId(data.checkoutRequestId);
+      } else {
+         setStatus('failed');
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus('failed');
+      alert('STK Push failed. Check console.');
+    }
   };
 
   return (
@@ -149,13 +201,17 @@ const Checkout = () => {
             <button 
                type="submit" 
                disabled={status === 'pending'}
-               className="w-full bg-primary text-primary-foreground font-bold text-lg rounded-xl py-4 mt-4 hover:bg-emerald-600 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+               className={`w-full font-bold text-lg rounded-xl py-4 mt-4 transition-colors shadow-lg flex items-center justify-center gap-2 cursor-pointer
+                 ${status === 'failed' ? 'bg-red-500 text-white' : 'bg-primary text-primary-foreground hover:bg-emerald-600 shadow-primary/20'} 
+                 disabled:opacity-70 disabled:cursor-not-allowed`}
             >
               {status === 'pending' ? (
                  <>
                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                    Waiting for M-Pesa PIN...
                  </>
+              ) : status === 'failed' ? (
+                 <>Payment Failed - Try Again</>
               ) : (
                 <>Pay {creator.price.replace('/mo', '')} <ArrowRight className="w-5 h-5" /></>
               )}

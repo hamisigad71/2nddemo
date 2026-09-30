@@ -1,13 +1,31 @@
-import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar, Loader2 } from 'lucide-react';
 import CreatorLayout from '../../components/CreatorLayout';
+import CreatePostForm from '../../components/CreatePostForm';
+import { useAuth } from '../../context/AuthContext';
+import { useState, useEffect } from 'react';
+import { getCreatorDashboardStats } from '../../lib/db';
 
 const CreatorDashboard = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState({ totalEarnings: 0, activeSubs: 0, recentSubs: [] as any[] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      getCreatorDashboardStats(user.uid).then(data => {
+        setStats(data);
+        setLoading(false);
+      });
+    }
+  }, [user]);
+  
   return (
     <CreatorLayout>
        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
          <div>
            <h1 className="text-3xl font-bold mb-1">Dashboard</h1>
-           <p className="text-muted-foreground">Welcome back, Jane. Here's how your content is performing.</p>
+           <p className="text-muted-foreground">Welcome back, {user?.displayName?.split(' ')[0] || 'Creator'}. Here's how your content is performing.</p>
          </div>
          <div className="flex items-center gap-2 bg-input/20 border border-border rounded-xl px-4 py-2 text-sm text-foreground">
            <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -16,28 +34,28 @@ const CreatorDashboard = () => {
        </div>
 
        {/* Stats Grid */}
-       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 w-full">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 w-full">
           {[
             { 
-              label: "Total Earnings", value: "KES 145k", increase: "+12.5%", 
+              label: "Total Earnings", value: `KES ${stats.totalEarnings.toLocaleString()}`, increase: "+12.5%", 
               glowClass: "bg-emerald-500/10", iconWrapperClass: "from-emerald-500/20 border-emerald-500/20",
               pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
               icon: <DollarSign className="w-5 h-5 text-emerald-500 drop-shadow-sm" /> 
             },
             { 
-              label: "Active Subs", value: "284", increase: "+4.2%", 
+              label: "Active Subs", value: stats.activeSubs.toString(), increase: "+4.2%", 
               glowClass: "bg-secondary/10", iconWrapperClass: "from-secondary/20 border-secondary/20",
               pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
               icon: <Users className="w-5 h-5 text-secondary drop-shadow-sm" /> 
             },
             { 
-              label: "Content Views", value: "12.4k", increase: "+22.1%", 
+              label: "Content Views", value: "---", increase: "+0.0%", 
               glowClass: "bg-primary/10", iconWrapperClass: "from-primary/20 border-primary/20",
               pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
               icon: <Eye className="w-5 h-5 text-primary drop-shadow-sm" /> 
             },
             { 
-              label: "Engagement", value: "8.4%", increase: "+1.9%", 
+              label: "Engagement", value: "---", increase: "+0.0%", 
               glowClass: "bg-secondary/10", iconWrapperClass: "from-secondary/20 border-secondary/20",
               pillClass: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
               icon: <BarChart3 className="w-5 h-5 text-secondary drop-shadow-sm" /> 
@@ -67,6 +85,9 @@ const CreatorDashboard = () => {
           ))}
        </div>
 
+       {/* Post Upload */}
+       <CreatePostForm />
+
        {/* Charts / Activity Placeholder */}
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-background border border-border rounded-2xl p-6 shadow-sm">
@@ -84,18 +105,33 @@ const CreatorDashboard = () => {
           <div className="bg-background border border-border rounded-2xl p-6 shadow-sm">
              <h3 className="text-lg font-bold mb-6 text-foreground">Recent Subscribers</h3>
              <div className="space-y-4">
-               {[1,2,3,4,5].map(i => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img src={`https://i.pravatar.cc/150?img=${i+20}`} alt="user" className="w-10 h-10 rounded-full" />
-                      <div>
-                         <div className="text-sm font-bold text-foreground">User {i}</div>
-                         <div className="text-xs text-muted-foreground">{10 * i} mins ago</div>
-                      </div>
-                    </div>
-                    <div className="text-sm font-bold text-primary">KES 500</div>
+               {loading ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   </div>
-               ))}
+               ) : stats.recentSubs.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    No subscribers yet.
+                  </div>
+               ) : (
+                 stats.recentSubs.map(t => (
+                    <div key={t.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={t.users?.avatar || "https://i.pravatar.cc/150?img=1"} 
+                          alt="user" 
+                          referrerPolicy="no-referrer"
+                          className="w-10 h-10 rounded-full object-cover" 
+                        />
+                        <div>
+                           <div className="text-sm font-bold text-foreground truncate w-32">{t.users?.name || 'Fan'}</div>
+                           <div className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-primary">KES {t.gross_amount}</div>
+                    </div>
+                 ))
+               )}
              </div>
              <button className="w-full mt-6 text-sm font-bold text-muted-foreground hover:text-foreground">View All</button>
           </div>

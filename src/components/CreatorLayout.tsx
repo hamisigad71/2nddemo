@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface CreatorLayoutProps {
   children: React.ReactNode;
@@ -23,6 +25,8 @@ const navItems = [
 const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
@@ -88,9 +92,9 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         <div className="pt-6 border-t border-border mt-auto shrink-0 mb-safe">
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3 w-full">
-               <img src="https://i.pravatar.cc/150?img=12" alt="avatar" className="w-10 h-10 rounded-full border border-border shrink-0" />
+               <img src={user?.photoURL || "https://i.pravatar.cc/150?img=12"} alt="avatar" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-border shrink-0" />
                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">Jane Doe</div>
+                  <div className="font-bold text-sm truncate">{user?.displayName || "Jane Doe"}</div>
                   <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="text-xs text-primary hover:underline truncate block">Edit Profile</Link>
                </div>
                <button onClick={handleLogout} className="p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">
@@ -98,6 +102,14 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                </button>
              </div>
            </div>
+           
+           <button 
+              onClick={toggleTheme} 
+              className="mt-4 flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground w-full"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              <span className="text-sm">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+           </button>
         </div>
       </aside>
 

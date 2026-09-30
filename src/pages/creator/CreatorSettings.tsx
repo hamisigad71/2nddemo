@@ -36,28 +36,52 @@ const CreatorSettings = () => {
              
              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold mb-2">Monthly Subscription Price</label>
-                  <p className="text-xs text-muted-foreground mb-3">Set how much fans pay per month to access your exclusive feed.</p>
-                  <div className="flex items-center">
-                    <span className="bg-muted border border-border border-r-0 px-4 py-3 rounded-l-xl font-bold text-muted-foreground">KES</span>
-                    <input type="number" defaultValue={500} className="w-full max-w-[200px] border border-border bg-background px-4 py-3 rounded-r-xl font-bold focus:outline-none focus:border-primary" />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-border">
-                   <div className="flex items-center justify-between font-bold mb-2">
-                     <span>Subscription Bundles</span>
-                     <button className="text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20">Add Bundle</button>
-                   </div>
-                   <p className="text-xs text-muted-foreground mb-4">Offer discounts to fans who subscribe for multiple months at once.</p>
-                   
-                   <div className="flex items-center justify-between border border-border rounded-xl p-4 bg-muted/20">
-                     <div className="flex items-center gap-4">
-                       <div className="font-bold">3 Months</div>
-                       <div className="text-sm px-2 py-1 bg-secondary/10 text-secondary border border-secondary/20 rounded-md">10% OFF</div>
+                  <h3 className="text-lg font-bold mb-4">Subscription Tiers</h3>
+                  <p className="text-xs text-muted-foreground mb-4">Create multiple access levels for your fans. Higher tiers should offer more value.</p>
+                  
+                  <div className="space-y-4">
+                     {/* Tier 1 */}
+                     <div className="border border-border rounded-xl p-4 bg-muted/10 relative overflow-hidden group">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+                        <div className="flex items-center justify-between mb-3">
+                           <input type="text" defaultValue="Fan" className="font-bold text-base bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary rounded px-1" />
+                           <div className="flex items-center">
+                              <span className="text-muted-foreground text-sm font-bold mr-2">KES</span>
+                              <input type="number" defaultValue={500} className="w-20 bg-background border border-border px-2 py-1 rounded-lg font-bold focus:outline-none focus:border-primary text-right" />
+                           </div>
+                        </div>
+                        <textarea className="w-full text-xs text-muted-foreground bg-transparent border-none focus:outline-none resize-none h-12" defaultValue="Access to my exclusive daily posts, voting on next week's content, and an ad-free experience." />
                      </div>
-                     <div className="font-bold text-primary">KES 1,350</div>
-                   </div>
+                     
+                     {/* Tier 2 */}
+                     <div className="border border-border rounded-xl p-4 bg-primary/5 relative overflow-hidden group">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-emerald-500"></div>
+                        <div className="flex items-center justify-between mb-3">
+                           <input type="text" defaultValue="Superfan" className="font-bold text-base text-primary bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary rounded px-1" />
+                           <div className="flex items-center">
+                              <span className="text-muted-foreground text-sm font-bold mr-2">KES</span>
+                              <input type="number" defaultValue={1500} className="w-20 bg-background border border-border px-2 py-1 rounded-lg font-bold focus:outline-none focus:border-primary text-right" />
+                           </div>
+                        </div>
+                        <textarea className="w-full text-xs text-muted-foreground bg-transparent border-none focus:outline-none resize-none h-12" defaultValue="Everything in Fan tier + monthly live streams, direct messaging access, and behind-the-scenes vlogs." />
+                     </div>
+
+                     {/* Tier 3 */}
+                     <div className="border border-border rounded-xl p-4 bg-gradient-to-br from-amber-500/5 to-orange-500/5 relative overflow-hidden group">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-500 to-orange-500"></div>
+                        <div className="flex items-center justify-between mb-3">
+                           <input type="text" defaultValue="VIP Inner Circle" className="font-black text-base text-amber-600 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-500 rounded px-1" />
+                           <div className="flex items-center">
+                              <span className="text-muted-foreground text-sm font-bold mr-2">KES</span>
+                              <input type="number" defaultValue={5000} className="w-20 bg-background border border-border px-2 py-1 rounded-lg font-bold focus:outline-none focus:border-primary text-right" />
+                           </div>
+                        </div>
+                        <textarea className="w-full text-xs text-muted-foreground bg-transparent border-none focus:outline-none resize-none h-12" defaultValue="Everything in Superfan + 1-on-1 monthly video calls, priority responses, and exclusive physical merch each year." />
+                     </div>
+                  </div>
+                  <button className="mt-4 w-full py-3 border-2 border-dashed border-border text-muted-foreground font-bold rounded-xl hover:border-primary hover:text-primary transition-colors text-sm">
+                     + Add New Tier
+                  </button>
                 </div>
              </div>
            </div>

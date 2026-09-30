@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon } from 'lucide-react';
 import BottomNav from './BottomNav';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -19,6 +21,8 @@ const navItems = [
 const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -86,9 +90,9 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         <div className="pt-6 border-t border-border mt-auto shrink-0 mb-safe">
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3 w-full">
-               <img src="https://i.pravatar.cc/150?img=50" alt="avatar" className="w-10 h-10 rounded-full border border-border shrink-0" />
+               <img src={user?.photoURL || "https://i.pravatar.cc/150?img=50"} alt="avatar" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-border shrink-0" />
                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">Fan User</div>
+                  <div className="font-bold text-sm truncate">{user?.displayName || "Fan User"}</div>
                   <Link to="/user/settings" onClick={() => setIsMobileMenuOpen(false)} className="text-xs text-secondary hover:underline truncate block">View Profile</Link>
                </div>
                <button onClick={handleLogout} className="p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">
@@ -96,6 +100,14 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                </button>
              </div>
            </div>
+           
+           <button 
+              onClick={toggleTheme} 
+              className="mt-4 flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground w-full"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              <span className="text-sm">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+           </button>
         </div>
       </aside>
 

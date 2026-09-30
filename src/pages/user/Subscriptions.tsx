@@ -17,7 +17,16 @@ const Subscriptions = () => {
                   <div className="flex items-center gap-4">
                      <img src={`https://i.pravatar.cc/150?img=${i+20}`} alt="creator" className="w-16 h-16 rounded-full object-cover border border-border" />
                      <div>
-                        <div className="font-bold text-lg">Creator Name {i}</div>
+                        <div className="font-bold text-lg flex items-center gap-2">
+                           Creator Name {i}
+                           <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${
+                              i === 1 ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' : 
+                              i === 2 ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 
+                              'bg-primary/10 text-primary border border-primary/20'
+                           }`}>
+                              {i === 1 ? 'VIP Tier' : i === 2 ? 'Superfan Tier' : 'Fan Tier'}
+                           </span>
+                        </div>
                         <div className="text-xs text-muted-foreground mb-2">@creator_{i}</div>
                         <div className={`text-xs font-bold flex items-center gap-1 ${isAutoRenew ? 'text-emerald-600' : 'text-red-500'}`}>
                            {isAutoRenew ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
@@ -28,7 +37,7 @@ const Subscriptions = () => {
 
                   <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-border sm:border-0">
                      <div className="text-left sm:text-right">
-                        <div className="font-black text-lg">KES 500<span className="text-sm text-muted-foreground font-medium">/mo</span></div>
+                        <div className="font-black text-lg">KES {i === 1 ? '5,000' : i === 2 ? '1,500' : '500'}<span className="text-sm text-muted-foreground font-medium">/mo</span></div>
                      </div>
                      <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors border border-border sm:border-transparent">
                         <MoreVertical className="w-5 h-5" />
