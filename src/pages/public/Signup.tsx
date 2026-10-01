@@ -127,16 +127,16 @@ const Signup = () => {
       </div>
       
       {/* Creative Image Section */}
-      <div className="flex w-full min-h-[50vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden">
+      <div className="flex w-full min-h-[65vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 pt-48 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden">
         <img 
-          src="https://i.pinimg.com/736x/2f/62/2b/2f622baee024d57eb55011d12d89caa2.jpg" 
+          src="/pic1.png" 
           alt="Creative Background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60" 
+          className="absolute inset-0 w-full h-full object-cover opacity-80 object-top" 
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
         <div className="relative z-10 max-w-md">
           <div className="w-12 h-1 bg-primary mb-6 rounded-full"></div>
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight mb-4">A new era for African creativity.</h2>
+          
           <p className="text-lg text-muted-foreground">Join Hideaway and connect with premium creators defining the future of storytelling.</p>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, CheckCircle2, Clock, UploadCloud, Smartphone } from 'lucide-react';
+import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 

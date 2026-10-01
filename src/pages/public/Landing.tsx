@@ -106,7 +106,7 @@ const Landing = () => {
 
         {/* Hero Section */}
         <section
-          className="relative flex flex-col items-center text-center overflow-hidden min-h-[80svh] md:min-h-[100svh]"
+          className="relative flex flex-col items-center text-center overflow-hidden min-h-[100svh] md:min-h-[100svh]"
         >
 
           {/* Carousel Background Images */}
@@ -145,13 +145,13 @@ const Landing = () => {
             />
             {/* Bottom fade into page background */}
             <div
-              className="absolute bottom-0 left-0 right-0 h-48 md:h-28"
+              className="absolute bottom-0 left-0 right-0 h-24 md:h-28"
               style={{ background: 'linear-gradient(to top, hsl(0 0% 10%) 0%, transparent 100%)' }}
             />
           </div>
 
           {/* Content */}
-          <div className="relative z-10 flex flex-col justify-between md:justify-center items-center px-6 pt-19 pb-10 md:py-40 w-full max-w-4xl mx-auto flex-1">
+          <div className="relative z-10 flex flex-col justify-end md:justify-center items-center px-6 pt-20 pb-10 md:py-40 w-full max-w-4xl mx-auto flex-1 gap-6">
 
             {/* TOP GROUP: Badge + Headline */}
             <div className="flex flex-col items-center text-center">

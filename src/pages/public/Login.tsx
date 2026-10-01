@@ -86,16 +86,16 @@ const Login = () => {
       </div>
       
       {/* Creative Image Section */}
-      <div className="flex w-full min-h-[50vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden">
+      <div className="flex w-full min-h-[65vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 pt-48 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden">
         <img 
-          src="https://i.pinimg.com/736x/5d/f3/fc/5df3fc69f7763e088d1f5f34b54a6ac4.jpg" 
+          src="/pic2.png" 
           alt="Creative Background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60" 
+          className="absolute inset-0 w-full h-full object-cover opacity-80 object-top" 
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
         <div className="relative z-10 max-w-md">
           <div className="w-12 h-1 bg-primary mb-6 rounded-full"></div>
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight mb-4">Welcome back to greatness.</h2>
+
           <p className="text-lg text-muted-foreground">Continue building, growing, and experiencing the finest creative work from the continent.</p>
         </div>
       </div>
