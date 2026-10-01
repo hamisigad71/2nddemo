@@ -4,7 +4,9 @@ import type { User } from 'firebase/auth';
 import { 
   signInWithPopup, 
   signOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
 } from 'firebase/auth';
 import { auth, googleProvider, facebookProvider } from '../lib/firebase';
 import { createUserProfile } from '../lib/db';
@@ -14,6 +16,8 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: (role?: string) => Promise<User>;
   signInWithFacebook: (role?: string) => Promise<User>;
+  signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string) => Promise<User>;
+  signInWithEmail: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -77,6 +81,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signUpWithEmail = async (email: string, password: string, name: string, phone: string, role: string) => {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      await createUserProfile(result.user.uid, {
+        name,
+        email,
+        phone,
+        role: role
+      });
+      return result.user;
+    } catch (error) {
+      console.error("Error signing up with email", error);
+      throw error;
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (error) {
+      console.error("Error signing in with email", error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -86,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

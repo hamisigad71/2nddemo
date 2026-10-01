@@ -3,9 +3,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useState } from 'react';
 
 const Login = () => {
-  const { signInWithGoogle, signInWithFacebook } = useAuth();
+  const { signInWithGoogle, signInWithFacebook, signInWithEmail } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleGoogleSignIn = async () => {
     try {
@@ -25,9 +28,24 @@ const Login = () => {
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+    try {
+      setError('');
+      await signInWithEmail(email, password);
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError('Login failed: ' + (err?.message || err));
+    }
+  };
+
   return (
-    <div className="min-h-screen w-full flex flex-col-reverse lg:flex-row bg-background text-foreground">
-      <div className="flex-1 flex items-center justify-center p-4 py-12 lg:py-16">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background text-foreground">
+      <div className="flex-1 flex items-center justify-center p-4 py-12 lg:py-16 order-2 lg:order-1">
         <div className="w-full max-w-md bg-input/10 border border-border p-8 pb-10 rounded-3xl shadow-2xl relative z-10 backdrop-blur-xl">
         <div className="text-center mb-8">
           <Link to="/" className="text-3xl font-bold tracking-tighter text-primary">Hideaway<span className="text-muted-foreground">.</span></Link>
@@ -53,12 +71,14 @@ const Login = () => {
            <div className="relative flex justify-center text-sm"><span className="bg-input/10 px-2 text-muted-foreground">or</span></div>
         </div>
         
-        <form className="flex flex-col gap-5">
+        <form className="flex flex-col gap-5" onSubmit={handleLogin}>
           <div>
-            <label className="block text-sm font-medium mb-2 text-foreground">Email or Phone via M-Pesa</label>
+            <label className="block text-sm font-medium mb-2 text-foreground">Email</label>
             <input 
-              type="text" 
-              placeholder="e.g. 0712345678 or name@example.com"
+              type="email" 
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="name@example.com"
               className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none transition-all placeholder:text-muted-foreground text-sm"
             />
           </div>
@@ -69,6 +89,8 @@ const Login = () => {
             </div>
             <input 
               type="password" 
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none transition-all placeholder:text-muted-foreground text-sm"
             />
@@ -86,7 +108,7 @@ const Login = () => {
       </div>
       
       {/* Creative Image Section */}
-      <div className="flex w-full min-h-[65vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 pt-48 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden">
+      <div className="flex w-full min-h-[65vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 pt-48 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden order-1 lg:order-2">
         <img 
           src="/pic2.png" 
           alt="Creative Background" 

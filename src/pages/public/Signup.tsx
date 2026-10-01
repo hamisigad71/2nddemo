@@ -4,9 +4,15 @@ import { useAuth } from '../../context/AuthContext';
 
 const Signup = () => {
   const [accountType, setAccountType] = useState('creator'); // 'subscriber' or 'creator'
-  const { signInWithGoogle, signInWithFacebook } = useAuth();
+  const { signInWithGoogle, signInWithFacebook, signUpWithEmail } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleGoogleSignIn = async () => {
     try {
@@ -26,18 +32,24 @@ const Signup = () => {
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (accountType === 'creator') {
-      navigate('/dashboard');
-    } else {
-      navigate('/user');
+    if (!firstName || !lastName || !email || !password || !phone) {
+      setError("Please fill out all fields.");
+      return;
+    }
+    try {
+      setError('');
+      await signUpWithEmail(email, password, `${firstName} ${lastName}`, phone, accountType);
+      navigate(accountType === 'creator' ? '/dashboard' : '/user');
+    } catch (err: any) {
+      setError('Registration failed: ' + (err?.message || err));
     }
   };
   
   return (
-    <div className="min-h-screen w-full flex flex-col-reverse lg:flex-row bg-background text-foreground">
-      <div className="flex-1 flex items-center justify-center p-4 py-12 lg:py-16">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background text-foreground">
+      <div className="flex-1 flex items-center justify-center p-4 py-12 lg:py-16 order-2 lg:order-1">
         <div className="w-full max-w-lg bg-input/10 border border-border p-8 pb-10 rounded-3xl shadow-2xl relative z-10 backdrop-blur-xl">
         <div className="text-center mb-8">
           <Link to="/" className="text-3xl font-bold tracking-tighter text-primary">Hideaway<span className="text-muted-foreground">.</span></Link>
@@ -84,11 +96,11 @@ const Signup = () => {
           <div className="grid grid-cols-2 gap-4">
              <div>
                 <label className="block text-sm font-medium mb-1.5 text-foreground">First Name</label>
-                <input type="text" className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="Kamau" />
+                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="Kamau" />
              </div>
              <div>
                 <label className="block text-sm font-medium mb-1.5 text-foreground">Last Name</label>
-                <input type="text" className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="Mwangi" />
+                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="Mwangi" />
              </div>
           </div>
           
@@ -96,19 +108,19 @@ const Signup = () => {
             <label className="block text-sm font-medium mb-1.5 text-foreground">Phone Number (M-Pesa)</label>
             <div className="flex">
               <span className="bg-muted border border-border border-r-0 rounded-l-xl px-4 py-3 text-muted-foreground text-sm flex items-center font-medium">+254</span>
-              <input type="tel" className="w-full bg-background border border-border rounded-r-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="712 345 678" />
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-background border border-border rounded-r-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="712 345 678" />
             </div>
             <p className="text-xs text-muted-foreground mt-1.5">Required for {accountType === 'creator' ? 'receiving payouts' : 'frictionless payments'}</p>
           </div>
           
           <div>
             <label className="block text-sm font-medium mb-1.5 text-foreground">Email Address</label>
-            <input type="email" className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="name@example.com" />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="name@example.com" />
           </div>
           
           <div>
             <label className="block text-sm font-medium mb-1.5 text-foreground">Password</label>
-            <input type="password" className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="Create a strong password" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none placeholder:text-muted-foreground text-sm" placeholder="Create a strong password" />
           </div>
           
           <button className="w-full bg-primary text-primary-foreground font-bold rounded-xl py-3.5 mt-4 hover:bg-emerald-600 transition-colors shadow-lg shadow-primary/20">
@@ -127,7 +139,7 @@ const Signup = () => {
       </div>
       
       {/* Creative Image Section */}
-      <div className="flex w-full min-h-[65vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 pt-48 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden">
+      <div className="flex w-full min-h-[65vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 pt-48 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden order-1 lg:order-2">
         <img 
           src="/pic1.png" 
           alt="Creative Background" 
