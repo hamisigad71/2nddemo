@@ -49,21 +49,24 @@ const MediaVault = () => {
          ))}
       </div>
 
-      {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {MEDIA_ITEMS.map((item) => (
-          <div key={item.id} className="group relative aspect-square bg-muted rounded-xl border border-border overflow-hidden cursor-pointer hover:border-primary transition-colors">
-            <img src={item.url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <div key={item.id} className="group relative aspect-[4/5] bg-muted rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-500 ring-1 ring-border/50 hover:ring-primary/50">
+            <img src={item.url} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
             
             {item.isLocked && (
-              <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm p-1.5 rounded-md text-secondary border border-border/50">
-                <Lock className="w-3.5 h-3.5" />
+              <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-md p-2 rounded-xl text-white shadow-lg ring-1 ring-white/20">
+                <Lock className="w-4 h-4" />
               </div>
             )}
             
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-              <span className="text-white text-xs font-bold truncate">{item.title}</span>
-              <span className="text-white/70 text-[10px]">{item.date}</span>
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            {/* Content overlay */}
+            <div className="absolute inset-0 flex flex-col justify-end p-4 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+              <span className="text-white text-sm font-bold truncate tracking-wide">{item.title}</span>
+              <span className="text-white/60 text-[10px] uppercase font-semibold tracking-wider mt-1">{item.date}</span>
             </div>
           </div>
         ))}

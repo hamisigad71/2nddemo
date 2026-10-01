@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import CreatorLayout from '../../components/CreatorLayout';
-import { DollarSign, ArrowUpRight, ArrowDownRight, Clock, Building, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Clock, Building, Loader2, CheckCircle, Wallet } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getCreatorTransactions } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
@@ -76,33 +76,97 @@ const EarningsWallet = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         {/* Main Balance Card */}
-        <div className="md:col-span-2 bg-gradient-to-br from-primary to-emerald-600 rounded-2xl p-8 text-primary-foreground shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-12 opacity-10 blur-xl">
-            <DollarSign className="w-64 h-64 mix-blend-overlay" />
+        <div className="md:col-span-2 rounded-[28px] p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden bg-zinc-950 ring-1 ring-white/10">
+
+          {/* Glowing orb accents — theme colors */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {/* Primary: crimson red — top right */}
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-25"
+              style={{ background: 'radial-gradient(circle, hsl(350 80% 50%) 0%, transparent 70%)' }} />
+            {/* Secondary: terracotta — bottom left */}
+            <div className="absolute -bottom-12 -left-12 w-44 h-44 rounded-full opacity-15"
+              style={{ background: 'radial-gradient(circle, hsl(15 65% 65%) 0%, transparent 70%)' }} />
+            {/* Subtle top sheen */}
+            <div className="absolute top-0 left-0 w-full h-full"
+              style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 55%)' }} />
           </div>
-          <div className="relative z-10 flex flex-col h-full justify-between gap-6">
-            <div>
-              <div className="text-emerald-100 font-medium mb-1">Available Balance</div>
-              <h2 className="text-5xl font-black tracking-tight">
-                KES {availableBalance.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
-              </h2>
+
+          {/* Subtle dot-grid texture */}
+          <div className="absolute inset-0 opacity-[0.05] pointer-events-none"
+            style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+          <div className="relative z-10 flex flex-col h-full justify-between gap-8">
+
+            {/* Header row */}
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-white/8 border border-white/12 rounded-full px-3 py-1 mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[11px] font-semibold tracking-widest uppercase text-white/60">Live Balance</span>
+                </div>
+                <div className="text-zinc-500 text-xs font-medium tracking-widest uppercase mb-1">Available to Withdraw</div>
+                <h2 className="text-5xl sm:text-6xl font-bold tracking-tight leading-none">
+                  <span className="text-white/40 text-2xl sm:text-3xl font-semibold align-top mt-2 mr-1 inline-block">KES</span>
+                  {availableBalance.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
+                </h2>
+              </div>
+              {/* Wallet icon — primary theme color */}
+              <div className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(350 80% 40% / 0.5), hsl(15 65% 55% / 0.35))',
+                  boxShadow: '0 0 22px hsl(350 80% 50% / 0.3)',
+                  border: '1px solid rgba(255,255,255,0.12)'
+                }}>
+                <Wallet className="w-6 h-6 text-white" />
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button 
+
+            {/* Stats chips */}
+            <div className="flex gap-3 flex-wrap">
+              <div className="flex items-center gap-2 bg-white/6 border border-white/10 rounded-xl px-4 py-2.5 backdrop-blur-sm">
+                <ArrowUpRight className="w-4 h-4" style={{ color: 'hsl(350 80% 60%)' }} />
+                <div>
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Earned</div>
+                  <div className="text-sm font-bold text-white">KES {availableBalance.toLocaleString()}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/6 border border-white/10 rounded-xl px-4 py-2.5 backdrop-blur-sm">
+                <Clock className="w-4 h-4 text-amber-400" />
+                <div>
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Pending</div>
+                  <div className="text-sm font-bold text-white">KES {pendingBalance.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
                 onClick={handleWithdraw}
                 disabled={withdrawStatus === 'pending' || availableBalance <= 0 || withdrawStatus === 'success'}
-                className="bg-white text-primary px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-50 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed text-white"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(350 80% 50%), hsl(15 65% 55%))',
+                  boxShadow: '0 4px 20px hsl(350 80% 50% / 0.35)'
+                }}
               >
-                {withdrawStatus === 'pending' && <Loader2 className="w-5 h-5 animate-spin" />}
-                {withdrawStatus === 'success' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
-                {withdrawStatus === 'success' ? 'Withdrawal Requested' : 'Withdraw to M-Pesa'}
+                {withdrawStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                {withdrawStatus === 'success' && <CheckCircle className="w-4 h-4 shrink-0" />}
+                {withdrawStatus === 'idle' && <ArrowUpRight className="w-4 h-4 shrink-0" />}
+                <span>{withdrawStatus === 'success' ? 'Requested!' : 'Withdraw to M-Pesa'}</span>
               </button>
-              <button className="bg-black/20 text-white border border-white/20 px-6 py-3 rounded-xl font-bold hover:bg-black/30 transition-colors">
-                Manage Bank
+
+              <button className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white/80 transition-all active:scale-95"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}>
+                <Building className="w-4 h-4 shrink-0" />
+                <span>Manage Bank</span>
               </button>
             </div>
           </div>
         </div>
+
 
         {/* Pending / Method */}
         <div className="flex flex-col gap-6">
@@ -128,51 +192,87 @@ const EarningsWallet = () => {
         </div>
       </div>
 
-      <div className="bg-background border border-border rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-6 border-b border-border flex justify-between items-center">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            Recent Transactions
-            <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">Net (After 15% Fee)</span>
-          </h3>
-          <button className="text-primary text-sm font-bold hover:underline">Download CSV</button>
+      {/* Recent Transactions */}
+      <div className="rounded-2xl overflow-hidden ring-1 ring-border shadow-sm" style={{ background: 'var(--bg)' }}>
+
+        {/* Section header */}
+        <div className="px-6 py-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'hsl(350 80% 50% / 0.12)', border: '1px solid hsl(350 80% 50% / 0.2)' }}>
+              <ArrowUpRight className="w-4 h-4" style={{ color: 'hsl(350 80% 55%)' }} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold leading-none mb-1">Recent Transactions</h3>
+              <p className="text-xs text-muted-foreground">All amounts shown after platform fee deduction</p>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+              style={{ background: 'hsl(350 80% 50% / 0.1)', color: 'hsl(350 80% 55%)', border: '1px solid hsl(350 80% 50% / 0.2)' }}>
+              Net · 15% Fee
+            </span>
+          </div>
+          <button className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl transition-all active:scale-95 self-start sm:self-auto"
+            style={{ border: '1px solid var(--border)', color: 'hsl(350 80% 55%)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'hsl(350 80% 50% / 0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+            <ArrowDownRight className="w-3.5 h-3.5" />
+            Download CSV
+          </button>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
-            <Loader2 className="w-5 h-5 animate-spin" /> Loading transactions...
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'hsl(350 80% 55%)' }} />
+            <p className="text-sm">Loading transactions…</p>
           </div>
         ) : transactions.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="font-bold mb-1">No transactions yet</p>
-            <p className="text-sm">Earnings from tips, subscriptions and PPV will appear here.</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'hsl(350 80% 50% / 0.08)', border: '1px solid hsl(350 80% 50% / 0.15)' }}>
+              <Wallet className="w-7 h-7" style={{ color: 'hsl(350 80% 55%)' }} />
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-foreground mb-1">No transactions yet</p>
+              <p className="text-sm text-muted-foreground max-w-xs">Earnings from tips, subscriptions and PPV unlocks will appear here once you start earning.</p>
+            </div>
           </div>
         ) : (
           <div className="divide-y divide-border">
             {transactions.map((t) => {
               const isPayout = t.type === 'payout' || t.type === 'withdrawal';
               return (
-                <div key={t.id} className="p-5 flex items-center justify-between hover:bg-muted/10 transition-colors group">
+                <div key={t.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/20 transition-colors group">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isPayout ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary'}`}>
-                       {t.status === 'pending_withdrawal' ? <Loader2 className="w-5 h-5 animate-spin" /> 
-                       : (isPayout ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />)}
+                    {/* Icon badge */}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0`}
+                      style={isPayout
+                        ? { background: 'hsl(0 80% 50% / 0.1)', border: '1px solid hsl(0 80% 50% / 0.2)' }
+                        : { background: 'hsl(350 80% 50% / 0.1)', border: '1px solid hsl(350 80% 50% / 0.2)' }}>
+                      {t.status === 'pending_withdrawal'
+                        ? <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                        : isPayout
+                          ? <ArrowDownRight className="w-4 h-4" style={{ color: 'hsl(0 80% 60%)' }} />
+                          : <ArrowUpRight className="w-4 h-4" style={{ color: 'hsl(350 80% 60%)' }} />}
                     </div>
                     <div>
-                      <div className="font-bold text-sm">
-                        {formatLabel(t.type)} {t.status === 'pending_withdrawal' && <span className="text-amber-500 text-xs ml-1">(Processing)</span>}
+                      <div className="font-semibold text-sm flex items-center gap-2">
+                        {formatLabel(t.type)}
+                        {t.status === 'pending_withdrawal' && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Processing</span>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mt-0.5">
                         {new Date(t.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`font-bold ${isPayout ? 'text-foreground' : 'text-primary'}`}>
-                      {isPayout ? '-' : '+'} KES {(t.net_amount || 0).toLocaleString()}
+                    <div className="font-bold text-sm" style={{ color: isPayout ? 'var(--fg)' : 'hsl(350 80% 55%)' }}>
+                      {isPayout ? '−' : '+'} KES {(t.net_amount || 0).toLocaleString()}
                     </div>
                     {!isPayout && (
-                      <div className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                        Gross: {t.gross_amount} • Fee: {t.platform_fee?.toFixed(0)}
+                      <div className="text-[10px] text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Gross: {t.gross_amount} · Fee: {t.platform_fee?.toFixed(0)}
                       </div>
                     )}
                   </div>
@@ -187,3 +287,4 @@ const EarningsWallet = () => {
 };
 
 export default EarningsWallet;
+

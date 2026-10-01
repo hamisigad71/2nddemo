@@ -36,8 +36,9 @@ const Signup = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background text-foreground py-12">
-      <div className="w-full max-w-lg bg-input/10 border border-border p-8 rounded-2xl shadow-xl">
+    <div className="min-h-screen w-full flex flex-col-reverse lg:flex-row bg-background text-foreground">
+      <div className="flex-1 flex items-center justify-center p-4 py-12 lg:py-16">
+        <div className="w-full max-w-lg bg-input/10 border border-border p-8 pb-10 rounded-3xl shadow-2xl relative z-10 backdrop-blur-xl">
         <div className="text-center mb-8">
           <Link to="/" className="text-3xl font-bold tracking-tighter text-primary">Hideaway<span className="text-muted-foreground">.</span></Link>
           <h2 className="text-2xl font-bold mt-6 mb-2 text-foreground">Create an Account</h2>
@@ -63,14 +64,14 @@ const Signup = () => {
 
         {error && <div className="text-red-500 text-sm font-bold bg-red-500/10 p-3 rounded-lg text-center mb-4">{error}</div>}
 
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
            <button onClick={handleGoogleSignIn} className="w-full flex items-center justify-center gap-2 border border-border bg-background py-3 rounded-xl hover:bg-muted font-bold shadow-sm transition-colors text-sm">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.993 10.993 0 0012 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-              Continue with Google
+              <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.993 10.993 0 0012 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              <span>Google</span>
            </button>
            <button onClick={handleFacebookSignIn} className="w-full flex items-center justify-center gap-2 border border-[#1877F2]/20 bg-[#1877F2]/10 text-[#1877F2] py-3 rounded-xl hover:bg-[#1877F2]/20 font-bold shadow-sm transition-colors text-sm">
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              Continue with Facebook
+              <img src="https://i.pinimg.com/736x/0f/16/7c/0f167cb2b6ffa10d8672c17ec8aea8f5.jpg" alt="Facebook" className="w-5 h-5 flex-shrink-0 rounded-full object-cover" />
+              <span>Facebook</span>
            </button>
         </div>
 
@@ -121,6 +122,22 @@ const Signup = () => {
         
         <div className="mt-8 text-center text-sm text-muted-foreground">
           Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Log in</Link>
+        </div>
+      </div>
+      </div>
+      
+      {/* Creative Image Section */}
+      <div className="flex w-full min-h-[50vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden">
+        <img 
+          src="https://i.pinimg.com/736x/2f/62/2b/2f622baee024d57eb55011d12d89caa2.jpg" 
+          alt="Creative Background" 
+          className="absolute inset-0 w-full h-full object-cover opacity-60" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+        <div className="relative z-10 max-w-md">
+          <div className="w-12 h-1 bg-primary mb-6 rounded-full"></div>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight mb-4">A new era for African creativity.</h2>
+          <p className="text-lg text-muted-foreground">Join Hideaway and connect with premium creators defining the future of storytelling.</p>
         </div>
       </div>
     </div>

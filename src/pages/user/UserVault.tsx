@@ -13,16 +13,20 @@ const UserVault = () => {
           {[1, 2, 3, 4].map((i) => {
             const isVideo = i % 2 === 0;
             return (
-              <div key={i} className="group relative aspect-[3/4] bg-muted rounded-xl border border-border overflow-hidden cursor-pointer shadow-sm">
-                 <img src={`https://i.pinimg.com/736x/ec/69/8d/ec698da362858bc36a6ab5a015cf9e34.jpg`} alt="purchased media" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div key={i} className="group relative aspect-[4/5] bg-muted rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-500 ring-1 ring-border/50 hover:ring-primary/50">
+                 <img src={`https://i.pinimg.com/736x/ec/69/8d/ec698da362858bc36a6ab5a015cf9e34.jpg`} alt="purchased media" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
                  
-                 <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm p-1.5 rounded-md text-foreground border border-border/50">
+                 <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-md p-2 rounded-xl text-white shadow-lg ring-1 ring-white/20">
                     {isVideo ? <PlayCircle className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
                  </div>
                  
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 sm:p-4">
-                    <span className="text-white text-sm font-bold truncate">Exclusive Set part {i}</span>
-                    <span className="text-white/70 text-xs mt-1">Creator Name • Unlocked Oct 24</span>
+                 {/* Gradient overlay */}
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                 
+                 {/* Content overlay */}
+                 <div className="absolute inset-0 flex flex-col justify-end p-4 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                    <span className="text-white text-sm font-bold truncate tracking-wide">Exclusive Set part {i}</span>
+                    <span className="text-white/60 text-[10px] uppercase font-semibold tracking-wider mt-1">Creator Name • Unlocked Oct 24</span>
                  </div>
               </div>
             )
