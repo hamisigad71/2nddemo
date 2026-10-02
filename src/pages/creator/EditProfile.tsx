@@ -3,7 +3,8 @@ import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCl
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { updateUserProfile } from '../../lib/db';
-import { RecaptchaVerifier, linkWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { RecaptchaVerifier, linkWithPhoneNumber } from 'firebase/auth';
+import type { ConfirmationResult } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
 const EditProfile = () => {
