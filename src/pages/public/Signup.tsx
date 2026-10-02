@@ -151,9 +151,12 @@ const Signup = () => {
       {/* Creative Image Section */}
       <div className="flex w-full min-h-[65vh] lg:min-h-0 lg:w-[45%] xl:w-[50%] relative items-end p-8 pt-48 lg:p-16 border-t lg:border-t-0 lg:border-l border-border bg-black overflow-hidden order-1 lg:order-2">
         <img 
-          src="/pic1.png" 
+          src="/pic1.webp" 
           alt="Creative Background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-80 object-top" 
+          className="absolute inset-0 w-full h-full object-cover opacity-80 object-top"
+          loading="eager"
+          fetchPriority="high"
+          decoding="sync"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
         <div className="relative z-10 max-w-md">
