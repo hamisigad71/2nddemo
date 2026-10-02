@@ -16,28 +16,32 @@ const Analytics = () => {
         </select>
       </div>
 
-      {/* Top Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8 w-full">
          {[
-           { label: 'Total Gross Revenue', val: 'KES 245K', icon: DollarSign, trend: '+12%' },
-           { label: 'Active Subscribers', val: '1,430', icon: Users, trend: '+5%' },
-           { label: 'Churn Rate', val: '4.2%', icon: Activity, trend: '-1.1%' },
-           { label: 'Profile Views', val: '45K', icon: TrendingUp, trend: '+34%' },
+           { label: 'Total Gross Revenue', val: 'KES 245K', icon: DollarSign, trend: '+12%', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+           { label: 'Active Subscribers', val: '1,430', icon: Users, trend: '+5%', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+           { label: 'Churn Rate', val: '4.2%', icon: Activity, trend: '-1.1%', color: 'text-red-500', bg: 'bg-red-500/10' },
+           { label: 'Profile Views', val: '45K', icon: TrendingUp, trend: '+34%', color: 'text-primary', bg: 'bg-primary/10' },
          ].map((stat, i) => (
-           <div key={i} className="bg-background border border-border rounded-xl p-5 shadow-sm">
-             <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
-                  <stat.icon className="w-5 h-5" />
+           <div key={i} className="bg-background border border-border p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                <div className={`p-2 rounded-xl ${stat.bg}`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
-                <div className={`text-xs font-bold px-2 py-1 rounded-full ${stat.trend.startsWith('+') ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
-                  {stat.trend}
+              </div>
+              <div className="mt-2">
+                <h3 className="text-3xl font-bold text-foreground mb-1 tracking-tight">{stat.val}</h3>
+                <div className="flex items-center gap-1.5 text-sm mt-3">
+                  <div className={`flex items-center gap-1 font-semibold ${stat.trend.startsWith('+') ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {stat.trend}
+                  </div>
+                  <span className="text-muted-foreground text-xs ml-1 font-medium">from last month</span>
                 </div>
-             </div>
-             <div className="font-bold text-2xl">{stat.val}</div>
-             <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
-           </div>
+              </div>
+            </div>
          ))}
-      </div>
+       </div>
 
       <div className="grid md:grid-cols-2 gap-8 mb-8">
          {/* Fake Chart 1 */}

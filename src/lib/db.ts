@@ -180,3 +180,17 @@ export const getCreatorDashboardStats = async (creatorId: string) => {
     recentSubs: recentSubs || []
   };
 };
+
+export const checkEmailExists = async (email: string) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('email')
+    .ilike('email', email)
+    .maybeSingle();
+    
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error checking email:', error);
+  }
+  
+  return !!data;
+};

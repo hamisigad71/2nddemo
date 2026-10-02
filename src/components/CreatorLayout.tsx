@@ -55,15 +55,16 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-background md:bg-input/10 border-r border-border p-6 flex flex-col h-screen transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex justify-between items-center mb-8 md:mb-10">
-           <Link to="/" className="text-2xl font-bold tracking-tighter text-primary hidden md:block">Hideaway<span className="text-muted-foreground">.</span></Link>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-background/95 md:bg-background/80 backdrop-blur-3xl border-r border-border p-5 flex flex-col h-screen transform transition-all duration-300 md:relative md:translate-x-0 shadow-2xl md:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex justify-between items-center mb-6 pl-2">
+           <Link to="/" className="text-2xl font-bold tracking-tighter text-primary hidden md:block">Hideaway<span className="text-foreground">.</span></Link>
            <span className="text-lg font-bold md:hidden">Menu</span>
-           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 -mr-2 text-muted-foreground hover:bg-muted rounded-full">
-             <X className="w-6 h-6" />
+           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 text-muted-foreground hover:bg-white/10 rounded-full transition-colors">
+             <X className="w-5 h-5" />
            </button>
         </div>
-        <nav className="flex-1 space-y-1.5 overflow-y-auto scrollbar-hide -mx-2 px-2 pb-6">
+        
+        <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide px-1 pb-6 -mx-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -72,43 +73,51 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                 key={item.name}
                 to={item.path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium ${
+                className={`flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${
                   isActive
-                    ? 'bg-primary/10 text-primary font-bold'
-                    : 'text-muted-foreground hover:bg-input hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-bold shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
                 }`}
               >
-                <Icon className="w-5 h-5" /> {item.name}
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full shadow-[0_0_10px_var(--primary)]" />
+                )}
+                <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'} shrink-0`} />
+                <span className="text-[15px]">{item.name}</span>
               </Link>
             );
           })}
-          <div className="pt-4 mt-2 mb-8">
-            <Link to="/create-post" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground rounded-xl transition-colors font-bold shadow-lg shadow-primary/20 hover:scale-[1.02]">
-              <Plus className="w-5 h-5" /> Create Post
+          
+          <div className="pt-2 mt-4 pb-4 px-2">
+            <Link to="/create-post" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 bg-primary text-primary-foreground rounded-xl transition-all duration-200 font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] hover:shadow-primary/40 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out rounded-xl" />
+              <Plus className="w-5 h-5 relative z-10" /> <span className="relative z-10">Create Post</span>
             </Link>
           </div>
         </nav>
         
-        <div className="pt-6 border-t border-border mt-auto shrink-0 mb-safe">
-           <div className="flex items-center justify-between">
-             <div className="flex items-center gap-3 w-full">
-               <img src={user?.photoURL || "https://i.pravatar.cc/150?img=12"} alt="avatar" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-border shrink-0" />
-               <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">{user?.displayName || "Jane Doe"}</div>
-                  <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="text-xs text-primary hover:underline truncate block">Edit Profile</Link>
+        <div className="pt-4 mt-auto shrink-0 mb-safe gap-2 flex flex-col border-t border-border/50 relative z-10 pt-5">
+           <div className="p-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/50 rounded-2xl flex items-center justify-between transition-colors">
+             <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 w-full group overflow-hidden pl-1">
+               <img src={user?.photoURL || "https://i.pravatar.cc/150?img=12"} alt="avatar" referrerPolicy="no-referrer" className="w-[38px] h-[38px] rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
+               <div className="flex-1 min-w-0 pr-2">
+                  <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{user?.displayName || "Jane Doe"}</div>
+                  <div className="text-[12px] text-muted-foreground truncate">View Profile</div>
                </div>
-               <button onClick={handleLogout} className="p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">
-                 <LogOut className="w-5 h-5" />
-               </button>
-             </div>
+             </Link>
+             <button onClick={handleLogout} className="p-2.5 text-muted-foreground hover:bg-red-500/20 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">
+               <LogOut className="w-[18px] h-[18px]" />
+             </button>
            </div>
            
            <button 
               onClick={toggleTheme} 
-              className="mt-4 flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground w-full"
+              className="flex items-center justify-between px-3.5 py-3 rounded-xl transition-colors font-medium border border-transparent text-muted-foreground hover:bg-foreground/5 hover:text-foreground w-full"
             >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              <span className="text-sm">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+              <div className="flex items-center gap-3">
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                <span className="text-[14px]">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+              </div>
            </button>
         </div>
       </aside>

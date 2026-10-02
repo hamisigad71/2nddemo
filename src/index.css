@@ -35,19 +35,19 @@
   }
 
   .light {
-    --bg: hsl(0 0% 98%);
-    --fg: hsl(0 0% 9%);
-    --primary: hsl(350 80% 50%);
+    --bg: hsl(0 0% 100%);
+    --fg: hsl(240 10% 4%);
+    --primary: hsl(346.8 77.2% 49.8%);
     --primary-fg: hsl(0 0% 100%);
-    --secondary: hsl(15 65% 55%);
-    --secondary-fg: hsl(0 0% 98%);
-    --muted: hsl(0 0% 93%);
-    --muted-fg: hsl(0 0% 45%);
-    --accent: hsl(15 65% 90%);
-    --accent-fg: hsl(0 0% 9%);
-    --border: hsl(0 0% 90%);
-    --input: hsl(0 0% 90%);
-    --ring: hsl(350 80% 50%);
+    --secondary: hsl(240 5% 96%);
+    --secondary-fg: hsl(240 6% 10%);
+    --muted: hsl(240 5% 96%);
+    --muted-fg: hsl(240 4% 46%);
+    --accent: hsl(240 5% 96%);
+    --accent-fg: hsl(240 6% 10%);
+    --border: hsl(240 6% 90%);
+    --input: hsl(240 6% 90%);
+    --ring: hsl(346.8 77.2% 49.8%);
   }
 
   body {
@@ -83,3 +83,28 @@
   animation: slide-in-right 0.3s ease-out forwards;
 }
 
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-sleek::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .scrollbar-sleek::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-sleek::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+  }
+  .scrollbar-sleek:hover::-webkit-scrollbar-thumb {
+    background: var(--muted-fg);
+  }
+}

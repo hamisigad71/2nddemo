@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState } from 'react';
+import { checkEmailExists } from '../../lib/db';
 
 const ForgotPassword = () => {
   const { resetPassword } = useAuth();
@@ -20,6 +21,14 @@ const ForgotPassword = () => {
       setError('');
       setSuccess(false);
       setLoading(true);
+      
+      const emailExists = await checkEmailExists(email);
+      if (!emailExists) {
+        setError('Email not registered');
+        setLoading(false);
+        return;
+      }
+
       await resetPassword(email);
       setSuccess(true);
     } catch (err: any) {
