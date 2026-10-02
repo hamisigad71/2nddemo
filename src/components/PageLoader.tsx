@@ -11,10 +11,10 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
   useEffect(() => {
     const steps = [
-      { target: 30, delay: 80 },
-      { target: 65, delay: 40 },
-      { target: 85, delay: 60 },
-      { target: 100, delay: 30 },
+      { target: 30, delay: 30 },
+      { target: 65, delay: 20 },
+      { target: 85, delay: 30 },
+      { target: 100, delay: 15 },
     ];
 
     let current = 0;
