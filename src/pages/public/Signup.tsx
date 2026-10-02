@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Signup = () => {
   const [accountType, setAccountType] = useState('creator'); // 'subscriber' or 'creator'
-  const { signInWithGoogle, signInWithFacebook, signUpWithEmail } = useAuth();
+  const { user, signInWithGoogle, signInWithFacebook, signUpWithEmail } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   
@@ -13,6 +13,16 @@ const Signup = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      if (accountType === 'creator') {
+        navigate('/dashboard');
+      } else {
+        navigate('/user');
+      }
+    }
+  }, [user, navigate, accountType]);
 
   const handleGoogleSignIn = async () => {
     try {

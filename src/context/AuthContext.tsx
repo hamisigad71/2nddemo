@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signOut, 
   onAuthStateChanged,
   createUserWithEmailAndPassword,
@@ -30,12 +32,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Check if user is returning from a popup-blocked redirect flow
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          const storedRole = localStorage.getItem('pendingAuthRole');
+          if (storedRole) {
+            await createUserProfile(result.user.uid, {
+              name: result.user.displayName,
+              email: result.user.email,
+              avatar: result.user.photoURL,
+              role: storedRole
+            });
+            localStorage.removeItem('pendingAuthRole');
+          }
+          // Redirect handling can be done by components listening to `user` state, or we just rely on them being logged in.
+        }
+      } catch (err) {
+        console.error("Redirect auth failed:", err);
+      }
+    };
+    
+    handleRedirectResult();
+
+    // 2. Listen to normal auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        // We removed the empty createUserProfile call here!
-        // It was causing a race condition where it fired and created the user 
-        // as a 'subscriber' before signInWithPopup had a chance to pass the role.
       } else {
         setUser(null);
       }
@@ -57,7 +81,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          });
       }
       return result.user;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === 'auth/popup-blocked') {
+        console.warn('Popup blocked, falling back to redirect...');
+        if (role) localStorage.setItem('pendingAuthRole', role);
+        await signInWithRedirect(auth, googleProvider);
+        return auth.currentUser as User;
+      }
       console.error("Error signing in with Google", error);
       throw error;
     }
@@ -75,7 +105,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          });
       }
       return result.user;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === 'auth/popup-blocked') {
+        console.warn('Popup blocked, falling back to redirect...');
+        if (role) localStorage.setItem('pendingAuthRole', role);
+        await signInWithRedirect(auth, facebookProvider);
+        return auth.currentUser as User;
+      }
       console.error("Error signing in with Facebook", error);
       throw error;
     }

@@ -1,14 +1,20 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Login = () => {
-  const { signInWithGoogle, signInWithFacebook, signInWithEmail } = useAuth();
+  const { user, signInWithGoogle, signInWithFacebook, signInWithEmail } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard'); // route depending on role, fallback to dashboard
+    }
+  }, [user, navigate]);
 
   const handleGoogleSignIn = async () => {
     try {
