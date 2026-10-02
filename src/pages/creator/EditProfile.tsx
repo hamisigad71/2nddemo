@@ -1,7 +1,10 @@
 import CreatorLayout from '../../components/CreatorLayout';
 import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { updateUserProfile } from '../../lib/db';
+import { RecaptchaVerifier, linkWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 const EditProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -22,6 +25,14 @@ const EditProfile = () => {
     phoneNumber: '',
     kraPin: '',
   });
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [userOtpInput, setUserOtpInput] = useState("");
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [otpMessage, setOtpMessage] = useState({ text: "", type: "" });
+  const [isLoadingOtp, setIsLoadingOtp] = useState(false);
 
   const tabs = [
     { id: 'profile', label: 'Public Profile', icon: User, activeColor: 'bg-primary text-primary-foreground' },
@@ -45,6 +56,88 @@ const EditProfile = () => {
   const handlePayoutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPayoutData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Pre-warm the reCAPTCHA on load so it sends the SMS instantly instead of delaying when clicked.
+  useEffect(() => {
+    if (!(window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible'
+        });
+        (window as any).recaptchaVerifier.render(); // Pre-render to load scripts in background
+      } catch (err) {
+        console.error("Recaptcha init error", err);
+      }
+    }
+  }, []);
+
+  const handleSendOtp = async () => {
+    setOtpMessage({ text: "", type: "" });
+    if (!payoutData.phoneNumber || payoutData.phoneNumber.length < 9) {
+      setOtpMessage({ text: "Please enter a valid phone number (at least 9 digits).", type: "error" });
+      return;
+    }
+    
+    let formattedPhone = payoutData.phoneNumber.trim();
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '+254' + formattedPhone.substring(1);
+    } else if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+254' + formattedPhone;
+    }
+
+    if (!user) {
+      setOtpMessage({ text: "You must be logged in to verify a phone number.", type: "error" });
+      return;
+    }
+
+    setIsLoadingOtp(true);
+    try {
+      if (!(window as any).recaptchaVerifier) {
+        setOtpMessage({ text: "Recaptcha not initialized. Please refresh the page.", type: "error" });
+        setIsLoadingOtp(false);
+        return;
+      }
+      const appVerifier = (window as any).recaptchaVerifier;
+      const confirmation = await linkWithPhoneNumber(user, formattedPhone, appVerifier);
+      setConfirmationResult(confirmation);
+      setOtpSent(true);
+      setOtpMessage({ text: "OTP sent via SMS! Please check your phone.", type: "success" });
+    } catch (error: any) {
+      console.error("Error sending OTP:", error);
+      setOtpMessage({ text: "Failed to send OTP. Make sure Phone authentication is enabled in Firebase Console.", type: "error" });
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = null;
+      }
+    } finally {
+      setIsLoadingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setOtpMessage({ text: "", type: "" });
+    if (!confirmationResult || !userOtpInput) {
+      setOtpMessage({ text: "Please enter the OTP.", type: "error" });
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      await confirmationResult.confirm(userOtpInput);
+      if (user?.uid) {
+        await updateUserProfile(user.uid, {
+          mpesa_phone: payoutData.phoneNumber,
+          kra_pin: payoutData.kraPin
+        });
+        setIsPhoneVerified(true);
+        setOtpMessage({ text: "Phone number verified and saved successfully!", type: "success" });
+      }
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      setOtpMessage({ text: "Invalid OTP code. Please try again.", type: "error" });
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleKycUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'id' | 'selfie') => {
@@ -274,18 +367,35 @@ const EditProfile = () => {
                 <div>
                   <label className="block text-sm font-bold mb-2">Safaricom Phone Number</label>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <input type="tel" name="phoneNumber" value={payoutData.phoneNumber} onChange={handlePayoutChange} placeholder="254 7XX XXX XXX" className="flex-1 bg-muted/50 border border-border px-4 py-3 rounded-xl focus:outline-none focus:border-primary" />
-                    <button className="bg-foreground text-background px-6 py-3 rounded-xl font-bold whitespace-nowrap hover:bg-foreground/90 transition-colors">
-                      Send OTP
-                    </button>
+                    <input type="tel" name="phoneNumber" value={payoutData.phoneNumber} onChange={handlePayoutChange} disabled={isPhoneVerified} placeholder="254 7XX XXX XXX" className="flex-1 bg-muted/50 border border-border px-4 py-3 rounded-xl focus:outline-none focus:border-primary disabled:opacity-50" />
+                    {!isPhoneVerified && (
+                      <button type="button" onClick={handleSendOtp} disabled={isLoadingOtp} className="bg-foreground text-background px-6 py-3 rounded-xl font-bold whitespace-nowrap hover:bg-foreground/90 transition-colors disabled:opacity-50">
+                        {isLoadingOtp ? 'Sending...' : (otpSent ? 'Resend OTP' : 'Send OTP')}
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">We will send a code to confirm ownership. This number receives your withdrawals.</p>
+                  {otpMessage.text && (
+                    <p className={`text-sm mt-2 font-bold ${otpMessage.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>{otpMessage.text}</p>
+                  )}
                 </div>
 
-                <div className="pt-4 hidden"> {/* Show when OTP is sent */}
-                  <label className="block text-sm font-bold mb-2">Verification Code</label>
-                  <input type="text" placeholder="Enter 6-digit OTP" className="w-full sm:w-1/2 bg-muted/50 border border-border px-4 py-3 rounded-xl focus:outline-none focus:border-primary text-center tracking-widest text-lg" />
-                </div>
+                {otpSent && !isPhoneVerified && (
+                  <div className="pt-4">
+                    <label className="block text-sm font-bold mb-2">Verification Code</label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input type="text" value={userOtpInput} onChange={(e) => setUserOtpInput(e.target.value)} placeholder="Enter 6-digit OTP" className="w-full sm:w-1/2 bg-muted/50 border border-border px-4 py-3 rounded-xl focus:outline-none focus:border-primary text-center tracking-widest text-lg" />
+                      <button type="button" onClick={handleVerifyOtp} disabled={isVerifying} className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold whitespace-nowrap hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        {isVerifying ? 'Verifying...' : 'Verify & Save'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {isPhoneVerified && (
+                   <div className="pt-2 text-sm text-green-600 font-bold flex items-center gap-2">
+                     <ShieldCheck className="w-5 h-5" /> Phone number verified
+                   </div>
+                )}
               </div>
             </div>
 
@@ -356,6 +466,7 @@ const EditProfile = () => {
         )}
 
       </div>
+      <div id="recaptcha-container"></div>
     </CreatorLayout>
   );
 };

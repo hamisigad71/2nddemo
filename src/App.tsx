@@ -7,6 +7,7 @@ import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
 import Discover from "./pages/public/Discover";
 import Login from "./pages/public/Login";
+import ForgotPassword from "./pages/public/ForgotPassword";
 import Signup from "./pages/public/Signup";
 import CreatorProfile from "./pages/public/CreatorProfile";
 import Checkout from "./pages/user/Checkout";
@@ -64,6 +65,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Landing />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/creator/:id" element={<CreatorProfile />} />
             

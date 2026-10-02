@@ -8,7 +8,8 @@ import {
   signOut, 
   onAuthStateChanged,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, googleProvider, facebookProvider } from '../lib/firebase';
 import { createUserProfile } from '../lib/db';
@@ -20,6 +21,7 @@ interface AuthContextType {
   signInWithFacebook: (role?: string) => Promise<User>;
   signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string) => Promise<User>;
   signInWithEmail: (email: string, password: string) => Promise<User>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -143,6 +145,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -152,7 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, resetPassword, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

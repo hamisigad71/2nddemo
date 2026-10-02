@@ -24,6 +24,18 @@ export const getUserProfile = async (uid: string) => {
   return data;
 };
 
+export const updateUserProfile = async (uid: string, data: any) => {
+  const { error } = await supabase
+    .from('users')
+    .update(data)
+    .eq('uid', uid);
+  
+  if (error) {
+    console.error('Error updating user profile:', error.message);
+    throw error;
+  }
+};
+
 // ========================
 // 2. STORAGE (Photo Uploads)
 // ========================
