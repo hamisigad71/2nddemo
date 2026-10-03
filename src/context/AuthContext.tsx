@@ -1,26 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { User } from 'firebase/auth';
-import { 
-  signInWithPopup, 
-  signInWithRedirect,
-  getRedirectResult,
-  signOut, 
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail
-} from 'firebase/auth';
-import { auth, googleProvider, facebookProvider } from '../lib/firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { createUserProfile } from '../lib/db';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: (role?: string) => Promise<User>;
-  signInWithFacebook: (role?: string) => Promise<User>;
-  signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string) => Promise<User>;
-  signInWithEmail: (email: string, password: string) => Promise<User>;
+  signInWithGoogle: (role?: string) => Promise<void>;
+  signInWithFacebook: (role?: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string) => Promise<User | null>;
+  signInWithEmail: (email: string, password: string) => Promise<User | null>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -34,62 +24,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Check if user is returning from a popup-blocked redirect flow
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-          const storedRole = localStorage.getItem('pendingAuthRole');
-          if (storedRole) {
-            await createUserProfile(result.user.uid, {
-              name: result.user.displayName,
-              email: result.user.email,
-              avatar: result.user.photoURL,
-              role: storedRole
-            });
-            localStorage.removeItem('pendingAuthRole');
-          }
-          // Redirect handling can be done by components listening to `user` state, or we just rely on them being logged in.
-        }
-      } catch (err) {
-        console.error("Redirect auth failed:", err);
-      }
-    };
-    
-    handleRedirectResult();
-
-    // 2. Listen to normal auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        setUser(null);
-      }
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return unsubscribe;
+    // Listen to normal auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+      
+      // Handle the redirect post-login hook
+      if (event === 'SIGNED_IN' && session?.user) {
+        const storedRole = localStorage.getItem('pendingAuthRole');
+        if (storedRole) {
+          try {
+            await createUserProfile(session.user.id, {
+              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
+              email: session.user.email,
+              avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
+              role: storedRole
+            });
+          } catch (err) {
+            console.error('Error creating profile after OAuth sign-in:', err);
+          }
+          localStorage.removeItem('pendingAuthRole');
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async (role?: string) => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      if (role) {
-         await createUserProfile(result.user.uid, {
-           name: result.user.displayName,
-           email: result.user.email,
-           avatar: result.user.photoURL,
-           role: role
-         });
-      }
-      return result.user;
-    } catch (error: any) {
-      if (error.code === 'auth/popup-blocked') {
-        console.warn('Popup blocked, falling back to redirect...');
-        if (role) localStorage.setItem('pendingAuthRole', role);
-        await signInWithRedirect(auth, googleProvider);
-        return auth.currentUser as User;
-      }
+      if (role) localStorage.setItem('pendingAuthRole', role);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
       console.error("Error signing in with Google", error);
       throw error;
     }
@@ -97,23 +77,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithFacebook = async (role?: string) => {
     try {
-      const result = await signInWithPopup(auth, facebookProvider);
-      if (role) {
-         await createUserProfile(result.user.uid, {
-           name: result.user.displayName,
-           email: result.user.email,
-           avatar: result.user.photoURL,
-           role: role
-         });
-      }
-      return result.user;
-    } catch (error: any) {
-      if (error.code === 'auth/popup-blocked') {
-        console.warn('Popup blocked, falling back to redirect...');
-        if (role) localStorage.setItem('pendingAuthRole', role);
-        await signInWithRedirect(auth, facebookProvider);
-        return auth.currentUser as User;
-      }
+      if (role) localStorage.setItem('pendingAuthRole', role);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
       console.error("Error signing in with Facebook", error);
       throw error;
     }
@@ -121,14 +93,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUpWithEmail = async (email: string, password: string, name: string, phone: string, role: string) => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      await createUserProfile(result.user.uid, {
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        phone,
-        role: role
+        password,
+        options: {
+          data: {
+            name,
+            phone,
+            role
+          }
+        }
       });
-      return result.user;
+      if (error) throw error;
+      
+      if (data.user) {
+        await createUserProfile(data.user.id, {
+          name,
+          email,
+          phone,
+          role
+        });
+      }
+      return data.user;
     } catch (error) {
       console.error("Error signing up with email", error);
       throw error;
@@ -137,8 +123,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return result.user;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) throw error;
+      return data.user;
     } catch (error) {
       console.error("Error signing in with email", error);
       throw error;
@@ -146,12 +136,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) throw error;
   };
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
     } catch (error) {
       console.error("Error signing out", error);
     }

@@ -26,6 +26,7 @@ import FanManagement from "./pages/creator/FanManagement";
 import Promotions from "./pages/creator/Promotions";
 import Analytics from "./pages/creator/Analytics";
 import Scheduling from "./pages/creator/Scheduling";
+import CreatorFeed from "./pages/creator/CreatorFeed";
 import UserMessages from "./pages/user/UserMessages";
 import UserVault from "./pages/user/UserVault";
 import Subscriptions from "./pages/user/Subscriptions";
@@ -84,6 +85,7 @@ const AppRoutes = () => {
               <Route path="/fans" element={<FanManagement />} />
               <Route path="/promotions" element={<Promotions />} />
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/feed" element={<CreatorFeed />} />
               <Route path="/scheduling" element={<Scheduling />} />
               <Route path="/user" element={<UserDashboard />} />
               <Route path="/user/messages" element={<UserMessages />} />

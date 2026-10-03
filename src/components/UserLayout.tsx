@@ -90,9 +90,9 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         <div className="pt-6 border-t border-border mt-auto shrink-0 mb-safe">
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3 w-full">
-               <img src={user?.photoURL || "https://i.pravatar.cc/150?img=50"} alt="avatar" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-border shrink-0" />
+               <img src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pravatar.cc/150?img=50"} alt="avatar" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border border-border shrink-0" />
                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">{user?.displayName || "Fan User"}</div>
+                  <div className="font-bold text-sm truncate">{user?.user_metadata?.name || user?.user_metadata?.full_name || "Fan User"}</div>
                   <Link to="/user/settings" onClick={() => setIsMobileMenuOpen(false)} className="text-xs text-secondary hover:underline truncate block">View Profile</Link>
                </div>
                <button onClick={handleLogout} className="p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">

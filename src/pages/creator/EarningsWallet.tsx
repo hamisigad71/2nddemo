@@ -14,7 +14,7 @@ const EarningsWallet = () => {
   const fetchTransactions = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const data = await getCreatorTransactions(user.uid);
+    const data = await getCreatorTransactions(user.id);
     setTransactions(data);
     setLoading(false);
   }, [user]);
@@ -46,7 +46,7 @@ const EarningsWallet = () => {
       const { data, error } = await supabase.functions.invoke('daraja-b2c-withdrawal', {
         body: {
           amount: availableBalance, // For MVP, withdraw entire balance
-          creatorId: user.uid,
+          creatorId: user.id,
           phoneNumber: '0712345678' // In production, grab phone from user profile
         }
       });

@@ -33,11 +33,11 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
 
     setUploading(true);
     try {
-      const path = `posts/${user.uid}/${Date.now()}_${selectedFile.name}`;
+      const path = `posts/${user.id}/${Date.now()}_${selectedFile.name}`;
       const mediaUrl = await uploadFileToSupabase(selectedFile, 'media', path);
 
       await createPost(
-        user.uid,
+        user.id,
         caption,
         mediaUrl,
         isLocked,

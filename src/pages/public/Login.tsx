@@ -34,26 +34,6 @@ const Login = () => {
     }
   };
 
-  const getLoginErrorMessage = (errorCode: string): string => {
-    switch (errorCode) {
-      case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-        return 'Incorrect password. Please try again or reset your password.';
-      case 'auth/user-not-found':
-        return 'No account found with this email address.';
-      case 'auth/invalid-email':
-        return 'Please enter a valid email address.';
-      case 'auth/user-disabled':
-        return 'This account has been disabled. Contact support for help.';
-      case 'auth/too-many-requests':
-        return 'Too many failed attempts. Please try again later or reset your password.';
-      case 'auth/network-request-failed':
-        return 'Network error. Please check your connection and try again.';
-      default:
-        return 'Login failed. Please check your credentials and try again.';
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -65,7 +45,7 @@ const Login = () => {
       await signInWithEmail(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(getLoginErrorMessage(err?.code || ''));
+      setError(err?.message || 'Login failed. Please check your credentials and try again.');
     }
   };
 

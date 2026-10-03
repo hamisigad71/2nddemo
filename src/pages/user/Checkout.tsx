@@ -52,7 +52,7 @@ const Checkout = () => {
         body: {
           amount,
           phoneNumber: phone,
-          userId: user.uid,
+          userId: user.id,
           toCreatorId: creator.id || 'creator_dummy_id', // Fallback for prototype
           type: 'subscription'
         }

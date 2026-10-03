@@ -13,7 +13,7 @@ const CreatorDashboard = () => {
   useEffect(() => {
     if (user) {
       setLoading(true);
-      getCreatorDashboardStats(user.uid).then(data => {
+      getCreatorDashboardStats(user.id).then(data => {
         setStats(data);
         setLoading(false);
       });
@@ -25,7 +25,7 @@ const CreatorDashboard = () => {
        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
          <div>
            <h1 className="text-3xl font-bold mb-1">Dashboard</h1>
-           <p className="text-muted-foreground">Welcome back, {user?.displayName?.split(' ')[0] || 'Creator'}. Here's how your content is performing.</p>
+           <p className="text-muted-foreground">Welcome back, {(user?.user_metadata?.name || user?.user_metadata?.full_name)?.split(' ')[0] || 'Creator'}. Here's how your content is performing.</p>
          </div>
          <div className="flex items-center gap-2 bg-input/20 border border-border rounded-xl px-4 py-2 text-sm text-foreground">
            <Calendar className="w-4 h-4 text-muted-foreground" />

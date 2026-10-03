@@ -143,19 +143,18 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
           {/* Logo mark */}
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl overflow-hidden"
             style={{
               background: 'color-mix(in srgb, var(--color-primary) 12%, var(--color-background))',
               border: '1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)',
               backdropFilter: 'blur(12px)',
             }}
           >
-            <span
-              className="text-2xl font-black tracking-tighter"
-              style={{ color: 'var(--color-primary)' }}
-            >
-              H
-            </span>
+            <img 
+              src="/logo1.png" 
+              alt="Logo" 
+              className="w-full h-full object-cover" 
+            />
           </div>
         </div>
 

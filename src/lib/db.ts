@@ -79,6 +79,21 @@ export const getPosts = async () => {
   return data || [];
 };
 
+export const getPostsByCreator = async (creatorId: string) => {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*, users(name, avatar)')
+    .eq('creator_id', creatorId)
+    .order('created_at', { ascending: false });
+  if (error) console.error('getPostsByCreator error:', error.message);
+  return data || [];
+};
+
+export const deletePost = async (postId: string) => {
+  const { error } = await supabase.from('posts').delete().eq('id', postId);
+  if (error) throw error;
+};
+
 // ========================
 // 4. TRANSACTIONS (Wallet)
 // ========================
