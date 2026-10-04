@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import PageLoader from "./components/PageLoader";
@@ -41,26 +41,35 @@ import UserSettings from "./pages/user/UserSettings";
 
 const AppRoutes = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [displayLocation, setDisplayLocation] = useState(location);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
+    // If logging out or navigating to login, instantly sync location and bypass transition loader
+    if (!user || location.pathname === '/login') {
+      setDisplayLocation(location);
+      setIsTransitioning(false);
+      setInitialLoad(false);
+      return;
+    }
+
     if (location.pathname !== displayLocation.pathname || location.search !== displayLocation.search) {
       if (!initialLoad) {
         setIsTransitioning(true);
       }
     }
-  }, [location, displayLocation.pathname, displayLocation.search, initialLoad]);
+  }, [location, displayLocation.pathname, displayLocation.search, initialLoad, user]);
 
-  const handleLoaderReady = () => {
+  const handleLoaderReady = useCallback(() => {
     setDisplayLocation(location);
-  };
+  }, [location]);
 
-  const handleLoaderComplete = () => {
+  const handleLoaderComplete = useCallback(() => {
     setIsTransitioning(false);
     if (initialLoad) setInitialLoad(false);
-  };
+  }, [initialLoad]);
 
   return (
     <>

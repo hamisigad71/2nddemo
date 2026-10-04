@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface PageLoaderProps {
   onComplete: () => void;
@@ -8,6 +8,14 @@ interface PageLoaderProps {
 const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
   const [progress, setProgress] = useState(0);
   const [fading, setFading] = useState(false);
+
+  const onReadyRef = useRef(onReady);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+    onCompleteRef.current = onComplete;
+  }, [onReady, onComplete]);
 
   useEffect(() => {
     const steps = [
@@ -22,9 +30,11 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
     const runStep = (stepIndex: number) => {
       if (stepIndex >= steps.length) {
         setTimeout(() => {
-          if (onReady) onReady();
+          if (onReadyRef.current) onReadyRef.current();
           setFading(true);
-          setTimeout(onComplete, 600);
+          setTimeout(() => {
+            if (onCompleteRef.current) onCompleteRef.current();
+          }, 600);
         }, 200);
         return;
       }
@@ -41,7 +51,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
     };
 
     runStep(0);
-  }, [onComplete]);
+  }, []);
 
   return (
     <div

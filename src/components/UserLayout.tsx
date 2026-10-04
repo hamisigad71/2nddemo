@@ -29,7 +29,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
     await logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || "Fan User";

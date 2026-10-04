@@ -18,7 +18,6 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
   const [phone, setPhone] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pesapalUrl, setPesapalUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   // Load User's phone number on open
   useEffect(() => {
@@ -84,7 +83,6 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
 
   const handlePesapalCheckout = async () => {
     if (!amount || !user) return;
-    setLoading(true);
     setStep('pesapal_loading');
     setErrorMessage(null);
 
@@ -121,8 +119,6 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
       console.error('Pesapal checkout error:', err);
       setErrorMessage(err.message || 'Pesapal checkout failed');
       setStep('method');
-    } finally {
-      setLoading(false);
     }
   };
 

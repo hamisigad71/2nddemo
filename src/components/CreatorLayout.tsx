@@ -33,7 +33,7 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
     await logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   return (
