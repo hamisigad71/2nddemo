@@ -14,7 +14,13 @@ import Checkout from "./pages/user/Checkout";
 import CreatorDashboard from "./pages/creator/CreatorDashboard";
 import CreatePost from "./pages/creator/CreatePost";
 import UserDashboard from "./pages/user/UserDashboard";
-import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminCreators from "./pages/admin/AdminCreators";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminContent from "./pages/admin/AdminContent";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminSettings from "./pages/admin/AdminSettings";
 import Messages from "./pages/creator/Messages";
 import MediaVault from "./pages/creator/MediaVault";
 import EarningsWallet from "./pages/creator/EarningsWallet";
@@ -93,7 +99,13 @@ const AppRoutes = () => {
               <Route path="/user/subscriptions" element={<Subscriptions />} />
               <Route path="/user/payments" element={<PaymentMethods />} />
               <Route path="/user/settings" element={<UserSettings />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin" element={<AdminOverview />} />
+              <Route path="/admin/creators" element={<AdminCreators />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/transactions" element={<AdminTransactions />} />
+              <Route path="/admin/content" element={<AdminContent />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
             </Route>
           </Routes>
         </div>
