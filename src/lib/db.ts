@@ -171,12 +171,13 @@ export const processPayment = async (
   type: 'tip' | 'subscription' | 'ppv',
   fromUserId: string,
   toCreatorId: string,
-  grossAmount: number
+  grossAmount: number,
+  referenceId?: string
 ) => {
   const platformFee = grossAmount * PLATFORM_FEE;
   const netAmount = grossAmount - platformFee;
 
-  await supabase.from('transactions').insert({
+  const { data: tx, error } = await supabase.from('transactions').insert({
     type,
     from_user_id: fromUserId,
     to_creator_id: toCreatorId,
@@ -184,7 +185,32 @@ export const processPayment = async (
     platform_fee: platformFee,
     net_amount: netAmount,
     status: 'completed',
-  });
+    reference_id: referenceId || null
+  }).select().single();
+
+  if (error) console.error('Error inserting transaction:', error.message);
+
+  // Increment Creator's Total Net Earnings in creator_profiles if profile exists
+  try {
+    const { data: profile } = await supabase
+      .from('creator_profiles')
+      .select('total_earnings')
+      .eq('user_id', toCreatorId)
+      .single();
+
+    if (profile) {
+      await supabase
+        .from('creator_profiles')
+        .update({
+          total_earnings: (profile.total_earnings || 0) + netAmount
+        })
+        .eq('user_id', toCreatorId);
+    }
+  } catch (err) {
+    console.error('Error updating creator profile earnings:', err);
+  }
+
+  return tx;
 };
 
 export const getCreatorTransactions = async (creatorId: string) => {
