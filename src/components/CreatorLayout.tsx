@@ -26,13 +26,13 @@ const navItems = [
 const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    // Basic logout logic for now. 
+  const handleLogout = async () => {
     setIsMobileMenuOpen(false);
+    await logout();
     navigate('/login');
   };
 

@@ -50,7 +50,8 @@ const Signup = () => {
     }
     try {
       setError('');
-      await signUpWithEmail(email, password, `${firstName} ${lastName}`, phone, accountType);
+      const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
+      await signUpWithEmail(email, password, `${firstName} ${lastName}`, fullPhone, accountType);
       navigate(accountType === 'creator' ? '/dashboard' : '/user');
     } catch (err: any) {
       setError('Registration failed: ' + (err?.message || err));

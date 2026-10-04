@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
+import { getUserProfile } from '../../lib/db';
 
 const Login = () => {
   const { user, signInWithGoogle, signInWithFacebook, signInWithEmail } = useAuth();
@@ -11,15 +12,30 @@ const Login = () => {
   const [password, setPassword] = useState('');
 
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard'); // route depending on role, fallback to dashboard
-    }
+    const handleNavigation = async () => {
+      if (user) {
+        try {
+          const profile = await getUserProfile(user.id);
+          const role = profile?.role || user.user_metadata?.role;
+          if (role === 'admin') {
+            navigate('/admin');
+          } else if (role === 'subscriber' || role === 'fan') {
+            navigate('/user');
+          } else {
+            navigate('/dashboard');
+          }
+        } catch (err) {
+          console.error("Error fetching role for navigation", err);
+          navigate('/dashboard');
+        }
+      }
+    };
+    handleNavigation();
   }, [user, navigate]);
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle('subscriber');
-      navigate('/dashboard'); // route depending on role, fallback to dashboard
     } catch (err) {
       setError('Failed to sign in with Google');
     }
@@ -28,7 +44,6 @@ const Login = () => {
   const handleFacebookSignIn = async () => {
     try {
       await signInWithFacebook('subscriber');
-      navigate('/dashboard');
     } catch (err) {
       setError('Failed to sign in with Facebook');
     }
@@ -43,7 +58,6 @@ const Login = () => {
     try {
       setError('');
       await signInWithEmail(email, password);
-      navigate('/dashboard');
     } catch (err: any) {
       setError(err?.message || 'Login failed. Please check your credentials and try again.');
     }

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { FALLBACK_POSTS } from '../data/mockPosts';
 
 const PLATFORM_FEE = 0.15;
 
@@ -7,16 +8,29 @@ const PLATFORM_FEE = 0.15;
 // ========================
 
 export const createUserProfile = async (uid: string, data: any) => {
-  const { data: existing } = await supabase.from('users').select('uid').eq('uid', uid).single();
-  if (!existing) {
-    await supabase.from('users').insert({
-      uid,
-      name: data.name,
-      email: data.email,
-      avatar: data.avatar,
-      role: data.role || 'subscriber',
-    });
+  // Check by uid first (same auth session)
+  const { data: byUid } = await supabase.from('users').select('uid').eq('uid', uid).single();
+  if (byUid) return;
+
+  // Also check by email — prevents duplicate rows when the same person
+  // signs up via different auth providers (e.g., Google then email/password)
+  if (data.email) {
+    const { data: byEmail } = await supabase
+      .from('users')
+      .select('uid')
+      .eq('email', data.email)
+      .maybeSingle();
+    if (byEmail) return; // Email already has a profile — skip creating another
   }
+
+  await supabase.from('users').insert({
+    uid,
+    name: data.name,
+    email: data.email,
+    avatar: data.avatar,
+    phone: data.phone,
+    role: data.role || 'subscriber',
+  });
 };
 
 export const getUserProfile = async (uid: string) => {
@@ -76,7 +90,12 @@ export const getPosts = async () => {
     .select('*, users(name, avatar)')
     .order('created_at', { ascending: false });
   if (error) console.error('getPosts error:', error.message);
-  return data || [];
+  
+  const dbPosts = data || [];
+  // Blend DB posts with fallback posts (DB posts come first)
+  const existingIds = new Set(dbPosts.map((p: any) => p.id));
+  const remainingFallbacks = FALLBACK_POSTS.filter(p => !existingIds.has(p.id));
+  return [...dbPosts, ...remainingFallbacks];
 };
 
 export const getPostsByCreator = async (creatorId: string) => {
@@ -87,6 +106,56 @@ export const getPostsByCreator = async (creatorId: string) => {
     .order('created_at', { ascending: false });
   if (error) console.error('getPostsByCreator error:', error.message);
   return data || [];
+};
+
+export const getFanFeed = async (fanId: string, page = 0, limit = 10) => {
+  let realPosts: any[] = [];
+  
+  try {
+    // 1. Get subscriptions of this user
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('creator_id')
+      .eq('fan_id', fanId)
+      .eq('status', 'active');
+      
+    if (subs && subs.length > 0) {
+      const creatorIds = subs.map(s => s.creator_id);
+      
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, users!creator_id(name, avatar)')
+        .in('creator_id', creatorIds)
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        realPosts = data;
+      }
+    }
+
+    // 2. Also fetch any public non-subscribed real posts to show active content
+    if (realPosts.length === 0) {
+      const { data: publicRealPosts } = await supabase
+        .from('posts')
+        .select('*, users!creator_id(name, avatar)')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (publicRealPosts) {
+        realPosts = publicRealPosts;
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching real feed:', err);
+  }
+
+  // 3. Blend real posts at the top, then append fallback posts
+  const realIds = new Set(realPosts.map(p => p.id));
+  const fallbacks = FALLBACK_POSTS.filter(p => !realIds.has(p.id));
+  const fullFeed = [...realPosts, ...fallbacks];
+
+  // 4. Paginate
+  const start = page * limit;
+  return fullFeed.slice(start, start + limit);
 };
 
 export const deletePost = async (postId: string) => {

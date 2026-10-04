@@ -1,7 +1,44 @@
+import { useState, useEffect } from 'react';
 import CreatorLayout from '../../components/CreatorLayout';
-import { Save, Shield, CreditCard } from 'lucide-react';
+import { Save, Shield, CreditCard, Smartphone } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { getUserProfile, updateUserProfile } from '../../lib/db';
 
 const CreatorSettings = () => {
+  const { user } = useAuth();
+  const [phone, setPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  // Load existing phone from DB
+  useEffect(() => {
+    if (!user?.id) return;
+    getUserProfile(user.id).then((profile) => {
+      if (profile?.phone) {
+        const raw = profile.phone.replace(/^\+254/, '').replace(/^0/, '');
+        setPhone(raw);
+      }
+    });
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+    setSaving(true);
+    setSaveMsg('');
+    try {
+      const fullPhone = phone
+        ? `+254${phone.replace(/\s+/g, '').replace(/^0/, '').replace(/^\+254/, '')}`
+        : null;
+      await updateUserProfile(user.id, { phone: fullPhone });
+      setSaveMsg('Saved successfully!');
+    } catch (err: any) {
+      setSaveMsg('Failed to save: ' + (err?.message || err));
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(''), 3000);
+    }
+  };
+
   return (
     <CreatorLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
@@ -9,14 +46,20 @@ const CreatorSettings = () => {
           <h1 className="text-3xl font-bold mb-1">Settings</h1>
           <p className="text-muted-foreground">Manage your subscription tiers and profile preferences.</p>
         </div>
-        <button className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 font-bold rounded-lg shadow-lg hover:-translate-y-1 transition-transform">
-          <Save className="w-5 h-5" /> Save Changes
+        <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 font-bold rounded-lg shadow-lg hover:-translate-y-1 transition-transform disabled:opacity-60">
+          <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
+      {saveMsg && (
+        <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-bold ${saveMsg.startsWith('Failed') ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-600'}`}>
+          {saveMsg}
+        </div>
+      )}
+
       <div className="grid md:grid-cols-3 gap-8">
         
-        {/* Navigation / Sections sidebar on Desktop (internal for settings) */}
+        {/* Navigation sidebar */}
         <div className="hidden md:flex flex-col gap-2">
            <button className="text-left px-4 py-3 rounded-xl font-bold bg-primary/10 text-primary">Subscription & Tiers</button>
            <button className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Profile Options</button>
@@ -24,10 +67,32 @@ const CreatorSettings = () => {
            <button className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Watermarks</button>
         </div>
 
-        {/* Settings Form Content */}
+        {/* Settings Content */}
         <div className="md:col-span-2 space-y-8">
            
-           {/* Section 1 */}
+           {/* M-Pesa Phone — REAL, saved to DB */}
+           <div className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+             <div className="flex items-center gap-3 mb-6 border-b border-border pb-4">
+                <Smartphone className="w-6 h-6 text-primary" />
+                <h2 className="text-xl font-bold">M-Pesa Payout Number</h2>
+             </div>
+             <div className="max-w-sm">
+               <label className="block text-sm font-bold mb-2">Safaricom Number</label>
+               <div className="flex">
+                 <span className="bg-muted border border-border border-r-0 px-4 py-3 rounded-l-xl text-muted-foreground font-medium flex items-center text-sm">+254</span>
+                 <input
+                   type="tel"
+                   value={phone}
+                   onChange={e => setPhone(e.target.value)}
+                   placeholder="7XX XXX XXX"
+                   className="w-full bg-muted/30 border border-border px-4 py-3 rounded-r-xl focus:outline-none focus:border-primary text-sm"
+                 />
+               </div>
+               <p className="text-xs text-muted-foreground mt-2">This is where your earnings will be sent via M-Pesa B2C.</p>
+             </div>
+           </div>
+
+           {/* Subscription Pricing */}
            <div className="bg-background border border-border rounded-2xl p-6 shadow-sm">
              <div className="flex items-center gap-3 mb-6 border-b border-border pb-4">
                 <CreditCard className="w-6 h-6 text-primary" />
@@ -86,7 +151,7 @@ const CreatorSettings = () => {
              </div>
            </div>
 
-           {/* Section 2 */}
+           {/* Privacy & Watermarks */}
            <div className="bg-background border border-border rounded-2xl p-6 shadow-sm">
              <div className="flex items-center gap-3 mb-6 border-b border-border pb-4">
                 <Shield className="w-6 h-6 text-primary" />

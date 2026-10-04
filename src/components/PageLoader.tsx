@@ -52,6 +52,14 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
       {/* Base desktop background */}
       <div className="hidden md:block absolute inset-0 bg-background" />
 
+      {/* Desktop faint background image */}
+      <img
+        src="/logo2.png"
+        alt=""
+        className="hidden md:block absolute inset-0 w-full h-full object-cover object-center opacity-[3.03] pointer-events-none"
+        loading="eager"
+      />
+
       {/* Mobile background image */}
       <img
         src="https://i.pinimg.com/736x/b1/39/54/b13954cc1f7c47fac66562a002262af9.jpg"

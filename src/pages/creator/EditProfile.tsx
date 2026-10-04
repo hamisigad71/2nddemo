@@ -1,8 +1,8 @@
 import CreatorLayout from '../../components/CreatorLayout';
 import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { updateUserProfile } from '../../lib/db';
+import { getUserProfile, updateUserProfile } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 
 const EditProfile = () => {
@@ -31,6 +31,17 @@ const EditProfile = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [otpMessage, setOtpMessage] = useState({ text: "", type: "" });
   const [isLoadingOtp, setIsLoadingOtp] = useState(false);
+
+  // Load existing phone from DB
+  useEffect(() => {
+    if (!user?.id) return;
+    getUserProfile(user.id).then((profile) => {
+      if (profile?.phone) {
+        const raw = profile.phone.replace(/^\+254/, '').replace(/^0/, '');
+        setPayoutData(prev => ({ ...prev, phoneNumber: raw }));
+      }
+    });
+  }, [user]);
 
   const tabs = [
     { id: 'profile', label: 'Public Profile', icon: User, activeColor: 'bg-primary text-primary-foreground' },
@@ -116,8 +127,9 @@ const EditProfile = () => {
       if (error) throw error;
 
       if (user?.id) {
+        const fullPhone = `+254${payoutData.phoneNumber.replace(/\s+/g, '').replace(/^0/, '').replace(/^\+254/, '')}`;
         await updateUserProfile(user.id, {
-          mpesa_phone: payoutData.phoneNumber,
+          phone: fullPhone,
           kra_pin: payoutData.kraPin
         });
         setIsPhoneVerified(true);

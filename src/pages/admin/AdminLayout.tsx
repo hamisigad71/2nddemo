@@ -3,9 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, DollarSign, ShieldAlert,
   BarChart3, Settings, Menu, X, LogOut, Bell, ChevronRight,
-  Rss, Sun, Moon
+  Rss, Sun, Moon, User
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { label: 'Overview',        icon: LayoutDashboard, path: '/admin' },
@@ -22,6 +23,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -69,11 +76,11 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </button>
         <button
-          onClick={() => navigate('/')}
+          onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-medium"
         >
           <LogOut className="w-[18px] h-[18px]" />
-          Back to Site
+          Logout
         </button>
       </div>
     </div>
@@ -120,10 +127,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
             </button>
             <div className="flex items-center gap-2 pl-2 border-l border-border ml-1">
-              <img src="https://i.pravatar.cc/150?img=60" className="w-8 h-8 rounded-full border-2 border-primary/30" />
+              <div className="w-8 h-8 rounded-full border-2 border-primary/30 bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                <User className="w-4 h-4" />
+              </div>
               <div className="hidden sm:block">
-                <div className="text-xs font-bold">Super Admin</div>
-                <div className="text-[10px] text-primary font-semibold">admin@hideaway.co.ke</div>
+                <div className="text-xs font-bold truncate max-w-[120px]">{user?.user_metadata?.name || user?.user_metadata?.full_name || 'Admin'}</div>
+                <div className="text-[10px] text-primary font-semibold truncate max-w-[120px]">{user?.email || 'admin@hideaway'}</div>
               </div>
             </div>
           </div>
