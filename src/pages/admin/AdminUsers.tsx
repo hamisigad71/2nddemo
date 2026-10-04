@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreVertical, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, MoreVertical } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const users = [

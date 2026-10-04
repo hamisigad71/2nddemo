@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, UserCheck, DollarSign, ShieldAlert,
-  BarChart3, Settings, Menu, X, LogOut, Bell, ChevronRight,
+  LayoutDashboard, Users, UserCheck, DollarSign,
+  BarChart3, Settings, Menu, LogOut, Bell, ChevronRight,
   Rss, Sun, Moon, User
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';

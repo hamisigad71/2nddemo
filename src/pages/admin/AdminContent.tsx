@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, Eye, Check, X, Clock, ShieldAlert } from 'lucide-react';
+import { Flag, Eye, Check, X, ShieldAlert } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const flaggedContent = [

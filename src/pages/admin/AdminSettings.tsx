@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Settings, DollarSign, Bell, Shield, CreditCard, Megaphone } from 'lucide-react';
+import { Save, Settings, DollarSign, Shield, CreditCard, Megaphone } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const AdminSettings = () => {

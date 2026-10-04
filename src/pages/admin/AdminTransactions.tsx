@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, CheckCircle, XCircle, Clock, Download } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Download } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const transactions = [
