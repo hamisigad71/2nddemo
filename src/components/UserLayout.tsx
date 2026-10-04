@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, Sparkles, ChevronRight } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -41,11 +41,6 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between px-5 py-3.5 border-b border-white/5 bg-[#0D0E12]/90 backdrop-blur-xl sticky top-0 z-40">
         <Link to="/user" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary via-emerald-500 to-amber-400 p-[1.5px] shadow-lg shadow-primary/20">
-            <div className="w-full h-full bg-[#0D0E12] rounded-[10px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary" />
-            </div>
-          </div>
           <span className="text-xl font-black tracking-tight text-white">Hideaway<span className="text-primary">.</span></span>
         </Link>
         <button 

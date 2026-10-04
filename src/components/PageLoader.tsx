@@ -161,7 +161,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
           {/* Logo mark */}
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden"
+            className="hidden md:flex w-14 h-14 rounded-2xl items-center justify-center overflow-hidden"
             style={{
               backdropFilter: 'blur(12px)',
             }}
