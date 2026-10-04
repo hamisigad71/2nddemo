@@ -56,7 +56,7 @@ const Landing = () => {
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <div className="text-2xl font-black tracking-tighter text-primary drop-shadow-[0_0_12px_rgba(0,200,110,0.4)]">
+          <div className="text-2xl font-black tracking-tighter text-primary">
             Hideaway<span className="text-secondary">.</span>
           </div>
         </div>
@@ -151,7 +151,7 @@ const Landing = () => {
           </div>
 
           {/* Content */}
-          <div className="relative z-10 flex flex-col justify-end md:justify-center items-center px-6 pt-20 pb-10 md:py-40 w-full max-w-4xl mx-auto flex-1 gap-6">
+          <div className="relative z-10 flex flex-col justify-start md:justify-center items-center px-6 pt-16 pb-10 md:py-40 w-full max-w-4xl mx-auto flex-1 gap-6">
 
             {/* TOP GROUP: Badge + Headline */}
             <div className="flex flex-col items-center text-center">
@@ -174,13 +174,16 @@ const Landing = () => {
               </h1>
             </div>
 
-            {/* BOTTOM GROUP: Description + CTAs + Social Proof */}
+            {/* BOTTOM GROUP: Description */}
             <div className="flex flex-col items-center text-center w-full">
               <p className="text-sm sm:text-base md:text-xl text-white/80 max-w-2xl mb-6 md:mb-10 leading-relaxed">
                 The premium subscription platform for African creators. Monetize your audience directly through{' '}
                 <span className="text-primary font-semibold">M-Pesa</span>, cards &amp; more. No middleman. No hassle.
               </p>
+            </div>
 
+            {/* CTA + Social Proof — pushed to bottom on mobile */}
+            <div className="mt-auto md:mt-0 flex flex-col items-center text-center w-full pb-2 md:pb-0">
               {/* CTA Buttons */}
               <div className="flex flex-row items-center gap-3 w-full justify-center px-1 sm:px-0">
                 <Link to="/signup" className="group w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-primary text-primary-foreground px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold hover:bg-emerald-500 transition-all shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.03]">
@@ -193,7 +196,7 @@ const Landing = () => {
               </div>
 
               {/* Social Proof Mini */}
-              <div className="mt-10 flex items-center gap-2 text-sm text-white/70">
+              <div className="mt-4 flex items-center gap-2 text-sm text-white/70">
                 <div className="flex -space-x-2">
                   {creators.slice(0, 3).map((c, i) => (
                     <img key={i} src={c.img} alt={c.name} className="w-7 h-7 rounded-full border-2 border-white/30 object-cover" />
@@ -269,7 +272,7 @@ const Landing = () => {
               </div>
               <h2 className="text-xl md:text-5xl font-black mb-4 md:mb-6 tracking-tight leading-tight max-w-[280px] md:max-w-none mx-auto md:mx-0">
                 Calculate your{' '}
-                <span className="block md:inline text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">earning potential</span>
+                <span className="inline text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">earning potential</span>
               </h2>
               <p className="text-muted-foreground mb-10 text-lg leading-relaxed max-w-lg">
                 See what happens when you monetize directly. Estimate your revenue if just <strong>5%</strong> of your audience subscribes at KES 500/month.

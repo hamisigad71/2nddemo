@@ -143,17 +143,16 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
           {/* Logo mark */}
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl overflow-hidden"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden"
             style={{
-              background: 'color-mix(in srgb, var(--color-primary) 12%, var(--color-background))',
-              border: '1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)',
               backdropFilter: 'blur(12px)',
             }}
           >
             <img 
               src="/logo1.png" 
               alt="Logo" 
-              className="w-full h-full object-cover" 
+              className="w-full h-full object-contain" 
+              style={{ mixBlendMode: 'screen' }}
             />
           </div>
         </div>

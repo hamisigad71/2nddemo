@@ -62,7 +62,7 @@ const Signup = () => {
       <div className="flex-1 flex items-center justify-center p-4 py-12 lg:py-16 order-2 lg:order-1">
         <div className="w-full max-w-lg bg-input/10 border border-border p-8 pb-10 rounded-3xl shadow-2xl relative z-10 backdrop-blur-xl">
         <div className="text-center mb-8">
-          <Link to="/" className="text-3xl font-bold tracking-tighter text-primary">Hideaway<span className="text-muted-foreground">.</span></Link>
+          
           <h2 className="text-2xl font-bold mt-6 mb-2 text-foreground">Create an Account</h2>
           <p className="text-muted-foreground text-sm">Join the premium Kenyan creator platform</p>
         </div>
