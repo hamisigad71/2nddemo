@@ -4,8 +4,10 @@ import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send } fr
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
-import { getFanFeed, getPostLikes, toggleLike, getComments, addComment } from '../../lib/db';
+import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getUserProfile } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
+import { Link } from 'react-router-dom';
+import { ShieldAlert } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -315,6 +317,15 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [kycStatus, setKycStatus] = useState<string>('verified'); // Default verified to avoid flash, then update
+
+  useEffect(() => {
+    if (user?.id) {
+      getUserProfile(user.id).then(profile => {
+        setKycStatus(profile?.kyc_status || 'unverified');
+      });
+    }
+  }, [user]);
 
   const loadMore = useCallback(async () => {
     if (!user || loading || !hasMore) return;
@@ -379,6 +390,20 @@ const UserDashboard = () => {
           Latest posts from creators you subscribe to
         </p>
       </div>
+
+      {kycStatus !== 'verified' && (
+        <div className="mb-8 bg-black/40 border border-red-500/30 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-[0_0_30px_rgba(220,38,38,0.1)]">
+           <div>
+             <h3 className="font-bold text-red-500 flex items-center gap-2 mb-1">
+               <ShieldAlert className="w-5 h-5" /> Verification Required
+             </h3>
+             <p className="text-sm text-zinc-400">To access premium features like subscribing and tipping, please complete your identity verification.</p>
+           </div>
+           <Link to="/user/settings" className="shrink-0 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+             Verify Now
+           </Link>
+        </div>
+      )}
 
       <div className="max-w-xl mx-auto flex flex-col gap-5">
         {posts.length === 0 && !loading && <EmptyFeed />}

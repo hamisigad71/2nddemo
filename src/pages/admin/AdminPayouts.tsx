@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, XCircle, Clock, Search, Wallet, ArrowUpRight, AlertTriangle, DollarSign, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Search, Wallet } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const mockPayouts = [

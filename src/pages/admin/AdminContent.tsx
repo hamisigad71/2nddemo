@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Flag, Eye, Check, X, ShieldAlert, Search, Trash2, AlertTriangle, Loader2, MessageSquare, Send } from 'lucide-react';
+import { Flag, Eye, Check, X, ShieldAlert, Search, Trash2, Loader2, MessageSquare, Send } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAdminContentPosts, deletePost, sendAdminMessage } from '../../lib/db';
 

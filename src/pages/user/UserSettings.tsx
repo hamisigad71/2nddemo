@@ -11,6 +11,16 @@ const UserSettings = () => {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
 
+  const [kycData, setKycData] = useState({
+    legalName: '',
+    nationalId: '',
+    dob: '',
+    idDocumentPreview: null as string | null,
+    selfiePreview: null as string | null,
+  });
+  const [kycStatus, setKycStatus] = useState('unverified');
+  const [kycSaving, setKycSaving] = useState(false);
+
   // Load real profile from DB
   useEffect(() => {
     if (!user?.id) return;
@@ -20,6 +30,10 @@ const UserSettings = () => {
         // Strip leading +254 for the input field display
         const raw = (profile.phone || '').replace(/^\+254/, '').replace(/^0/, '');
         setPhone(raw);
+        setKycStatus(profile.kyc_status || 'unverified');
+        if (profile.legal_name) setKycData(prev => ({ ...prev, legalName: profile.legal_name }));
+        if (profile.national_id_number) setKycData(prev => ({ ...prev, nationalId: profile.national_id_number }));
+        if (profile.dob) setKycData(prev => ({ ...prev, dob: profile.dob }));
       }
     });
   }, [user]);
@@ -42,6 +56,44 @@ const UserSettings = () => {
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMsg(''), 3000);
+    }
+  };
+
+  const handleKycChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setKycData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleKycUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'id' | 'selfie') => {
+    if (e.target.files && e.target.files[0]) {
+       const url = URL.createObjectURL(e.target.files[0]);
+       if (type === 'id') setKycData(prev => ({ ...prev, idDocumentPreview: url }));
+       if (type === 'selfie') setKycData(prev => ({ ...prev, selfiePreview: url }));
+    }
+  };
+
+  const submitKyc = async () => {
+    if (!user?.id) return;
+    if (!kycData.legalName || !kycData.nationalId || !kycData.dob) {
+      setSaveMsg('Failed: Please fill out all required KYC fields.');
+      return;
+    }
+    setKycSaving(true);
+    setSaveMsg('');
+    try {
+      await updateUserProfile(user.id, {
+        legal_name: kycData.legalName,
+        national_id_number: kycData.nationalId,
+        dob: kycData.dob,
+        kyc_status: 'pending'
+      });
+      setKycStatus('pending');
+      setSaveMsg('KYC Submitted securely for review!');
+    } catch (err: any) {
+      setSaveMsg('Failed to submit KYC: ' + (err?.message || err));
+    } finally {
+      setKycSaving(false);
+      setTimeout(() => setSaveMsg(''), 5000);
     }
   };
 
@@ -104,6 +156,93 @@ const UserSettings = () => {
                    </select>
                 </div>
              </div>
+          </section>
+
+          {/* Identity Verification (KYC) Section */}
+          <section className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+             <h2 className="text-lg font-bold mb-6 pb-2 border-b border-border flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-muted-foreground" /> Identity Verification (KYC)
+             </h2>
+             
+             {kycStatus === 'verified' && (
+               <div className="mb-6 bg-green-500/10 border border-green-500/20 p-4 rounded-xl flex items-center gap-3">
+                 <ShieldAlert className="w-5 h-5 text-green-500" />
+                 <div>
+                   <h3 className="font-bold text-green-600 text-sm">Account Verified</h3>
+                   <p className="text-xs text-green-600/80">Your identity has been verified. You have full access to all features.</p>
+                 </div>
+               </div>
+             )}
+
+             {kycStatus === 'pending' && (
+               <div className="mb-6 bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl flex items-center gap-3">
+                 <Bell className="w-5 h-5 text-yellow-500" />
+                 <div>
+                   <h3 className="font-bold text-yellow-600 text-sm">Verification Pending</h3>
+                   <p className="text-xs text-yellow-600/80">Your KYC documents are under review by the moderation team.</p>
+                 </div>
+               </div>
+             )}
+
+             {(kycStatus === 'unverified' || kycStatus === 'rejected') && (
+               <div>
+                 {kycStatus === 'rejected' && (
+                   <div className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-xl">
+                     <h3 className="font-bold text-red-600 text-sm mb-1">Verification Rejected</h3>
+                     <p className="text-xs text-red-600/80">Please ensure your documents are clear and your details match your legal identity.</p>
+                   </div>
+                 )}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                   <div>
+                     <label className="block text-sm font-bold mb-1">Legal Full Name <span className="text-red-500">*</span></label>
+                     <input type="text" name="legalName" value={kycData.legalName} onChange={handleKycChange} className="w-full bg-muted/20 border border-border px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="As it appears on your ID" />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-bold mb-1">National ID / Passport <span className="text-red-500">*</span></label>
+                     <input type="text" name="nationalId" value={kycData.nationalId} onChange={handleKycChange} className="w-full bg-muted/20 border border-border px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="e.g. 12345678" />
+                   </div>
+                 </div>
+                 <div className="mb-6">
+                   <label className="block text-sm font-bold mb-1">Date of Birth <span className="text-red-500">*</span></label>
+                   <input type="date" name="dob" value={kycData.dob} onChange={handleKycChange} className="w-full sm:w-1/2 bg-muted/20 border border-border px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-primary" />
+                 </div>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center hover:bg-muted/30 transition-colors cursor-pointer flex flex-col items-center justify-center h-40">
+                      <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleKycUpload(e, 'id')} />
+                      {kycData.idDocumentPreview ? (
+                         <img src={kycData.idDocumentPreview} alt="ID Preview" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-2">
+                            <Camera className="w-5 h-5" />
+                          </div>
+                          <div className="font-bold text-sm">ID Document</div>
+                          <div className="text-[10px] text-muted-foreground mt-1">Front & back of ID</div>
+                        </>
+                      )}
+                    </div>
+                    <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center hover:bg-muted/30 transition-colors cursor-pointer flex flex-col items-center justify-center h-40">
+                      <input type="file" accept="image/*" capture="user" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleKycUpload(e, 'selfie')} />
+                      {kycData.selfiePreview ? (
+                         <img src={kycData.selfiePreview} alt="Selfie Preview" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-2">
+                            <Camera className="w-5 h-5" />
+                          </div>
+                          <div className="font-bold text-sm">Selfie with ID</div>
+                          <div className="text-[10px] text-muted-foreground mt-1">Holding ID near face</div>
+                        </>
+                      )}
+                    </div>
+                 </div>
+                 
+                 <button onClick={submitKyc} disabled={kycSaving} className="w-full sm:w-auto bg-primary text-primary-foreground font-bold px-6 py-2.5 rounded-lg shadow-sm hover:brightness-110 transition-all disabled:opacity-50">
+                    {kycSaving ? 'Submitting...' : 'Submit for Verification'}
+                 </button>
+               </div>
+             )}
           </section>
 
           {/* Payment Section — M-Pesa phone now REAL */}

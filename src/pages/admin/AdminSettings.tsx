@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Settings, DollarSign, Shield, CreditCard, Megaphone, Bell, CheckCircle, Users } from 'lucide-react';
+import { Save, Settings, DollarSign, Shield, CreditCard, Megaphone, CheckCircle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (

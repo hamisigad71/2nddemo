@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, Mail, ArrowRight, RefreshCw } from 'lucide-react';
+import { Mail, ArrowRight, RefreshCw } from 'lucide-react';
 
 const Signup = () => {
   const [accountType, setAccountType] = useState('creator'); // 'subscriber' or 'creator'

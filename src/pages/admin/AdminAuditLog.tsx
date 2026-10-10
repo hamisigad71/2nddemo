@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Shield, UserX, CheckCircle, XCircle, DollarSign, Flag, Settings, RotateCcw, Download } from 'lucide-react';
+import { Search, Shield, UserX, CheckCircle, XCircle, DollarSign, Flag, Settings, Download } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const mockLogs = [

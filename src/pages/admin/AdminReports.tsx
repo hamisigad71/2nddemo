@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, Search, CheckCircle, XCircle, Eye, AlertTriangle, ShieldAlert, Trash2 } from 'lucide-react';
+import { Flag, Search, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
 const mockReports = [

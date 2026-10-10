@@ -1,5 +1,5 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { DollarSign, MessageCircle, Heart, UserPlus, Bell, CheckCheck, Sparkles, Filter, ChevronRight } from 'lucide-react';
+import { DollarSign, MessageCircle, Heart, UserPlus, Bell, CheckCheck, Sparkles, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 const Notifications = () => {
