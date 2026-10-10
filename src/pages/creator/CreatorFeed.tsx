@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
 import { useAuth } from '../../context/AuthContext';
-import { getPostsByCreator, deletePost } from '../../lib/db';
-import { Lock, Unlock, Trash2, PlusCircle, Loader2, ImageOff, MoreHorizontal, Heart, MessageCircle, Eye } from 'lucide-react';
+import { getPostsByCreator, deletePost, getPostLikes, getComments } from '../../lib/db';
+import { Lock, Unlock, Trash2, PlusCircle, Loader2, ImageOff, MoreHorizontal, Heart, MessageCircle } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -14,6 +14,27 @@ interface Post {
   created_at: string;
   users?: { name: string; avatar: string | null };
 }
+
+const PostStats = ({ postId }: { postId: string }) => {
+  const [likes, setLikes] = useState(0);
+  const [comments, setComments] = useState(0);
+
+  useEffect(() => {
+    getPostLikes(postId).then(({ count }) => setLikes(count));
+    getComments(postId).then(data => setComments(data.length));
+  }, [postId]);
+
+  return (
+    <>
+      <button className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
+        <Heart className="w-4 h-4" /> <span>{likes}</span>
+      </button>
+      <button className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
+        <MessageCircle className="w-4 h-4" /> <span>{comments}</span>
+      </button>
+    </>
+  );
+};
 
 const CreatorFeed = () => {
   const { user } = useAuth();
@@ -181,17 +202,9 @@ const CreatorFeed = () => {
                 </div>
               )}
 
-              {/* Actions (decorative stats row for creator view) */}
+              {/* Actions — real stats */}
               <div className="flex items-center gap-5 px-5 py-4 border-t border-border mt-4">
-                <button className="flex items-center gap-1.5 text-muted-foreground hover:text-red-500 transition-colors text-sm font-medium">
-                  <Heart className="w-4 h-4" /> <span>—</span>
-                </button>
-                <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-sm font-medium">
-                  <MessageCircle className="w-4 h-4" /> <span>—</span>
-                </button>
-                <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-sm font-medium">
-                  <Eye className="w-4 h-4" /> <span>—</span>
-                </button>
+                <PostStats postId={post.id} />
                 <span className="ml-auto text-xs text-muted-foreground font-medium">
                   {post.is_locked ? `Paid · KES ${post.price}` : 'Free post'}
                 </span>

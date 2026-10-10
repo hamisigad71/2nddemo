@@ -19,13 +19,13 @@ const creators = [
 
 const testimonials = [
   {
-    quote: "Hideaway changed everything for me. I went from zero to KES 120,000/month in 4 months. M-Pesa payouts hit instantly — no waiting, no friction.",
+    quote: "The Gents Dollhouse changed everything for me. I went from zero to KES 120,000/month in 4 months. M-Pesa payouts hit instantly — no waiting, no friction.",
     name: "Amina K.",
     role: "Fitness Creator · 12k subscribers",
     img: "https://images.unsplash.com/photo-1531123414780-f74242c2b052?w=200&q=80",
   },
   {
-    quote: "I've tried other platforms but they didn't get Kenya. Hideaway speaks my fans' language — M-Pesa is all they need. My income tripled in 3 months.",
+    quote: "I've tried other platforms but they didn't get Kenya. The Gents Dollhouse speaks my fans' language — M-Pesa is all they need. My income tripled in 3 months.",
     name: "Chef Kamau",
     role: "Culinary Creator · 8.5k subscribers",
     img: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=200&q=80",
@@ -56,9 +56,8 @@ const Landing = () => {
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <div className="text-2xl font-black tracking-tighter text-primary">
-            Hideaway<span className="text-secondary">.</span>
-          </div>
+          <img src="/logo.svg" alt="Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain" />
+          <span className="text-xl md:text-2xl font-black tracking-tighter text-primary">The Gents Dollhouse<span className="text-secondary">.</span></span>
         </div>
 
         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -88,7 +87,10 @@ const Landing = () => {
             <button onClick={() => setMobileMenuOpen(false)} className="self-end text-muted-foreground hover:text-foreground">
               <X className="w-6 h-6" />
             </button>
-            <div className="text-2xl font-black tracking-tighter text-primary">Hideaway<span className="text-secondary">.</span></div>
+            <div className="flex items-center gap-2">
+              <img src="/logo.svg" alt="Logo" className="w-10 h-10 object-contain" />
+              <span className="text-2xl font-black tracking-tighter text-primary">The Gents Dollhouse<span className="text-secondary">.</span></span>
+            </div>
             <div className="flex flex-col gap-4 text-base font-medium">
               <a href="#discover" onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors">Discover</a>
               <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors">How It Works</a>
@@ -260,28 +262,25 @@ const Landing = () => {
         </section>
 
         {/* Earning Potential Calculator */}
-        <section className="px-6 py-28 relative overflow-hidden bg-background border-b border-border">
-          {/* Subtle background glow */}
-          <div className="absolute top-1/2 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -translate-y-1/2" />
-
-          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-16 relative z-10">
+        <section className="px-6 py-28 relative overflow-hidden bg-[#0a0b0e] border-b border-zinc-800">
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12 lg:gap-16 relative z-10">
             {/* Left Content */}
             <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-6">
-                <TrendingUp className="w-3.5 h-3.5" /> Growth Calculator
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/50 border border-red-500/30 text-red-400 text-xs font-black uppercase tracking-widest mb-6">
+                <TrendingUp className="w-4 h-4 text-red-500" /> Growth Calculator
               </div>
-              <h2 className="text-xl md:text-5xl font-black mb-4 md:mb-6 tracking-tight leading-tight max-w-[280px] md:max-w-none mx-auto md:mx-0">
+              <h2 className="text-3xl md:text-5xl font-black mb-4 md:mb-6 tracking-tight leading-tight text-white">
                 Calculate your{' '}
-                <span className="inline text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">earning potential</span>
+                <span className="inline text-red-500">earning potential</span>
               </h2>
-              <p className="text-muted-foreground mb-10 text-lg leading-relaxed max-w-lg">
-                See what happens when you monetize directly. Estimate your revenue if just <strong>5%</strong> of your audience subscribes at KES 500/month.
+              <p className="text-zinc-400 mb-8 text-base md:text-lg leading-relaxed max-w-lg font-medium">
+                See what happens when you monetize directly. Estimate your revenue if just <strong className="text-white">5%</strong> of your audience subscribes at KES 500/month.
               </p>
               
-              <div className="w-full bg-muted/30 border border-border rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-sm">
-                <div className="flex justify-between items-center mb-5 md:mb-6">
-                  <span className="font-bold text-foreground text-xs md:text-sm uppercase tracking-wider">Current Followers</span>
-                  <span className="text-2xl md:text-3xl font-black text-primary">{followers.toLocaleString()}</span>
+              <div className="w-full bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 md:p-8 relative">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="font-black text-zinc-400 text-xs uppercase tracking-wider">Current Followers</span>
+                  <span className="text-3xl md:text-4xl font-black text-red-500 tracking-tight">{followers.toLocaleString()}</span>
                 </div>
                 
                 <div className="relative pt-2 pb-2">
@@ -292,175 +291,217 @@ const Landing = () => {
                     step="1000"
                     value={followers}
                     onChange={(e) => setFollowers(Number(e.target.value))}
-                    className="w-full h-2 bg-input rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
+                    className="w-full h-2.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-red-600 focus:outline-none"
                   />
                 </div>
                 
-                <div className="flex justify-between text-xs font-bold text-muted-foreground mt-2">
+                <div className="flex justify-between text-xs font-bold text-zinc-500 mt-2">
                   <span>1k</span>
                   <span>1M+</span>
                 </div>
               </div>
             </div>
             
-            {/* Right Content - Premium Card */}
+            {/* Right Content - Solid Dark Card (No Glows) */}
             <div className="w-full md:w-1/2">
-              <div className="relative group perspective-1000">
-                {/* Animated glow behind the card */}
-                <div className="absolute -inset-1 bg-gradient-to-b from-primary/40 to-background rounded-[2.5rem] blur-xl opacity-40 group-hover:opacity-70 transition duration-700" />
-                
-                <div className="relative bg-card border border-border p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] text-center shadow-2xl z-10 transition-transform duration-500 group-hover:scale-[1.02] flex flex-col items-center overflow-hidden">
+              <div className="bg-[#0d0e12] border border-zinc-800 p-8 md:p-12 rounded-[2.5rem] text-center z-10 flex flex-col items-center overflow-hidden">
+                <div className="w-full flex flex-col items-center">
+                  {/* Dollar Icon Badge */}
+                  <div className="w-14 h-14 md:w-16 md:h-16 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+                    <DollarSign className="w-7 h-7 md:w-8 md:h-8" />
+                  </div>
                   
-                  {/* Subtle noise texture */}
-                  <div className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
-
-                  <div className="relative z-10 w-full flex flex-col items-center">
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 text-primary rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 transform group-hover:-translate-y-1 group-hover:scale-110 transition-all duration-300 shadow-inner border border-primary/20">
-                      <DollarSign className="w-6 h-6 md:w-8 md:h-8" />
-                    </div>
-                    
-                    <h3 className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2 md:mb-4">Estimated Monthly Income</h3>
-                    
-                    <div className="flex items-center justify-center gap-1 md:gap-1.5 mb-1 w-full">
-                      <span className="text-sm md:text-2xl font-bold text-muted-foreground mt-1 md:mt-2">KES</span>
-                      <span className="text-4xl md:text-6xl lg:text-7xl font-black text-foreground tracking-tight">
-                        {(followers * 0.05 * 500).toLocaleString()}
-                      </span>
-                    </div>
-                    
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/60 border border-border text-xs font-semibold text-muted-foreground mt-4">
-                      <CheckCircle className="w-3.5 h-3.5 text-primary" /> Based on KES 500 sub price
-                    </div>
-                    
-                    <div className="mt-8 pt-8 border-t border-border w-full">
-                      <Link to="/signup" className="flex items-center justify-center w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold text-lg hover:brightness-110 hover:shadow-xl hover:shadow-primary/25 transition-all group/btn">
-                        Start Earning Free <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Stats Bar */}
-        <section className="border-y border-border bg-muted/20 py-4 px-3">
-          <div className="max-w-5xl mx-auto grid grid-cols-4 gap-1 text-center">
-            {[
-              { value: "2,400+", label: "Active Creators" },
-              { value: "KES 12M+", label: "Paid Out Monthly" },
-              { value: "180k+", label: "Happy Fans" },
-              { value: "90%", label: "Revenue to Creators" },
-            ].map((stat, i) => (
-              <div key={i} className="flex flex-col items-center gap-0.5 px-1">
-                <div className="text-base sm:text-2xl md:text-3xl font-black text-foreground leading-tight">{stat.value}</div>
-                <div className="text-[9px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide leading-tight">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Value Propositions */}
-        <section className="px-6 py-24 bg-muted/20 border-b border-border">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-black mb-3">Why creators choose Hideaway</h2>
-              <p className="text-muted-foreground max-w-xl mx-auto">Built from the ground up for the African creator — not just adapted from Western platforms.</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-              {[
-                { icon: TrendingUp, color: "primary", title: "Maximize Earnings", body: "Keep up to 90% of your subscription revenue. We offer the lowest platform fees for verified creators — more money in your pocket, always." },
-                { icon: Users, color: "secondary", title: "Own Your Audience", body: "Your fans, your community. Own your contact list and build direct relationships with your most loyal supporters." },
-                { icon: ShieldCheck, color: "primary", title: "Secure & Instant Payouts", body: "M-Pesa STK push and Card checkouts built natively. Instant payouts with zero withdrawal minimums or waiting periods." },
-              ].map(({ icon: Icon, color, title, body }, i) => (
-                <div key={i} className={`group bg-background border border-border p-5 md:p-8 rounded-2xl hover:border-${color}/40 transition-all duration-300 hover:shadow-lg hover:shadow-${color}/5 hover:-translate-y-1 ${i === 2 ? 'col-span-2 md:col-span-1 mx-auto max-w-sm md:max-w-none' : ''}`}>
-                  <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-${color}/10 flex items-center justify-center mb-4 md:mb-6 group-hover:bg-${color}/20 transition-colors`}>
-                    <Icon className={`w-5 h-5 md:w-6 md:h-6 text-${color}`} />
-                  </div>
-                  <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 leading-tight">{title}</h3>
-                  <p className="text-muted-foreground leading-relaxed text-xs md:text-sm">{body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* How It Works */}
-        <section id="how-it-works" className="px-6 py-24 border-b border-border">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-black mb-3">Start earning in 3 steps</h2>
-              <p className="text-muted-foreground max-w-lg mx-auto">From signup to your first M-Pesa payout — it takes less than 10 minutes.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-3 sm:gap-8 relative">
-              {/* Connector line (desktop) */}
-              <div className="hidden md:block absolute top-10 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-              {[
-                { step: "01", icon: Zap, title: "Create Your Page", body: "Sign up free, set your subscription price, and upload your first piece of content. Takes under 5 minutes." },
-                { step: "02", icon: Users, title: "Grow Your Fans", body: "Share your Hideaway link on Instagram, TikTok, Twitter. Fans subscribe with M-Pesa or card in seconds." },
-                { step: "03", icon: TrendingUp, title: "Get Paid Instantly", body: "Earnings hit your M-Pesa wallet instantly after each transaction. No hold periods, no minimums." },
-              ].map(({ icon: Icon, title, body }, i) => (
-                <div key={i} className="flex flex-col items-center text-center group">
-                  <div className="relative mb-3 sm:mb-6">
-                    <div className="w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:border-primary/40 group-hover:bg-primary/5 transition-all duration-300 shadow-sm">
-                      <Icon className="w-5 h-5 sm:w-8 sm:h-8 text-primary" />
-                    </div>
-                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white text-black text-[10px] sm:text-xs font-black flex items-center justify-center shadow-md">
-                      {i + 1}
+                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Estimated Monthly Income</h3>
+                  
+                  <div className="flex items-center justify-center gap-2 mb-4 w-full">
+                    <span className="text-xl md:text-3xl font-extrabold text-red-500 align-top mt-2">KES</span>
+                    <span className="text-5xl md:text-7xl font-black text-white tracking-tight leading-none">
+                      {(followers * 0.05 * 500).toLocaleString()}
                     </span>
                   </div>
-                  <h3 className="text-[11px] sm:text-lg font-bold mb-1 sm:mb-2 leading-tight">{title}</h3>
-                  <p className="text-muted-foreground text-[9px] sm:text-sm leading-relaxed">{body}</p>
+                  
+                  {/* Green status badge */}
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-950/50 border border-emerald-500/30 text-xs font-bold text-emerald-400">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" /> Based on KES 500 sub price
+                  </div>
+                  
+                  <div className="mt-8 pt-8 border-t border-zinc-800/80 w-full">
+                    <Link to="/signup" className="flex items-center justify-center w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base md:text-lg transition-all active:scale-95 group/btn border border-red-500">
+                      Start Earning Free <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                    </Link>
+                  </div>
                 </div>
-              ))}
+              </div>
             </div>
-            <div className="mt-12 text-center">
-              <Link to="/signup" className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-lg shadow-primary/20 hover:scale-[1.03]">
-                Get Started Free <ArrowRight className="w-5 h-5" />
-              </Link>
+          </div>
+        </section>
+
+        {/* Platform Stats Header Bar */}
+        <section className="border-y border-zinc-800 bg-[#07080a] py-10 px-6">
+          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="flex flex-col items-center justify-center p-2">
+              <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">2,400+</span>
+              <span className="text-xs uppercase font-extrabold tracking-widest text-red-500 mt-1">Active Creators</span>
             </div>
+            <div className="flex flex-col items-center justify-center p-2">
+              <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">KES 12M+</span>
+              <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-400 mt-1">Paid Out Monthly</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-2">
+              <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">180k+</span>
+              <span className="text-xs uppercase font-extrabold tracking-widest text-red-500 mt-1">Happy Fans</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-2">
+              <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">90%</span>
+              <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-400 mt-1">Revenue To Creators</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Why Creators Choose Us */}
+        <section className="px-6 py-28 border-b border-zinc-800 bg-[#0a0b0e]">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4 leading-tight">
+                Why creators choose <span className="text-red-500">The Gents Dollhouse</span>
+              </h2>
+              <p className="text-zinc-400 text-base sm:text-lg font-medium leading-relaxed">
+                Built from the ground up for the African creator — not just adapted from Western platforms.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl hover:border-red-500/40 transition-colors group">
+                <div className="w-14 h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+                  <TrendingUp className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-3">Maximize Earnings</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                  Keep up to <strong className="text-emerald-400">90%</strong> of your subscription revenue. We offer the lowest platform fees for verified creators — more money in your pocket, always.
+                </p>
+              </div>
+
+              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl hover:border-red-500/40 transition-colors group">
+                <div className="w-14 h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+                  <Users className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-3">Own Your Audience</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                  Your fans, your community. Own your contact list and build direct relationships with your most loyal supporters without algorithm restrictions.
+                </p>
+              </div>
+
+              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl hover:border-red-500/40 transition-colors group">
+                <div className="w-14 h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+                  <ShieldCheck className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-3">Secure & Instant Payouts</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                  M-Pesa STK push and Card checkouts built natively. Instant payouts with zero withdrawal minimums or long waiting periods.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Start Earning in 3 Steps */}
+        <section className="px-6 py-28 border-b border-zinc-800 bg-[#07080a]">
+          <div className="max-w-5xl mx-auto text-center">
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
+              Start earning in <span className="text-red-500">3 steps</span>
+            </h2>
+            <p className="text-zinc-400 text-base sm:text-lg font-medium mb-16 max-w-xl mx-auto">
+              From signup to your first M-Pesa payout — it takes less than 10 minutes.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative mb-16">
+              {/* Step 1 */}
+              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl relative flex flex-col items-center text-center">
+                <div className="absolute -top-4 right-6 w-8 h-8 rounded-full bg-red-600 text-white font-black text-xs flex items-center justify-center border-2 border-[#07080a]">
+                  1
+                </div>
+                <div className="w-16 h-16 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+                  <Zap className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">Create Your Page</h3>
+                <p className="text-zinc-400 text-xs sm:text-sm font-medium leading-relaxed">
+                  Sign up free, set your subscription price, and upload your first piece of content. Takes under 5 minutes.
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl relative flex flex-col items-center text-center">
+                <div className="absolute -top-4 right-6 w-8 h-8 rounded-full bg-red-600 text-white font-black text-xs flex items-center justify-center border-2 border-[#07080a]">
+                  2
+                </div>
+                <div className="w-16 h-16 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+                  <Users className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">Grow Your Fans</h3>
+                <p className="text-zinc-400 text-xs sm:text-sm font-medium leading-relaxed">
+                  Share your link on Instagram, TikTok, Twitter. Fans subscribe with M-Pesa or card in seconds.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl relative flex flex-col items-center text-center">
+                <div className="absolute -top-4 right-6 w-8 h-8 rounded-full bg-emerald-500 text-black font-black text-xs flex items-center justify-center border-2 border-[#07080a]">
+                  3
+                </div>
+                <div className="w-16 h-16 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 rounded-2xl flex items-center justify-center mb-6">
+                  <TrendingUp className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">Get Paid Instantly</h3>
+                <p className="text-zinc-400 text-xs sm:text-sm font-medium leading-relaxed">
+                  Earnings hit your M-Pesa wallet instantly after each transaction. No hold periods, no minimums.
+                </p>
+              </div>
+            </div>
+
+            <Link to="/signup" className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-2xl font-black text-base transition-all active:scale-95 border border-red-500 shadow-lg shadow-red-600/20">
+              Get Started Free <ArrowRight className="w-5 h-5 ml-2" />
+            </Link>
           </div>
         </section>
 
         {/* Featured Creators */}
-        <section id="discover" className="px-6 py-24 border-b border-border bg-muted/10">
+        <section id="discover" className="px-6 py-24 border-b border-zinc-800 bg-[#0a0b0e]">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
               <div>
-                <h2 className="text-3xl md:text-4xl font-black mb-2">Trending on Hideaway</h2>
-                <p className="text-muted-foreground">Top Kenyan creators sharing premium content right now.</p>
+                <h2 className="text-3xl md:text-4xl font-black text-white mb-2">Trending on The Gents Dollhouse</h2>
+                <p className="text-zinc-400 font-medium">Top Kenyan creators sharing premium content right now.</p>
               </div>
-              <Link to="/discover" className="text-sm font-bold text-primary hover:text-emerald-300 flex items-center gap-1 transition-colors">
+              <Link to="/discover" className="text-sm font-bold text-red-500 hover:text-red-400 flex items-center gap-1.5 transition-colors">
                 View all creators <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
             <div 
               id="creators" 
-              className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6"
+              className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
             >
               {creators.map((creator, i) => (
-                <div key={i} className="flex-shrink-0 group relative bg-background border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 cursor-pointer">
-                  <div className="relative aspect-[4/5] sm:aspect-square overflow-hidden bg-muted">
+                <div key={i} className="flex-shrink-0 group relative bg-[#0d0e12] border border-zinc-800 rounded-3xl overflow-hidden hover:border-red-500/50 transition-all duration-300 shadow-xl flex flex-col justify-between">
+                  <div className="relative aspect-[4/5] sm:aspect-square overflow-hidden bg-zinc-900">
                     <img src={creator.img} alt={creator.name} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     {/* Category badge */}
-                    <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-background/70 backdrop-blur-sm border border-border text-xs font-semibold text-secondary">
+                    <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-zinc-950/80 backdrop-blur-md border border-zinc-800 text-[11px] font-black uppercase tracking-wider text-red-400">
                       {creator.category}
                     </div>
                   </div>
-                  <div className="p-5">
-                    <h3 className="text-base font-bold mb-1 flex items-center gap-1.5">
-                      {creator.name}
-                      <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
-                    </h3>
-                    <div className="flex items-center justify-between text-sm mt-3">
-                      <span className="text-muted-foreground">{creator.subs} subscribers</span>
-                      <span className="font-bold text-secondary">{creator.price}</span>
+                  <div className="p-5 flex flex-col flex-1 justify-between gap-4">
+                    <div>
+                      <h3 className="text-base sm:text-lg font-black text-white mb-1 flex items-center gap-1.5">
+                        {creator.name}
+                        <CheckCircle className="w-4 h-4 text-red-500 shrink-0 fill-red-500/10" />
+                      </h3>
+                      <div className="flex items-center justify-between text-xs sm:text-sm font-bold mt-2">
+                        <span className="text-zinc-400 font-medium">{creator.subs} subscribers</span>
+                        <span className="text-red-500 font-extrabold">{creator.price}</span>
+                      </div>
                     </div>
-                    <button className="mt-4 w-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/20 hover:border-primary py-2 rounded-lg text-sm font-semibold transition-all duration-200">
+
+                    <button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500 py-3 rounded-2xl text-xs sm:text-sm font-black transition-all active:scale-95 shadow-lg shadow-red-600/20">
                       Subscribe
                     </button>
                   </div>
@@ -474,7 +515,7 @@ const Landing = () => {
         <section className="px-6 py-24 border-b border-border">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-14">
-              <h2 className="text-3xl md:text-4xl font-black mb-3">Creators love Hideaway</h2>
+              <h2 className="text-3xl md:text-4xl font-black mb-3">Creators love The Gents Dollhouse</h2>
               <p className="text-muted-foreground">Real stories from creators earning real money.</p>
             </div>
             <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-4 md:gap-6 pb-6 md:pb-0 snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -543,14 +584,14 @@ const Landing = () => {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black mb-3">Frequently Asked Questions</h2>
-            <p className="text-muted-foreground">Everything you need to know about earning on Hideaway.</p>
+            <p className="text-muted-foreground">Everything you need to know about earning on The Gents Dollhouse.</p>
           </div>
           <div className="space-y-4">
             {[
-              { q: "How long do payouts take?", a: "Instantly. Unlike other platforms that make you wait 30 days, Hideaway deposits your earnings directly to your M-Pesa immediately after a subscriber pays." },
-              { q: "What percentage does Hideaway take?", a: "We take a flat 10% platform fee, which covers hosting, payment processing fees (M-Pesa/Card), and features. You keep 90% of everything you earn." },
+              { q: "How long do payouts take?", a: "Instantly. Unlike other platforms that make you wait 30 days, The Gents Dollhouse deposits your earnings directly to your M-Pesa immediately after a subscriber pays." },
+              { q: "What percentage does The Gents Dollhouse take?", a: "We take a flat 10% platform fee, which covers hosting, payment processing fees (M-Pesa/Card), and features. You keep 90% of everything you earn." },
               { q: "Can international fans subscribe?", a: "Yes! While built for Africa and M-Pesa natively, international followers can pay seamlessly using their Visa or Mastercard in USD." },
-              { q: "What type of content is allowed?", a: "Hideaway is a home for premium lifestyle, fitness, culinary, educational, and entertainment creators. Content must comply with our Terms of Service (no explicit adult content)." },
+              { q: "What type of content is allowed?", a: "The Gents Dollhouse is a home for premium lifestyle, fitness, culinary, educational, and entertainment creators. Content must comply with our Terms of Service (no explicit adult content)." },
             ].map((faq, i) => (
               <details key={i} className="group bg-muted/20 border border-border rounded-2xl overflow-hidden open:bg-muted/40 transition-colors">
                 <summary className="font-bold text-lg p-6 cursor-pointer flex justify-between items-center hover:text-primary transition-colors list-none marker:hidden">
@@ -576,7 +617,10 @@ const Landing = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <div className="text-2xl font-black tracking-tighter text-primary mb-3">Hideaway<span className="text-secondary">.</span></div>
+              <div className="flex items-center gap-3 mb-4">
+                <img src="/logo.svg" alt="Logo" className="w-12 h-12 object-contain" />
+                <span className="text-2xl font-black tracking-tighter text-primary leading-tight">The Gents Dollhouse<span className="text-secondary">.</span></span>
+              </div>
               <p className="text-sm text-muted-foreground leading-relaxed">The premium creator platform built for Kenya and all of Africa.</p>
             </div>
             {/* Creators */}
@@ -603,7 +647,7 @@ const Landing = () => {
             <div>
               <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-foreground">Company</h4>
               <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <a href="#" className="hover:text-primary transition-colors">About Hideaway</a>
+                <a href="#" className="hover:text-primary transition-colors">About The Gents Dollhouse</a>
                 <a href="#" className="hover:text-primary transition-colors">Blog</a>
                 <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
                 <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
@@ -612,7 +656,7 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-muted-foreground">© 2026 Hideaway Technologies Ltd. All rights reserved.</div>
+            <div className="text-sm text-muted-foreground">© 2026 The Gents Dollhouse Technologies Ltd. All rights reserved.</div>
             <div className="flex items-center gap-3">
               {["M-PESA", "VISA", "MC"].map((b) => (
                 <div key={b} className="px-2.5 py-1 rounded border border-border bg-muted text-xs font-bold text-muted-foreground">

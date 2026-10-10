@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, Flame } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -13,8 +13,10 @@ const navItems = [
   { name: 'Feed', path: '/user', icon: Home, badge: 'Live' },
   { name: 'Messages', path: '/user/messages', icon: MessageCircle },
   { name: 'Purchases', path: '/user/vault', icon: FolderHeart },
+  { name: 'Escorts', path: '/user/escorts', icon: Flame, badge: 'New' },
   { name: 'Subscriptions', path: '/user/subscriptions', icon: CreditCard },
-  { name: 'Payment Methods', path: '/user/payments', icon: Wallet },
+  { name: 'Wallet', path: '/user/wallet', icon: Wallet },
+  { name: 'Payment Methods', path: '/user/payments', icon: CreditCard },
   { name: 'Settings', path: '/user/settings', icon: Settings },
 ];
 
@@ -40,8 +42,9 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between px-5 py-3.5 border-b border-white/5 bg-[#0D0E12]/90 backdrop-blur-xl sticky top-0 z-40">
-        <Link to="/user" className="flex items-center gap-2 group">
-          <span className="text-xl font-black tracking-tight text-white">Hideaway<span className="text-primary">.</span></span>
+        <Link to="/user" className="flex items-center gap-2.5 group">
+          <img src="/logo.svg" alt="Logo" className="w-10 h-10 object-contain drop-shadow-md" />
+          <span className="text-lg font-black tracking-tight text-white">The Gents Dollhouse<span className="text-primary">.</span></span>
         </Link>
         <button 
           onClick={() => setIsMobileMenuOpen(true)} 
@@ -64,13 +67,11 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         
         {/* Brand Header */}
         <div className="flex justify-between items-center mb-6 pt-1">
-          <Link to="/user" className="flex items-center gap-2.5 group">
-           
-            <div>
-              <div className="text-xl font-black tracking-tight text-white flex items-center gap-1">
-                Hideaway<span className="text-primary font-serif italic text-2xl leading-none">.</span>
-              </div>
-              <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 -mt-0.5">VIP Portal</div>
+          <Link to="/user" className="flex items-center gap-3 group">
+            <img src="/logo.svg" alt="Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-md" />
+            <div className="flex flex-col">
+              <span className="text-[1.1rem] md:text-xl font-black tracking-tight text-white leading-tight">The Gents Dollhouse<span className="text-primary">.</span></span>
+              <span className="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 mt-0.5">VIP Portal</span>
             </div>
           </Link>
 
@@ -117,7 +118,11 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                 </div>
 
                 {item.badge && (
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded-full border border-primary/30">
+                  <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                    item.badge === 'New' 
+                      ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]' 
+                      : 'bg-primary/20 text-primary border-primary/30'
+                  }`}>
                     {item.badge}
                   </span>
                 )}

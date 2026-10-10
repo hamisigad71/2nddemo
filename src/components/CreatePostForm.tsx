@@ -17,6 +17,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   const [price, setPrice] = useState('');
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,9 +33,15 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
     if (!user || !selectedFile) return;
 
     setUploading(true);
+    setUploadError(null);
     try {
       const path = `posts/${user.id}/${Date.now()}_${selectedFile.name}`;
-      const mediaUrl = await uploadFileToSupabase(selectedFile, 'media', path);
+      const mediaUrl = await uploadFileToSupabase(selectedFile, 'hideaway post storage', path);
+
+      if (!mediaUrl) {
+        setUploadError('Image upload failed. Please check your storage settings or try a smaller file.');
+        return;
+      }
 
       await createPost(
         user.id,
@@ -54,6 +61,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error(err);
+      setUploadError('An unexpected error occurred. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -127,6 +135,12 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
               placeholder="e.g. 500"
               className="flex-1 bg-muted/30 border border-border rounded-r-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm"
             />
+          </div>
+        )}
+
+        {uploadError && (
+          <div className="text-red-500 text-sm font-bold bg-red-500/10 rounded-xl px-4 py-3 text-center">
+            ❌ {uploadError}
           </div>
         )}
 

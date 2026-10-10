@@ -15,7 +15,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     // Check local storage or default to dark
     const stored = localStorage.getItem('hideaway-theme');
     if (stored === 'light' || stored === 'dark') return stored;
-    return 'dark'; // Dark theme is default for Hideaway
+    return 'dark'; // Dark theme is default for The Gents Dollhouse
   });
 
   useEffect(() => {

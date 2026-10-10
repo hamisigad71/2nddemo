@@ -1,13 +1,24 @@
 import { useState } from 'react';
-import { Save, Settings, DollarSign, Shield, CreditCard, Megaphone } from 'lucide-react';
+import { Save, Settings, DollarSign, Shield, CreditCard, Megaphone, Bell, CheckCircle, Users } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 
+const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
+  <button
+    onClick={() => onChange(!value)}
+    className={`relative w-12 h-6 rounded-full transition-colors duration-300 border ${value ? 'bg-red-600 border-red-500' : 'bg-zinc-800 border-zinc-700'}`}
+  >
+    <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 ${value ? 'translate-x-6' : 'translate-x-0'}`} />
+  </button>
+);
+
 const AdminSettings = () => {
-  const [platformFee, setPlatformFee] = useState('10');
+  const [platformFee, setPlatformFee] = useState('15');
+  const [minPayout, setMinPayout] = useState('1000');
   const [announcement, setAnnouncement] = useState('');
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [newCreators, setNewCreators] = useState(true);
+  const [autoApprove, setAutoApprove] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -15,133 +26,136 @@ const AdminSettings = () => {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
-    <button
-      onClick={() => onChange(!value)}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${value ? 'bg-primary' : 'bg-muted'}`}
-    >
-      <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${value ? 'translate-x-5' : 'translate-x-0'}`} />
-    </button>
+  const Section = ({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) => (
+    <div className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 space-y-5 hover:border-zinc-700 transition-colors">
+      <div className="flex items-center gap-3 pb-3 border-b border-zinc-800">
+        <div className="w-8 h-8 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500">
+          <Icon className="w-4 h-4" />
+        </div>
+        <h3 className="font-black text-white text-base">{title}</h3>
+      </div>
+      {children}
+    </div>
   );
 
   return (
     <AdminLayout>
-      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-3xl mx-auto">
+      <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-3xl mx-auto">
 
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight">Platform Settings</h1>
-          <p className="text-muted-foreground text-sm mt-1">Configure global platform behaviour and settings.</p>
-        </div>
-
-        {/* Platform Fee */}
-        <div className="bg-muted/30 border border-border rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-4 h-4 text-primary" />
-            <h3 className="font-bold">Revenue & Fees</h3>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-2 block">Platform Commission (%)</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min="1"
-                max="50"
-                value={platformFee}
-                onChange={e => setPlatformFee(e.target.value)}
-                className="w-28 px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <span className="text-sm text-muted-foreground">% deducted from each transaction</span>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#0d0e12] to-[#14161d] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500">
+                <Settings className="w-5 h-5" />
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Platform Settings</h1>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Current: creators keep <strong className="text-foreground">{100 - parseInt(platformFee || '0')}%</strong> of their earnings.</p>
+            <p className="text-zinc-400 text-sm font-medium">Configure global platform behaviour, revenue rates, and security settings.</p>
           </div>
         </div>
+
+        {/* Revenue & Fees */}
+        <Section icon={DollarSign} title="Revenue & Fees">
+          <div className="space-y-4">
+            <div>
+              <label className="text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-2 block">Platform Commission (%)</label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="number" min="1" max="50" value={platformFee}
+                  onChange={e => setPlatformFee(e.target.value)}
+                  className="w-28 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-2xl text-white text-sm font-black focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 transition-all"
+                />
+                <span className="text-sm text-zinc-400">% cut per transaction</span>
+              </div>
+              <p className="text-xs text-zinc-600 mt-2">Creators currently keep <strong className="text-white">{100 - parseInt(platformFee || '0')}%</strong> of their earnings.</p>
+            </div>
+            <div>
+              <label className="text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-2 block">Minimum Payout Threshold (KES)</label>
+              <input
+                type="number" value={minPayout}
+                onChange={e => setMinPayout(e.target.value)}
+                className="w-40 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-2xl text-white text-sm font-black focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 transition-all"
+              />
+              <p className="text-xs text-zinc-600 mt-2">Creators must earn at least KES {parseInt(minPayout || '0').toLocaleString()} before requesting a withdrawal.</p>
+            </div>
+          </div>
+        </Section>
 
         {/* Feature Flags */}
-        <div className="bg-muted/30 border border-border rounded-2xl p-6 space-y-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Settings className="w-4 h-4 text-primary" />
-            <h3 className="font-bold">Feature Flags</h3>
-          </div>
+        <Section icon={Settings} title="Feature Flags">
           {[
             { label: 'Allow New Creator Signups', desc: 'Enable or disable new creator registrations platform-wide.', value: newCreators, onChange: setNewCreators },
-            { label: 'Email Alerts for Admins', desc: 'Receive email notifications for flagged content and failed payouts.', value: emailAlerts, onChange: setEmailAlerts },
-            { label: 'Maintenance Mode', desc: 'Puts the platform in read-only mode. No new transactions.', value: maintenanceMode, onChange: setMaintenanceMode },
+            { label: 'Auto-Approve Low-Risk Creators', desc: 'Automatically approve creators with verified ID and no prior flags.', value: autoApprove, onChange: setAutoApprove },
+            { label: 'Admin Email Alerts', desc: 'Receive email notifications for flagged content and failed payouts.', value: emailAlerts, onChange: setEmailAlerts },
+            { label: 'Maintenance Mode', desc: 'Puts the platform in read-only mode. No new transactions or signups.', value: maintenanceMode, onChange: setMaintenanceMode },
           ].map(({ label, desc, value, onChange }, i) => (
-            <div key={i} className="flex items-center justify-between gap-4">
+            <div key={i} className="flex items-center justify-between gap-4 py-3 border-b border-zinc-900 last:border-0">
               <div>
-                <div className="text-sm font-semibold">{label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{desc}</div>
+                <div className="text-sm font-bold text-white">{label}</div>
+                <div className="text-xs text-zinc-500 mt-0.5">{desc}</div>
               </div>
               <Toggle value={value} onChange={onChange} />
             </div>
           ))}
-        </div>
+        </Section>
 
-        {/* Announcement Banner */}
-        <div className="bg-muted/30 border border-border rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Megaphone className="w-4 h-4 text-primary" />
-            <h3 className="font-bold">Announcement Banner</h3>
-          </div>
+        {/* Announcement */}
+        <Section icon={Megaphone} title="Platform Announcement Banner">
           <div>
-            <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-2 block">Banner Message</label>
+            <label className="text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-2 block">Banner Message</label>
             <textarea
               value={announcement}
               onChange={e => setAnnouncement(e.target.value)}
-              placeholder="e.g. We are performing scheduled maintenance on Oct 5..."
+              placeholder="e.g. We are performing scheduled maintenance on Oct 15..."
               rows={3}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground resize-none"
+              className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-2xl text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 placeholder:text-zinc-600 resize-none transition-all"
             />
-            <p className="text-xs text-muted-foreground mt-1">Leave empty to hide the banner.</p>
+            <p className="text-xs text-zinc-600 mt-1">Leave empty to hide the banner. Visible to all platform users.</p>
           </div>
-        </div>
+        </Section>
 
         {/* Payment Gateway */}
-        <div className="bg-muted/30 border border-border rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CreditCard className="w-4 h-4 text-primary" />
-            <h3 className="font-bold">Payment Gateway Keys</h3>
-          </div>
+        <Section icon={CreditCard} title="Payment Gateway Keys">
           {[
             { label: 'M-Pesa Consumer Key', placeholder: 'sk_mpesa_xxxxxxxxxxxxx' },
-            { label: 'Stripe API Key', placeholder: 'sk_live_xxxxxxxxxxxxx' },
+            { label: 'M-Pesa Consumer Secret', placeholder: 'cs_mpesa_xxxxxxxxxxxxx' },
+            { label: 'Stripe API Key (Optional)', placeholder: 'sk_live_xxxxxxxxxxxxx' },
           ].map(({ label, placeholder }, i) => (
             <div key={i}>
-              <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-2 block">{label}</label>
+              <label className="text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-2 block">{label}</label>
               <input
-                type="password"
-                placeholder={placeholder}
-                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground"
+                type="password" placeholder={placeholder}
+                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-2xl text-white text-sm font-mono focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 placeholder:text-zinc-600 transition-all"
               />
             </div>
           ))}
-        </div>
+        </Section>
 
         {/* Security */}
-        <div className="bg-muted/30 border border-border rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-4 h-4 text-primary" />
-            <h3 className="font-bold">Admin Security</h3>
-          </div>
+        <Section icon={Shield} title="Admin Security">
           <div className="space-y-3">
-            <button className="w-full text-left px-4 py-3 bg-background border border-border rounded-xl text-sm hover:border-primary/30 transition-colors group">
-              <div className="font-semibold group-hover:text-primary transition-colors">Change Admin Password</div>
-              <div className="text-xs text-muted-foreground mt-0.5">Update your super admin credentials</div>
-            </button>
-            <button className="w-full text-left px-4 py-3 bg-background border border-border rounded-xl text-sm hover:border-primary/30 transition-colors group">
-              <div className="font-semibold group-hover:text-primary transition-colors">Two-Factor Authentication</div>
-              <div className="text-xs text-muted-foreground mt-0.5">Enable 2FA for additional security</div>
-            </button>
+            {[
+              { label: 'Change Admin Password', desc: 'Update your super admin credentials' },
+              { label: 'Two-Factor Authentication', desc: 'Enable 2FA for login security' },
+              { label: 'Session Management', desc: 'View and revoke active admin sessions' },
+            ].map(({ label, desc }, i) => (
+              <button key={i} className="w-full text-left px-5 py-4 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-500/30 hover:bg-zinc-900/80 transition-all group">
+                <div className="font-bold text-white text-sm group-hover:text-red-400 transition-colors">{label}</div>
+                <div className="text-xs text-zinc-500 mt-0.5">{desc}</div>
+              </button>
+            ))}
           </div>
-        </div>
+        </Section>
 
-        {/* Save Button */}
+        {/* Save */}
         <button
           onClick={handleSave}
-          className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm transition-all ${saved ? 'bg-emerald-400 text-black' : 'bg-primary text-primary-foreground hover:brightness-110'} shadow-lg shadow-primary/20`}
+          className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-2xl ${saved ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-red-600 text-white hover:bg-red-500 shadow-red-600/20'}`}
         >
-          <Save className="w-4 h-4" />
-          {saved ? 'Saved!' : 'Save Changes'}
+          {saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+          {saved ? 'Changes Saved!' : 'Save All Changes'}
         </button>
 
       </div>

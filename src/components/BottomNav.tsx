@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Compass, MessageCircle, CreditCard, Settings } from 'lucide-react';
+import { Home, Compass, MessageCircle, CreditCard, Settings, Flame } from 'lucide-react';
 
 const navItems = [
   { label: 'Feed', path: '/user', icon: Home },
   { label: 'Discover', path: '/discover', icon: Compass },
+  { label: 'Escorts', path: '/user/escorts', icon: Flame },
   { label: 'Messages', path: '/user/messages', icon: MessageCircle },
   { label: 'Subs', path: '/user/subscriptions', icon: CreditCard },
   { label: 'Settings', path: '/user/settings', icon: Settings },

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -11,6 +11,7 @@ interface CreatorLayoutProps {
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
   { name: 'My Feed', path: '/feed', icon: Rss },
+  { name: 'Creator Playbook', path: '/guide', icon: BookOpen },
   { name: 'Analytics', path: '/analytics', icon: LineChart },
   { name: 'Messages', path: '/messages', icon: MessageCircle },
   { name: 'Automations', path: '/automations', icon: Bot },
@@ -21,6 +22,7 @@ const navItems = [
   { name: 'Wallet', path: '/wallet', icon: DollarSign },
   { name: 'Notifications', path: '/notifications', icon: Bell },
   { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Escort Application', path: '/escort-application', icon: Heart },
 ];
 
 const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
@@ -41,7 +43,10 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
       
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background sticky top-0 z-40">
-        <Link to="/" className="text-xl font-bold tracking-tighter text-primary">Hideaway<span className="text-muted-foreground">.</span></Link>
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <img src="/logo.svg" alt="Logo" className="w-9 h-9 object-contain drop-shadow-md" />
+          <span className="text-lg font-bold tracking-tighter text-foreground">The Gents Dollhouse<span className="text-primary">.</span></span>
+        </Link>
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -mr-2 text-foreground">
           <Menu className="w-7 h-7" />
         </button>
@@ -58,7 +63,10 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-background/95 md:bg-background/80 backdrop-blur-3xl border-r border-border p-5 flex flex-col h-screen transform transition-all duration-300 md:relative md:translate-x-0 shadow-2xl md:shadow-none ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex justify-between items-center mb-6 pl-2">
-           <Link to="/" className="text-2xl font-bold tracking-tighter text-primary hidden md:block">Hideaway<span className="text-foreground">.</span></Link>
+           <Link to="/" className="hidden md:flex items-center gap-2.5 group">
+             <img src="/logo.svg" alt="Logo" className="w-12 h-12 object-contain drop-shadow-md" />
+             <span className="text-xl font-bold tracking-tighter text-foreground leading-tight">The Gents Dollhouse<span className="text-primary">.</span></span>
+           </Link>
            <span className="text-lg font-bold md:hidden">Menu</span>
            <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-2 text-muted-foreground hover:bg-white/10 rounded-full transition-colors">
              <X className="w-5 h-5" />
@@ -100,7 +108,7 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         <div className="pt-4 mt-auto shrink-0 mb-safe gap-2 flex flex-col border-t border-border/50 relative z-10 pt-5">
            <div className="p-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/50 rounded-2xl flex items-center justify-between transition-colors">
              <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 w-full group overflow-hidden pl-1">
-               <img src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pravatar.cc/150?img=12"} alt="avatar" referrerPolicy="no-referrer" className="w-[38px] h-[38px] rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
+               <img src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pinimg.com/736x/c9/27/d6/c927d6a930299f0e5d0be9b217d09b16.jpg"} alt="avatar" referrerPolicy="no-referrer" className="w-[38px] h-[38px] rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
                <div className="flex-1 min-w-0 pr-2">
                   <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{user?.user_metadata?.name || user?.user_metadata?.full_name || "Jane Doe"}</div>
                   <div className="text-[12px] text-muted-foreground truncate">View Profile</div>

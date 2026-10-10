@@ -21,6 +21,10 @@ import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminPayouts from "./pages/admin/AdminPayouts";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminAuditLog from "./pages/admin/AdminAuditLog";
+import AdminEscorts from "./pages/admin/AdminEscorts";
 import Messages from "./pages/creator/Messages";
 import MediaVault from "./pages/creator/MediaVault";
 import EarningsWallet from "./pages/creator/EarningsWallet";
@@ -32,12 +36,16 @@ import FanManagement from "./pages/creator/FanManagement";
 import Promotions from "./pages/creator/Promotions";
 import Analytics from "./pages/creator/Analytics";
 import Scheduling from "./pages/creator/Scheduling";
+import CreatorGuide from "./pages/creator/CreatorGuide";
 import CreatorFeed from "./pages/creator/CreatorFeed";
+import EscortRegistration from "./pages/creator/EscortRegistration";
 import UserMessages from "./pages/user/UserMessages";
 import UserVault from "./pages/user/UserVault";
 import Subscriptions from "./pages/user/Subscriptions";
 import PaymentMethods from "./pages/user/PaymentMethods";
 import UserSettings from "./pages/user/UserSettings";
+import EscortsPage from "./pages/user/EscortsPage";
+import UserWallet from "./pages/user/UserWallet";
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -102,10 +110,14 @@ const AppRoutes = () => {
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/feed" element={<CreatorFeed />} />
               <Route path="/scheduling" element={<Scheduling />} />
+              <Route path="/guide" element={<CreatorGuide />} />
+              <Route path="/escort-application" element={<EscortRegistration />} />
               <Route path="/user" element={<UserDashboard />} />
               <Route path="/user/messages" element={<UserMessages />} />
               <Route path="/user/vault" element={<UserVault />} />
               <Route path="/user/subscriptions" element={<Subscriptions />} />
+              <Route path="/user/escorts" element={<EscortsPage />} />
+              <Route path="/user/wallet" element={<UserWallet />} />
               <Route path="/user/payments" element={<PaymentMethods />} />
               <Route path="/user/settings" element={<UserSettings />} />
               <Route path="/admin" element={<AdminOverview />} />
@@ -115,6 +127,10 @@ const AppRoutes = () => {
               <Route path="/admin/content" element={<AdminContent />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/payouts" element={<AdminPayouts />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
+              <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+              <Route path="/admin/escorts" element={<AdminEscorts />} />
             </Route>
           </Routes>
         </div>

@@ -31,7 +31,7 @@ const AdminOverview = () => {
         {/* Header */}
         <div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight">Platform Overview</h1>
-          <p className="text-muted-foreground text-sm mt-1">Real-time snapshot of Hideaway platform performance.</p>
+          <p className="text-muted-foreground text-sm mt-1">Real-time snapshot of The Gents Dollhouse platform performance.</p>
         </div>
 
         {/* Stat Cards */}

@@ -15,6 +15,12 @@ export default defineConfig({
         target: 'https://cyb3rpay.pesapal.com/pesapalv3',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/pesapal-sandbox/, ''),
+      },
+      '/daraja': {
+        target: 'https://sandbox.safaricom.co.ke',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/daraja/, ''),
+        secure: true,
       }
     }
   }

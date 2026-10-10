@@ -11,6 +11,7 @@ interface AuthContextType {
   signInWithFacebook: (role?: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string) => Promise<User | null>;
   signInWithEmail: (email: string, password: string) => Promise<User | null>;
+  verifyOtp: (email: string, token: string) => Promise<User | null>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -135,6 +136,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const verifyOtp = async (email: string, token: string) => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'signup'
+      });
+      if (error) throw error;
+      return data.user;
+    } catch (error) {
+      console.error("Error verifying OTP", error);
+      throw error;
+    }
+  };
+
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -151,7 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, resetPassword, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, verifyOtp, resetPassword, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

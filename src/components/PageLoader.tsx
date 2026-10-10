@@ -74,12 +74,12 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
       <img
         src="https://i.pinimg.com/736x/b1/39/54/b13954cc1f7c47fac66562a002262af9.jpg"
         alt=""
-        className="md:hidden absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+        className="md:hidden absolute inset-0 w-full h-full object-cover object-center pointer-events-none filter saturate-[0.85]"
         loading="eager"
       />
       
       {/* Mobile overlay - subtle dark gradient to ensure legibility while keeping image crisp */}
-      <div className="md:hidden absolute inset-0 bg-black/40 bg-gradient-to-t from-background/90 via-transparent to-background/50 pointer-events-none" />
+      <div className="md:hidden absolute inset-0 bg-black/40 bg-gradient-to-t from-[#13141A] via-[#13141A]/50 to-black/60 backdrop-blur-[3px] pointer-events-none" />
 
       {/* Ambient background glow blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -161,44 +161,40 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
           {/* Logo mark */}
           <div
-            className="hidden md:flex w-14 h-14 rounded-2xl items-center justify-center overflow-hidden"
-            style={{
-              backdropFilter: 'blur(12px)',
-            }}
+            className="hidden md:flex w-14 h-14 rounded-2xl items-center justify-center -ml-1"
           >
             <img 
-              src="/logo1.png" 
+              src="/logo.svg" 
               alt="Logo" 
               className="w-full h-full object-contain" 
-              style={{ mixBlendMode: 'screen' }}
             />
           </div>
         </div>
 
         {/* Brand name */}
-        <div className="text-center">
-          <div className="text-3xl font-black tracking-tighter mb-1 text-foreground">
-            Hideaway<span style={{ color: 'var(--color-secondary)' }}>.</span>
+        <div className="text-center relative z-10 mt-4">
+          <div className="text-3xl font-black tracking-tighter mb-1 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+            The Gents Dollhouse<span className="text-rose-500">.</span>
           </div>
-          <p className="text-xs text-muted-foreground font-medium tracking-[0.2em] uppercase">
+          <p className="text-xs text-white/80 font-bold tracking-[0.25em] uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             Creator Platform
           </p>
         </div>
 
         {/* Progress bar */}
-        <div className="w-48 flex flex-col items-center gap-2">
-          <div className="w-full h-0.5 bg-border rounded-full overflow-hidden">
+        <div className="w-56 flex flex-col items-center gap-3 relative z-10 mt-2">
+          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden backdrop-blur-md border border-white/5">
             <div
               className="h-full rounded-full"
               style={{
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, var(--color-primary), var(--color-secondary))',
+                background: 'linear-gradient(90deg, #f43f5e, #fb7185)',
                 transition: 'width 0.15s ease-out',
-                boxShadow: '0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent)',
+                boxShadow: '0 0 12px rgba(244,63,94,0.6)',
               }}
             />
           </div>
-          <span className="text-[10px] font-bold tabular-nums text-primary">
+          <span className="text-[11px] font-black tabular-nums text-rose-400 tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
             {progress}%
           </span>
         </div>
@@ -206,7 +202,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
       {/* Bottom tagline */}
       <div
-        className="absolute bottom-10 text-[11px] text-muted-foreground font-medium tracking-widest uppercase"
+        className="absolute bottom-10 text-[11px] text-white/60 font-bold tracking-[0.15em] uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
         style={{ animation: 'loader-fade-up 1s ease-out forwards' }}
       >
         🇰🇪 Built for African Creators

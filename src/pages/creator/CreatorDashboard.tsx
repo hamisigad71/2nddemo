@@ -1,4 +1,5 @@
-import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar, Loader2 } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar, Loader2, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +32,29 @@ const CreatorDashboard = () => {
            <Calendar className="w-4 h-4 text-muted-foreground" />
            Last 30 Days
          </div>
+       </div>
+
+       {/* Identity Verification Alert Banner */}
+       <div className="mb-8 p-5 rounded-2xl bg-[#1b0809]/90 border border-red-600/40 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+         <div className="flex items-start sm:items-center gap-3.5">
+           <div className="p-2 rounded-xl bg-red-600/10 text-red-500 shrink-0 mt-0.5 sm:mt-0 border border-red-500/20">
+             <AlertCircle className="w-6 h-6 text-red-500" />
+           </div>
+           <div>
+             <h3 className="text-base font-bold text-red-500 flex items-center gap-2">
+               Action Required: Identity Verification
+             </h3>
+             <p className="text-xs sm:text-sm text-zinc-300 font-medium mt-0.5">
+               You cannot withdraw earnings until your identity is verified under Kenya regulatory compliance (AML).
+             </p>
+           </div>
+         </div>
+         <Link 
+           to="/edit-profile" 
+           className="w-full sm:w-auto text-center bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs tracking-wider uppercase px-5 py-2.5 rounded-full transition-all shadow-md shadow-red-600/30 border border-red-500 whitespace-nowrap"
+         >
+           UNVERIFIED
+         </Link>
        </div>
 
        {/* Stats Grid */}

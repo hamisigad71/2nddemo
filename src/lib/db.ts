@@ -164,6 +164,83 @@ export const deletePost = async (postId: string) => {
 };
 
 // ========================
+// LIKES
+// ========================
+
+export const getPostLikes = async (postId: string, userId?: string) => {
+  const { count } = await supabase
+    .from('post_likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('post_id', postId);
+
+  let userHasLiked = false;
+  if (userId) {
+    const { data } = await supabase
+      .from('post_likes')
+      .select('id')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    userHasLiked = !!data;
+  }
+
+  return { count: count || 0, userHasLiked };
+};
+
+export const toggleLike = async (postId: string, userId: string, currentlyLiked: boolean) => {
+  if (currentlyLiked) {
+    await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', userId);
+  } else {
+    await supabase
+      .from('post_likes')
+      .insert({ post_id: postId, user_id: userId });
+  }
+};
+
+// ========================
+// COMMENTS
+// ========================
+
+export const getComments = async (postId: string) => {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  if (error) console.error('getComments error:', error.message);
+  if (!data || data.length === 0) return [];
+
+  // Fetch user info for each commenter separately (no FK defined)
+  const withUsers = await Promise.all(
+    data.map(async (comment: any) => {
+      const { data: userInfo } = await supabase
+        .from('users')
+        .select('name, avatar')
+        .eq('uid', comment.user_id)
+        .maybeSingle();
+      return { ...comment, users: userInfo || null };
+    })
+  );
+  return withUsers;
+};
+
+export const addComment = async (postId: string, userId: string, content: string) => {
+  const { data, error } = await supabase
+    .from('comments')
+    .insert({ post_id: postId, user_id: userId, content })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+
+
+// ========================
 // 4. TRANSACTIONS (Wallet)
 // ========================
 
@@ -303,4 +380,154 @@ export const checkEmailExists = async (email: string) => {
   }
   
   return !!data;
+};
+
+// ========================
+// 6. ADMIN SYSTEM
+// ========================
+
+export const getAdminOverviewStats = async () => {
+  // Aggregate mock totals if tables don't exist yet, but wire up real counts
+  try {
+    const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    const { count: creatorsCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'creator');
+    
+    // Sum transactions for total revenue
+    const { data: txs } = await supabase.from('transactions').select('gross_amount').eq('status', 'completed');
+    const totalRevenue = (txs || []).reduce((sum, t) => sum + (t.gross_amount || 0), 0);
+    
+    return {
+      totalUsers: usersCount || 0,
+      totalCreators: creatorsCount || 0,
+      totalRevenue: totalRevenue,
+      platformFees: totalRevenue * PLATFORM_FEE,
+    };
+  } catch (e) {
+    return { totalUsers: 0, totalCreators: 0, totalRevenue: 0, platformFees: 0 };
+  }
+};
+
+export const getAdminCreators = async () => {
+  try {
+    // 1. Fetch all users who are creators or pending creators
+    const { data: creatorUsers, error } = await supabase
+      .from('users')
+      .select('uid, name, email, avatar, role')
+      // Note: Assuming 'pending_creator' or 'suspended_creator' could be a role or status 
+      // For now we fetch all to show in admin logic if needed, or explicitly 'creator'
+      .in('role', ['creator', 'pending_creator', 'suspended_creator']);
+      
+    if (error) throw error;
+    
+    // 2. Map and aggregate with profiles (mocked fallback if missing properties)
+    const formatted = await Promise.all((creatorUsers || []).map(async (u) => {
+       const { data: profile } = await supabase.from('creator_profiles').select('*').eq('user_id', u.uid).maybeSingle();
+       
+       return {
+         id: u.uid,
+         name: u.name,
+         email: u.email,
+         img: u.avatar || `https://i.pravatar.cc/150?u=${u.uid}`,
+         category: profile?.niche || 'Various',
+         subs: profile?.total_subscribers || 0,
+         revenue: `KES ${(profile?.total_earnings || 0).toLocaleString()}`,
+         // Role dictates status for simplicity, or grab explicit status if added to DB
+         status: u.role === 'creator' ? 'active' : u.role === 'suspended_creator' ? 'suspended' : 'pending',
+         joined: 'Recent' // Can format created_at if existed
+       };
+    }));
+    
+    return formatted;
+  } catch (err) {
+    console.error("Error fetching admin creators:", err);
+    return [];
+  }
+};
+
+export const updateCreatorStatus = async (creatorId: string, newStatus: 'active' | 'pending' | 'suspended') => {
+  const roleMap = {
+    'active': 'creator',
+    'pending': 'pending_creator',
+    'suspended': 'suspended_creator'
+  };
+  
+  const { error } = await supabase
+    .from('users')
+    .update({ role: roleMap[newStatus] as string })
+    .eq('uid', creatorId);
+    
+  if (error) throw error;
+};
+
+export const getAdminContentPosts = async () => {
+  try {
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select('*, users!creator_id(name, avatar)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return posts?.map(p => ({
+      id: p.id,
+      creator: p.users?.name || 'Unknown',
+      creatorId: p.creator_id, // Added creatorId to know who to message
+      type: p.media_url?.includes('.mp4') ? 'Video' : p.media_url ? 'Photo' : 'Text Post',
+      title: p.content?.substring(0, 60) + (p.content?.length > 60 ? '...' : '') || 'Untitled Post',
+      reports: 0, // Mocked for UI until a reporting table is added
+      reason: 'General Review', // Mocked
+      status: 'pending',
+      img: p.media_url || p.users?.avatar || `https://i.pravatar.cc/150?u=${p.id}`,
+      time: new Date(p.created_at).toLocaleDateString()
+    })) || [];
+  } catch (err) {
+    console.error("Error fetching admin content posts:", err);
+    return [];
+  }
+};
+
+export const sendAdminMessage = async (creatorId: string, message: string) => {
+  try {
+    const { error } = await supabase.from('notifications').insert({
+      user_id: creatorId,
+      title: 'Admin Moderation',
+      message: message,
+      type: 'warning',
+      is_read: false
+    });
+    if (error) throw error;
+  } catch (err) {
+    console.error("Failed to send admin message to creator:", err);
+    throw err;
+  }
+};
+
+export const getAdminTransactions = async () => {
+  try {
+    const { data: txs, error } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        from_user:users!from_user_id (name, email),
+        to_creator:users!to_creator_id (name, email)
+      `)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    
+    return txs?.map(t => ({
+      id: t.id.substring(0,8).toUpperCase(), // Short visual ID
+      user: t.from_user?.name || 'Unknown',
+      creator: t.to_creator?.name || 'Unknown',
+      method: t.type === 'subscription' ? 'Card' : 'M-Pesa', // Rough mock mapping
+      amount: `KES ${(t.gross_amount || 0).toLocaleString()}`,
+      fee: `KES ${(t.platform_fee || 0).toLocaleString()}`,
+      net: `KES ${(t.net_amount || 0).toLocaleString()}`,
+      status: t.status, // completed -> success, pending -> pending, failed -> failed
+      date: new Date(t.created_at).toLocaleString()
+    })) || [];
+  } catch (e) {
+    console.error("Error fetching Admin transactions:", e);
+    return [];
+  }
 };
