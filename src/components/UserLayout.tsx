@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, Flame } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -11,8 +11,10 @@ interface UserLayoutProps {
 
 const navItems = [
   { name: 'Feed', path: '/user', icon: Home, badge: 'Live' },
+  { name: 'Notifications', path: '/user/notifications', icon: Bell, badge: '3' },
   { name: 'Messages', path: '/user/messages', icon: MessageCircle },
   { name: 'Purchases', path: '/user/vault', icon: FolderHeart },
+  { name: 'Membership', path: '/user/membership', icon: Crown, badge: 'Upgrade' },
   { name: 'Escorts', path: '/user/escorts', icon: Flame, badge: 'New' },
   { name: 'Subscriptions', path: '/user/subscriptions', icon: CreditCard },
   { name: 'Wallet', path: '/user/wallet', icon: Wallet },
@@ -26,6 +28,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const mainRef = useRef<HTMLElement>(null);
 
   const handleLogout = async () => {
@@ -38,8 +41,20 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pravatar.cc/150?img=50";
 
   return (
-    <div className="min-h-screen bg-[#0A0A0C] text-foreground flex flex-col md:flex-row font-sans selection:bg-primary/30">
+    <div className="min-h-screen bg-[#0A0A0C] text-foreground flex flex-col md:flex-row font-sans selection:bg-primary/30 relative">
       
+      {/* Floating Open Sidebar Button when closed on Desktop */}
+      {!isSidebarOpen && (
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="hidden md:flex fixed top-4 left-4 z-40 items-center gap-2.5 px-3 py-2.5 bg-[#0D0E12]/95 border border-white/15 hover:border-red-500/60 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-md text-zinc-300 hover:text-white transition-all hover:scale-105 active:scale-95 group"
+          title="Open Sidebar"
+        >
+          <PanelLeftOpen className="w-5 h-5 text-red-500 transition-transform group-hover:scale-110" />
+          <span className="text-xs font-bold text-zinc-300 group-hover:text-white tracking-wide">Open Sidebar</span>
+        </button>
+      )}
+
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between px-5 py-3.5 border-b border-white/5 bg-[#0D0E12]/90 backdrop-blur-xl sticky top-0 z-40">
         <Link to="/user" className="flex items-center gap-2.5 group">
@@ -63,20 +78,45 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       )}
 
       {/* Classic & Premium Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-[#0D0E12] border-r border-white/10 p-5 flex flex-col h-screen transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 bg-[#0D0E12] border-r border-white/10 p-5 flex flex-col h-screen transform transition-all duration-300 shadow-2xl ${
+        isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full'
+      } ${
+        isSidebarOpen 
+          ? 'md:relative md:translate-x-0 md:w-64' 
+          : 'md:relative md:w-0 md:p-0 md:border-r-0 md:opacity-0 md:pointer-events-none md:overflow-hidden'
+      }`}>
+
+        {/* Desktop Edge Close Pill Button */}
+        <button
+          onClick={() => setIsSidebarOpen(false)}
+          className="hidden md:flex absolute -right-3.5 top-7 z-50 w-7 h-7 bg-[#0d0e12] border border-white/20 hover:border-red-500 rounded-full items-center justify-center text-zinc-400 hover:text-white shadow-xl transition-all hover:scale-110 active:scale-95"
+          title="Close Sidebar"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
         
         {/* Brand Header */}
         <div className="flex justify-between items-center mb-6 pt-1">
-          <Link to="/user" className="flex items-center gap-3 group">
-            <img src="/logo.svg" alt="Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-md" />
-            <div className="flex flex-col">
-              <span className="text-[1.1rem] md:text-xl font-black tracking-tight text-white leading-tight">The Gents Dollhouse<span className="text-primary">.</span></span>
+          <Link to="/user" className="flex items-center gap-3 group min-w-0">
+            <img src="/logo.svg" alt="Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-md shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[1.1rem] md:text-xl font-black tracking-tight text-white leading-tight truncate">The Gents Dollhouse<span className="text-primary">.</span></span>
               <span className="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 mt-0.5">VIP Portal</span>
             </div>
           </Link>
 
+          {/* Close button for Mobile */}
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl transition-colors">
             <X className="w-5 h-5" />
+          </button>
+
+          {/* Close button for Desktop Header */}
+          <button 
+            onClick={() => setIsSidebarOpen(false)} 
+            className="hidden md:flex p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+            title="Close Sidebar"
+          >
+            <PanelLeftClose className="w-5 h-5 text-zinc-400 hover:text-red-500" />
           </button>
         </div>
 
@@ -92,7 +132,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
 
         {/* Navigation Items */}
         <div className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground/50 px-3 mb-2">Navigation</div>
-        <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar -mx-1 px-1">
+        <nav className="flex-1 space-y-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -119,7 +159,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
 
                 {item.badge && (
                   <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                    item.badge === 'New' 
+                    item.badge === 'New' || item.badge === 'Live'
                       ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]' 
                       : 'bg-primary/20 text-primary border-primary/30'
                   }`}>

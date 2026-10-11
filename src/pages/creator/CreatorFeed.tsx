@@ -4,6 +4,7 @@ import CreatePostForm from '../../components/CreatePostForm';
 import { useAuth } from '../../context/AuthContext';
 import { getPostsByCreator, deletePost, getPostLikes, getComments } from '../../lib/db';
 import { Lock, Unlock, Trash2, PlusCircle, Loader2, ImageOff, MoreHorizontal, Heart, MessageCircle } from 'lucide-react';
+import FeedImage from '../../components/FeedImage';
 
 interface Post {
   id: string;
@@ -71,8 +72,11 @@ const CreatorFeed = () => {
   };
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+    const datePart = d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+    const timePart = d.toLocaleTimeString('en-KE', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${datePart} · ${timePart}`;
   };
 
   const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Creator';
@@ -127,8 +131,8 @@ const CreatorFeed = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {posts.map(post => (
-            <div key={post.id} className="bg-background border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+          {posts.map((post, index) => (
+            <article key={post.id} className="bg-zinc-950 border border-white/[0.06] overflow-hidden shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300 hover:border-white/10 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
               {/* Post Header */}
               <div className="flex items-center justify-between px-5 py-4">
                 <div className="flex items-center gap-3">
@@ -180,14 +184,14 @@ const CreatorFeed = () => {
 
               {/* Media */}
               {post.media_url && (
-                <div className="relative">
-                  <img
+                <div className="relative w-full bg-black/90 flex justify-center items-center overflow-hidden border-y border-border/50">
+                  <FeedImage
                     src={post.media_url}
                     alt="post media"
-                    className="w-full max-h-[480px] object-cover"
+                    priority={index < 2}
                   />
                   {post.is_locked && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
                       <Lock className="w-8 h-8 text-white mb-2" />
                       <span className="text-white font-bold text-sm">Pay-Per-View · KES {post.price}</span>
                     </div>
@@ -209,7 +213,7 @@ const CreatorFeed = () => {
                   {post.is_locked ? `Paid · KES ${post.price}` : 'Free post'}
                 </span>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}

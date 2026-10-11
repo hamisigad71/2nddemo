@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ToastProvider } from "./context/ToastContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
@@ -25,6 +26,7 @@ import AdminPayouts from "./pages/admin/AdminPayouts";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import AdminEscorts from "./pages/admin/AdminEscorts";
+import AdminHardcodedEscorts from "./pages/admin/AdminHardcodedEscorts";
 import Messages from "./pages/creator/Messages";
 import MediaVault from "./pages/creator/MediaVault";
 import EarningsWallet from "./pages/creator/EarningsWallet";
@@ -42,6 +44,8 @@ import EscortRegistration from "./pages/creator/EscortRegistration";
 import UserMessages from "./pages/user/UserMessages";
 import UserVault from "./pages/user/UserVault";
 import Subscriptions from "./pages/user/Subscriptions";
+import ApplyMembership from "./pages/user/ApplyMembership";
+import UserNotifications from "./pages/user/UserNotifications";
 import PaymentMethods from "./pages/user/PaymentMethods";
 import UserSettings from "./pages/user/UserSettings";
 import EscortsPage from "./pages/user/EscortsPage";
@@ -116,6 +120,8 @@ const AppRoutes = () => {
               <Route path="/user/messages" element={<UserMessages />} />
               <Route path="/user/vault" element={<UserVault />} />
               <Route path="/user/subscriptions" element={<Subscriptions />} />
+              <Route path="/user/membership" element={<ApplyMembership />} />
+              <Route path="/user/notifications" element={<UserNotifications />} />
               <Route path="/user/escorts" element={<EscortsPage />} />
               <Route path="/user/wallet" element={<UserWallet />} />
               <Route path="/user/payments" element={<PaymentMethods />} />
@@ -131,6 +137,7 @@ const AppRoutes = () => {
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/audit-log" element={<AdminAuditLog />} />
               <Route path="/admin/escorts" element={<AdminEscorts />} />
+              <Route path="/admin/escorts/hardcoded" element={<AdminHardcodedEscorts />} />
             </Route>
           </Routes>
         </div>
@@ -138,13 +145,18 @@ const AppRoutes = () => {
   );
 };
 
+import FloatingNav from "./components/FloatingNav";
+
 function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AppRoutes />
+            <FloatingNav />
+          </AuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

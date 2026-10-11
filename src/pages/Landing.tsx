@@ -70,7 +70,7 @@ const Landing = () => {
           <Link to="/login" className="hidden md:inline-flex text-sm font-medium hover:text-primary transition-colors text-muted-foreground">
             Login
           </Link>
-          <Link to="/signup" className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-500 transition-all shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02]">
+          <Link to="/signup" className="hidden md:inline-flex bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-500 transition-all shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02]">
             Start Earning
           </Link>
           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-foreground p-1">
@@ -127,7 +127,7 @@ const Landing = () => {
             {/* Semi-transparent dark overlay — keeps images visible but text readable */}
             <div
               className="absolute inset-0 block md:hidden"
-              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.95) 100%)' }}
+              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.6) 40%, rgba(10,10,12,1) 100%)' }}
             />
             <div
               className="absolute inset-0 hidden md:block"
@@ -144,16 +144,19 @@ const Landing = () => {
           <div className="relative z-10 flex flex-col items-center justify-end md:justify-center px-6 pt-48 pb-10 md:py-40 w-full max-w-4xl mx-auto mt-auto md:mt-0">
 
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-secondary/15 border border-secondary/30 text-secondary text-xs md:text-sm font-semibold mb-6 md:mb-8 shadow-sm backdrop-blur-sm">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-              🇰🇪 Kenyan Creator Economy — Built Different
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-red-500/30 text-white text-xs md:text-sm font-bold mb-6 md:mb-8 shadow-lg shadow-red-500/10 backdrop-blur-md transition-all cursor-default relative overflow-hidden">
+              <span className="relative flex h-2 w-2 z-10">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+              <span className="z-10">Kenyan Creator Economy — Built Different 🇰🇪</span>
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight mb-4 md:mb-6 leading-[1.05]">
-              <span className="text-white drop-shadow-lg">Your Content.</span><br />
-              <span className="text-white drop-shadow-lg">Your Fans.</span>{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-300 to-secondary drop-shadow-lg">
+            <h1 className="text-xl sm:text-5xl md:text-7xl font-black tracking-tight mb-4 md:mb-6 leading-tight whitespace-nowrap md:whitespace-normal">
+              <span className="text-white drop-shadow-xl">Your Content.</span>{' '}
+              <span className="text-white drop-shadow-xl">Your Fans.</span>{' '}
+              <span className="text-red-500 drop-shadow-[0_4px_12px_rgba(239,68,68,0.5)]">
                 Your Money.
               </span>
             </h1>
@@ -164,12 +167,12 @@ const Landing = () => {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-row items-center gap-3 w-full justify-center px-1 sm:px-0">
-              <Link to="/signup" className="group w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-primary text-primary-foreground px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold hover:bg-emerald-500 transition-all shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.03]">
+            <div className="flex flex-row items-center justify-center gap-3 w-full px-2 sm:px-0 max-w-sm sm:max-w-none">
+              <Link to="/signup" className="group flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-red-600 text-white px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-black hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] hover:scale-[1.02] border border-red-500">
                 Start Earning
                 <ArrowRight className="hidden sm:block w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link to="/discover" className="w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/25 hover:border-white/40 px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-semibold transition-all">
+              <Link to="/discover" className="flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-[#0a0b0e] backdrop-blur-md text-white hover:bg-white/5 border border-zinc-700 hover:border-white/40 px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-[11px] sm:text-base font-bold transition-all uppercase tracking-wider">
                 Explore Creators
               </Link>
             </div>

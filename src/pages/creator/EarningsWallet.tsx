@@ -4,6 +4,7 @@ import { ArrowUpRight, ArrowDownRight, Clock, Building, Loader2, CheckCircle, Wa
 import { useAuth } from '../../context/AuthContext';
 import { getCreatorTransactions } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
+import { toast } from '../../context/ToastContext';
 
 const EarningsWallet = () => {
   const { user } = useAuth();
@@ -55,12 +56,17 @@ const EarningsWallet = () => {
       if (data?.error) throw new Error(data.error);
 
       setWithdrawStatus('success');
+      toast.success('Withdrawal Requested', {
+        description: 'Funds are being processed to your M-Pesa account.'
+      });
       fetchTransactions(); // Refresh UI to show the pending withdrawal
       setTimeout(() => setWithdrawStatus('idle'), 5000);
     } catch (err: any) {
       console.error(err);
       setWithdrawStatus('failed');
-      alert(`Withdrawal failed: ${err.message || 'Unknown error'}`);
+      toast.error('Withdrawal failed', {
+        description: err.message || 'Unknown error occurred.'
+      });
       setTimeout(() => setWithdrawStatus('idle'), 3000);
     }
   };
@@ -80,11 +86,9 @@ const EarningsWallet = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
         {/* Main Balance Card - Solid Black (#0d0e12), Crimson Red Accents, Crisp White Text */}
-        <div className="lg:col-span-2 rounded-[2rem] p-8 md:p-10 bg-[#0d0e12] border border-red-900/30 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+        <div className="lg:col-span-2 rounded-[2rem] p-8 md:p-10 bg-[#0d0e12] border border-zinc-900 flex flex-col justify-between shadow-md relative overflow-hidden">
           
-          {/* Top subtle glow accent */}
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-20 pointer-events-none"
-            style={{ background: 'radial-gradient(circle, #ef4444 0%, transparent 70%)' }} />
+
 
           <div className="relative z-10 flex flex-col h-full justify-between gap-8">
             {/* Header Row */}
@@ -102,7 +106,7 @@ const EarningsWallet = () => {
               </div>
 
               {/* Wallet Icon Badge - Red glow */}
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl shrink-0 bg-red-950/50 border border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.25)]">
+              <div className="flex items-center justify-center w-14 h-14 rounded-2xl shrink-0 bg-red-950/50 border border-zinc-800">
                 <Wallet className="w-6 h-6 text-red-500" />
               </div>
             </div>
@@ -131,11 +135,11 @@ const EarningsWallet = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <button
                 onClick={handleWithdraw}
                 disabled={withdrawStatus === 'pending' || availableBalance <= 0 || withdrawStatus === 'success'}
-                className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white bg-red-600 hover:bg-red-700 border border-red-500 shadow-[0_4px_20px_rgba(239,68,68,0.35)]"
+                className="flex items-center justify-center gap-1.5 py-3 sm:py-4 rounded-2xl font-black text-[11px] sm:text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white bg-red-600 hover:bg-red-700 border border-red-500 shadow-[0_4px_20px_rgba(239,68,68,0.35)]"
               >
                 {withdrawStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
                 {withdrawStatus === 'success' && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
@@ -143,7 +147,7 @@ const EarningsWallet = () => {
                 <span>{withdrawStatus === 'success' ? 'Requested!' : 'Withdraw to M-Pesa'}</span>
               </button>
 
-              <button className="flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all active:scale-95">
+              <button className="flex items-center justify-center gap-1.5 py-3 sm:py-4 rounded-2xl font-bold text-[11px] sm:text-sm text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all active:scale-95">
                 <Building className="w-4 h-4 text-zinc-400 shrink-0" />
                 <span>Manage Bank</span>
               </button>

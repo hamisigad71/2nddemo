@@ -7,6 +7,58 @@ interface CreatePostFormProps {
   onPostCreated?: () => void;
 }
 
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1080;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(file);
+        
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Attempt WebP for ultra-lightweight high-quality transfers
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          } else {
+            // Fallback to JPEG if WebP blob creation fails
+            canvas.toBlob((jpegBlob) => {
+              if (!jpegBlob) return resolve(file);
+              const compressedFile = new File([jpegBlob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            }, 'image/jpeg', 0.8);
+          }
+        }, 'image/webp', 0.8);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+};
+
 const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,8 +87,9 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
     setUploading(true);
     setUploadError(null);
     try {
-      const path = `posts/${user.id}/${Date.now()}_${selectedFile.name}`;
-      const mediaUrl = await uploadFileToSupabase(selectedFile, 'hideaway post storage', path);
+      const compressedFile = await compressImage(selectedFile);
+      const path = `posts/${user.id}/${Date.now()}_${compressedFile.name}`;
+      const mediaUrl = await uploadFileToSupabase(compressedFile, 'hideaway post storage', path);
 
       if (!mediaUrl) {
         setUploadError('Image upload failed. Please check your storage settings or try a smaller file.');

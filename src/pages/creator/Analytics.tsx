@@ -65,7 +65,7 @@ const Analytics = () => {
                  { source: 'Direct / Existing Link', pct: 45, color: 'bg-primary' },
                  { source: 'TikTok Bio', pct: 30, color: 'bg-secondary' },
                  { source: 'Twitter Profile', pct: 20, color: 'bg-blue-400' },
-                 { source: 'Instagram', pct: 5, color: 'bg-pink-500' },
+                 { source: 'Instagram', pct: 5, color: 'bg-red-500' },
                ].map((item, i) => (
                  <div key={i}>
                     <div className="flex justify-between text-sm mb-1 font-medium">

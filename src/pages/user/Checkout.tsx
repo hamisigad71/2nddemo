@@ -3,6 +3,7 @@ import { ArrowLeft, CheckCircle, ShieldCheck, CreditCard, ArrowRight } from 'luc
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from '../../context/ToastContext';
 
 const Checkout = () => {
   const location = useLocation();
@@ -70,7 +71,9 @@ const Checkout = () => {
     } catch (err) {
       console.error(err);
       setStatus('failed');
-      alert('STK Push failed. Check console.');
+      toast.error('STK Push failed', {
+        description: 'Please check your phone number and try again.'
+      });
     }
   };
 

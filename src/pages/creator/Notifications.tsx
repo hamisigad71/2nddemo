@@ -32,7 +32,7 @@ const Notifications = () => {
             </div>
             <p className="text-zinc-400 text-sm font-medium mt-1">Stay up to date with real-time fan interactions, tips, and unlocks.</p>
           </div>
-          <button className="self-start sm:self-auto flex items-center gap-2 bg-[#14161d] hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold border border-zinc-800 transition-all shadow-sm">
+          <button className="self-start sm:self-auto flex items-center gap-2 bg-[#0d0e12] hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold border border-zinc-800 transition-all shadow-sm">
             <CheckCheck className="w-4 h-4 text-red-500" />
             Mark all as read
           </button>
@@ -49,7 +49,7 @@ const Notifications = () => {
                 className={`px-5 py-2.5 rounded-full text-xs font-black tracking-wider uppercase whitespace-nowrap transition-all duration-200 border ${
                   isActive 
                     ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30' 
-                    : 'bg-[#14161d] text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    : 'bg-[#0d0e12] text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
                 }`}
               >
                 {tab}
@@ -59,7 +59,7 @@ const Notifications = () => {
         </div>
 
         {/* Notifications List */}
-        <div className="bg-[#14161d] border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="bg-[#0d0e12] border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl">
           {filteredNotifications.length === 0 ? (
             <div className="p-12 text-center text-zinc-500">
               <Bell className="w-12 h-12 mx-auto mb-3 text-zinc-700 opacity-50" />

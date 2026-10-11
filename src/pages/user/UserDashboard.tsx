@@ -7,7 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getUserProfile } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
-import { ShieldAlert } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { toast } from '../../context/ToastContext';
+import FeedImage from '../../components/FeedImage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,7 +23,7 @@ interface Comment {
 
 // ─── Feed Post Component ──────────────────────────────────────────────────────
 
-const FeedPost = ({ post, currentUserId }: { post: any; currentUserId: string }) => {
+const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: any; currentUserId: string; kycStatus: string; priority?: boolean }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
@@ -40,9 +42,14 @@ const FeedPost = ({ post, currentUserId }: { post: any; currentUserId: string })
   const creator = post.users;
   const avatarUrl = creator?.avatar || `https://i.pravatar.cc/150?u=${post.creator_id}`;
   const creatorName = creator?.name || 'Creator';
-  const timeAgo = post.created_at
-    ? new Date(post.created_at).toLocaleDateString('en-KE', { month: 'short', day: 'numeric' })
-    : '';
+  const formatPostTime = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const datePart = date.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' });
+    const timePart = date.toLocaleTimeString('en-KE', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${datePart} · ${timePart}`;
+  };
+  const timeAgo = formatPostTime(post.created_at);
 
   // Load real like state on mount
   useEffect(() => {
@@ -103,7 +110,7 @@ const FeedPost = ({ post, currentUserId }: { post: any; currentUserId: string })
 
   return (
     <>
-      <article className="bg-zinc-950 border border-white/[0.06] rounded-[20px] overflow-hidden shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300 hover:border-white/10">
+      <article className="bg-zinc-950 border border-white/[0.06] overflow-hidden shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300 hover:border-white/10 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
 
         {/* Header */}
         <div className="px-5 py-4 flex items-center justify-between bg-zinc-950/80 border-b border-white/5">
@@ -129,11 +136,11 @@ const FeedPost = ({ post, currentUserId }: { post: any; currentUserId: string })
         {/* Media */}
         {post.media_url && (
           <div className="relative bg-black overflow-hidden group">
-            <img
+            <FeedImage
               src={post.media_url}
               alt="post"
-              referrerPolicy="no-referrer"
-              className={`w-full object-cover max-h-[600px] transition-transform duration-700 ${post.is_locked ? 'scale-105 filter blur-lg opacity-80' : ''}`}
+              priority={priority}
+              isLocked={post.is_locked}
             />
             {post.is_locked && (
               <div className="absolute inset-0 flex flex-col items-center justify-center backdrop-blur-md bg-black/40 px-6 text-center">
@@ -148,7 +155,15 @@ const FeedPost = ({ post, currentUserId }: { post: any; currentUserId: string })
 
                 {/* Solid Red Button */}
                 <button 
-                  onClick={() => setIsSubscribeOpen(true)}
+                  onClick={() => {
+                    if (kycStatus !== 'verified') {
+                      toast.warning('Identity Verification Required', {
+                        description: 'Please verify your identity in settings to subscribe.'
+                      });
+                      return;
+                    }
+                    setIsSubscribeOpen(true);
+                  }}
                   className="bg-red-600 hover:bg-red-500 text-white font-bold text-sm tracking-wide py-2.5 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Subscribe
@@ -192,14 +207,30 @@ const FeedPost = ({ post, currentUserId }: { post: any; currentUserId: string })
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsTipOpen(true)}
+              onClick={() => {
+                if (kycStatus !== 'verified') {
+                  toast.warning('Identity Verification Required', {
+                    description: 'Please verify your identity in settings to tip creators.'
+                  });
+                  return;
+                }
+                setIsTipOpen(true);
+              }}
               className="text-white hover:bg-white/10 transition-all rounded-full px-3.5 py-1.5 font-medium text-[12px] border border-white/20 active:scale-95"
             >
               Tip 💸
             </button>
             {!post.is_locked && (
               <button
-                onClick={() => setIsSubscribeOpen(true)}
+                onClick={() => {
+                  if (kycStatus !== 'verified') {
+                    toast.warning('Identity Verification Required', {
+                      description: 'Please verify your identity in settings to subscribe.'
+                    });
+                    return;
+                  }
+                  setIsSubscribeOpen(true);
+                }}
                 className="bg-red-600 hover:bg-red-500 text-white transition-all rounded-full px-4 py-1.5 font-bold text-[12px] shadow-[0_2px_12px_rgba(220,38,38,0.3)] active:scale-95 tracking-wide flex items-center gap-1"
               >
                 Subscribe <span className="text-[10px]">⭐</span>
@@ -392,24 +423,34 @@ const UserDashboard = () => {
       </div>
 
       {kycStatus !== 'verified' && (
-        <div className="mb-8 bg-black/40 border border-red-500/30 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-[0_0_30px_rgba(220,38,38,0.1)]">
-           <div>
-             <h3 className="font-bold text-red-500 flex items-center gap-2 mb-1">
-               <ShieldAlert className="w-5 h-5" /> Verification Required
-             </h3>
-             <p className="text-sm text-zinc-400">To access premium features like subscribing and tipping, please complete your identity verification.</p>
-           </div>
-           <Link to="/user/settings" className="shrink-0 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-             Verify Now
-           </Link>
+        <div className="mb-10 mx-auto w-full max-w-lg bg-[#0b0a0a] border border-red-600/30 rounded-[1.25rem] p-5 shadow-[0_0_20px_rgba(220,38,38,0.1)] flex flex-col gap-5">
+          <div className="flex gap-4 items-start">
+            <div className="shrink-0 w-11 h-11 bg-[#0b0a0a] border border-red-600/40 rounded-[12px] flex items-center justify-center shadow-inner">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+            </div>
+            <div className="mt-0.5">
+              <h3 className="font-bold text-red-500 text-[17px] mb-1.5 tracking-tight">
+                Action Required: Identity Verification
+              </h3>
+              <p className="text-[13px] text-zinc-300 leading-relaxed font-medium">
+                You cannot access premium features like tipping or subscribing until your identity is verified for Kenya regulatory compliance (AML).
+              </p>
+            </div>
+          </div>
+          <Link 
+            to="/user/settings" 
+            className="w-full bg-[#f00000] hover:bg-red-600 text-white font-bold py-3.5 rounded-xl text-center text-sm shadow-[0_4px_15px_rgba(220,38,38,0.4)] transition-all active:scale-[0.98] uppercase tracking-wide"
+          >
+            UNVERIFIED
+          </Link>
         </div>
       )}
 
       <div className="max-w-xl mx-auto flex flex-col gap-5">
         {posts.length === 0 && !loading && <EmptyFeed />}
 
-        {posts.map((post) => (
-          <FeedPost key={post.id} post={post} currentUserId={user?.id || ''} />
+        {posts.map((post, index) => (
+          <FeedPost key={post.id} post={post} currentUserId={user?.id || ''} kycStatus={kycStatus} priority={index < 2} />
         ))}
 
         <div ref={sentinelRef} className="h-4" />

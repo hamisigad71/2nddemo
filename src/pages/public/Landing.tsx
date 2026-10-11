@@ -1,4 +1,4 @@
-import { ShieldCheck, TrendingUp, Users, CheckCircle, ArrowRight, Menu, Star, Zap, Lock, X, DollarSign, ChevronDown } from 'lucide-react';
+import { ShieldCheck, TrendingUp, Users, CheckCircle, ArrowRight, Menu, Star, Zap, Lock, X, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
@@ -56,7 +56,7 @@ const Landing = () => {
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain" />
+          <img src="/logo.svg" alt="Logo" className="hidden md:block w-10 h-10 md:w-12 md:h-12 object-contain" />
           <span className="text-xl md:text-2xl font-black tracking-tighter text-primary">The Gents Dollhouse<span className="text-secondary">.</span></span>
         </div>
 
@@ -70,7 +70,7 @@ const Landing = () => {
           <Link to="/login" className="hidden md:inline-flex text-sm font-medium hover:text-primary transition-colors text-muted-foreground">
             Login
           </Link>
-          <Link to="/signup" className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-500 transition-all shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02]">
+          <Link to="/signup" className="hidden md:inline-flex bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-500 transition-all shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02]">
             Start Earning
           </Link>
           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-foreground p-1">
@@ -139,7 +139,7 @@ const Landing = () => {
             {/* Semi-transparent dark overlay — keeps images visible but text readable */}
             <div
               className="absolute inset-0 block md:hidden"
-              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.95) 100%)' }}
+              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.6) 40%, rgba(10,10,12,1) 100%)' }}
             />
             <div
               className="absolute inset-0 hidden md:block"
@@ -158,19 +158,19 @@ const Landing = () => {
             {/* TOP GROUP: Badge + Headline */}
             <div className="flex flex-col items-center text-center">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs md:text-sm font-medium mb-6 md:mb-8 shadow-2xl backdrop-blur-md hover:bg-white/15 hover:border-white/30 transition-all cursor-default">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-red-500/30 text-white text-xs md:text-sm font-bold mb-6 md:mb-8 shadow-lg shadow-red-500/10 backdrop-blur-md transition-all cursor-default relative overflow-hidden">
+                <span className="relative flex h-2 w-2 z-10">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-                <span>Kenyan Creator Economy — Built Different 🇰🇪</span>
+                <span className="z-10">Kenyan Creator Economy — Built Different 🇰🇪</span>
               </div>
 
               {/* Headline */}
-              <h1 className="text-[1.35rem] sm:text-5xl md:text-7xl font-black tracking-tight mb-4 md:mb-6 leading-[1.05] whitespace-nowrap md:whitespace-normal">
-                <span className="text-white drop-shadow-lg">Your Content.</span>{' '}
-                <span className="text-white drop-shadow-lg">Your Fans.</span>{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-300 to-secondary drop-shadow-lg">
+              <h1 className="text-xl sm:text-5xl md:text-7xl font-black tracking-tight mb-4 md:mb-6 leading-tight whitespace-nowrap md:whitespace-normal">
+                <span className="text-white drop-shadow-xl">Your Content.</span>{' '}
+                <span className="text-white drop-shadow-xl">Your Fans.</span>{' '}
+                <span className="text-red-500 drop-shadow-[0_4px_12px_rgba(239,68,68,0.5)]">
                   Your Money.
                 </span>
               </h1>
@@ -187,12 +187,12 @@ const Landing = () => {
             {/* CTA + Social Proof — pushed to bottom on mobile */}
             <div className="mt-auto md:mt-0 flex flex-col items-center text-center w-full pb-2 md:pb-0">
               {/* CTA Buttons */}
-              <div className="flex flex-row items-center gap-3 w-full justify-center px-1 sm:px-0">
-                <Link to="/signup" className="group w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-primary text-primary-foreground px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold hover:bg-emerald-500 transition-all shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.03]">
+              <div className="flex flex-row items-center justify-center gap-3 w-full px-2 sm:px-0 max-w-sm sm:max-w-none">
+                <Link to="/signup" className="group flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-red-600 text-white px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-black hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] hover:scale-[1.02] border border-red-500">
                   Start Earning
                   <ArrowRight className="hidden sm:block w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link to="/discover" className="w-1/2 sm:w-auto flex items-center justify-center gap-1.5 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border border-white/25 hover:border-white/40 px-2 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-semibold transition-all">
+                <Link to="/discover" className="flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-[#0a0b0e] backdrop-blur-md text-white hover:bg-white/5 border border-zinc-700 hover:border-white/40 px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-[11px] sm:text-base font-bold transition-all uppercase tracking-wider">
                   Explore Creators
                 </Link>
               </div>
@@ -277,59 +277,53 @@ const Landing = () => {
                 See what happens when you monetize directly. Estimate your revenue if just <strong className="text-white">5%</strong> of your audience subscribes at KES 500/month.
               </p>
               
-              <div className="w-full bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 md:p-8 relative">
-                <div className="flex justify-between items-center mb-6">
-                  <span className="font-black text-zinc-400 text-xs uppercase tracking-wider">Current Followers</span>
-                  <span className="text-3xl md:text-4xl font-black text-red-500 tracking-tight">{followers.toLocaleString()}</span>
-                </div>
-                
-                <div className="relative pt-2 pb-2">
-                  <input 
-                    type="range" 
-                    min="1000" 
-                    max="1000000" 
-                    step="1000"
-                    value={followers}
-                    onChange={(e) => setFollowers(Number(e.target.value))}
-                    className="w-full h-2.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-red-600 focus:outline-none"
-                  />
-                </div>
-                
-                <div className="flex justify-between text-xs font-bold text-zinc-500 mt-2">
-                  <span>1k</span>
-                  <span>1M+</span>
-                </div>
-              </div>
             </div>
             
-            {/* Right Content - Solid Dark Card (No Glows) */}
+            {/* Right Content - Unified Card for both mobile and desktop */}
             <div className="w-full md:w-1/2">
-              <div className="bg-[#0d0e12] border border-zinc-800 p-8 md:p-12 rounded-[2.5rem] text-center z-10 flex flex-col items-center overflow-hidden">
-                <div className="w-full flex flex-col items-center">
-                  {/* Dollar Icon Badge */}
-                  <div className="w-14 h-14 md:w-16 md:h-16 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
-                    <DollarSign className="w-7 h-7 md:w-8 md:h-8" />
+              <div className="bg-[#0d0e12] border border-zinc-800 rounded-3xl md:rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl relative z-10 w-full max-w-lg mx-auto md:max-w-none">
+                <div className="flex flex-row p-4 sm:p-6 md:p-10 items-stretch gap-3 sm:gap-6 w-full">
+                  {/* Slider Side */}
+                  <div className="flex-1 flex flex-col justify-center min-w-0">
+                    <div className="text-[9px] sm:text-xs font-black text-zinc-400 uppercase tracking-widest mb-1 sm:mb-2 truncate">Current Followers</div>
+                    <div className="text-lg sm:text-3xl md:text-4xl font-black text-red-500 tracking-tight mb-4 sm:mb-6 truncate">{followers.toLocaleString()}</div>
+                    <div className="relative pt-1 sm:pt-2 w-full">
+                       <input 
+                         type="range" min="1000" max="1000000" step="1000"
+                         value={followers} onChange={(e) => setFollowers(Number(e.target.value))}
+                         className="w-full h-1.5 sm:h-2.5 bg-zinc-800 rounded-lg appearance-none accent-red-600 focus:outline-none cursor-pointer"
+                       />
+                       <div className="flex justify-between text-[8px] sm:text-xs font-bold text-zinc-500 mt-2 sm:mt-3">
+                         <span>1k</span><span>1M+</span>
+                       </div>
+                    </div>
                   </div>
                   
-                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Estimated Monthly Income</h3>
+                  {/* Vertical Divider */}
+                  <div className="w-px bg-zinc-800 shrink-0"></div>
                   
-                  <div className="flex items-center justify-center gap-2 mb-4 w-full">
-                    <span className="text-xl md:text-3xl font-extrabold text-red-500 align-top mt-2">KES</span>
-                    <span className="text-5xl md:text-7xl font-black text-white tracking-tight leading-none">
-                      {(followers * 0.05 * 500).toLocaleString()}
-                    </span>
+                  {/* Income Side */}
+                  <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0">
+                    <div className="text-[9px] sm:text-xs font-black text-zinc-400 uppercase tracking-widest mb-1 sm:mb-2 truncate w-full">Monthly Income</div>
+                    <div className="flex items-start justify-center gap-0.5 sm:gap-1 mb-2 sm:mb-4">
+                      <span className="text-[9px] sm:text-lg font-extrabold text-red-500 mt-1">KES</span>
+                      <span className="text-xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-none truncate">
+                        {(followers * 0.05 * 500).toLocaleString()}
+                      </span>
+                    </div>
+                    {/* Badge */}
+                    <div className="inline-flex items-center gap-1 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-emerald-950/30 border border-emerald-500/30 text-[8px] sm:text-xs font-bold text-emerald-400">
+                      <CheckCircle className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+                      <span className="truncate flex-1 min-w-0"><span className="hidden sm:inline">Based on </span>KES 500<span className="hidden sm:inline"> sub price</span></span>
+                    </div>
                   </div>
-                  
-                  {/* Green status badge */}
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-950/50 border border-emerald-500/30 text-xs font-bold text-emerald-400">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" /> Based on KES 500 sub price
-                  </div>
-                  
-                  <div className="mt-8 pt-8 border-t border-zinc-800/80 w-full">
-                    <Link to="/signup" className="flex items-center justify-center w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base md:text-lg transition-all active:scale-95 group/btn border border-red-500">
-                      Start Earning Free <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                    </Link>
-                  </div>
+                </div>
+
+                {/* Bottom CTA area */}
+                <div className="p-4 sm:p-6 md:p-8 border-t border-zinc-800 bg-zinc-900/20">
+                  <Link to="/signup" className="flex items-center justify-center w-full bg-red-600 hover:bg-red-700 text-white py-3 md:py-4 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base md:text-lg transition-all active:scale-95 group/btn border border-red-500 shadow-lg shadow-red-600/10">
+                    Start Earning Free <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2 group-hover/btn:translate-x-1 transition-transform shrink-0" />
+                  </Link>
                 </div>
               </div>
             </div>
@@ -370,33 +364,33 @@ const Landing = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl hover:border-red-500/40 transition-colors group">
-                <div className="w-14 h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
-                  <TrendingUp className="w-7 h-7" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 lg:gap-8">
+              <div className="bg-[#0d0e12] border border-zinc-800 p-4 md:p-8 rounded-2xl md:rounded-3xl hover:border-red-500/40 transition-colors group">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6">
+                  <TrendingUp className="w-5 h-5 md:w-7 md:h-7" />
                 </div>
-                <h3 className="text-xl font-black text-white mb-3">Maximize Earnings</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                <h3 className="text-sm md:text-xl font-black text-white mb-2 md:mb-3 leading-tight">Maximize Earnings</h3>
+                <p className="text-zinc-400 text-[10px] md:text-sm leading-relaxed font-medium">
                   Keep up to <strong className="text-emerald-400">90%</strong> of your subscription revenue. We offer the lowest platform fees for verified creators — more money in your pocket, always.
                 </p>
               </div>
 
-              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl hover:border-red-500/40 transition-colors group">
-                <div className="w-14 h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
-                  <Users className="w-7 h-7" />
+              <div className="bg-[#0d0e12] border border-zinc-800 p-4 md:p-8 rounded-2xl md:rounded-3xl hover:border-red-500/40 transition-colors group">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6">
+                  <Users className="w-5 h-5 md:w-7 md:h-7" />
                 </div>
-                <h3 className="text-xl font-black text-white mb-3">Own Your Audience</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                <h3 className="text-sm md:text-xl font-black text-white mb-2 md:mb-3 leading-tight">Own Your Audience</h3>
+                <p className="text-zinc-400 text-[10px] md:text-sm leading-relaxed font-medium">
                   Your fans, your community. Own your contact list and build direct relationships with your most loyal supporters without algorithm restrictions.
                 </p>
               </div>
 
-              <div className="bg-[#0d0e12] border border-zinc-800 p-8 rounded-3xl hover:border-red-500/40 transition-colors group">
-                <div className="w-14 h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mb-6">
-                  <ShieldCheck className="w-7 h-7" />
+              <div className="bg-[#0d0e12] border border-zinc-800 p-4 md:p-8 rounded-2xl md:rounded-3xl hover:border-red-500/40 transition-colors group col-span-2 md:col-span-1">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-red-950/40 border border-red-500/30 text-red-500 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6">
+                  <ShieldCheck className="w-5 h-5 md:w-7 md:h-7" />
                 </div>
-                <h3 className="text-xl font-black text-white mb-3">Secure & Instant Payouts</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                <h3 className="text-sm md:text-xl font-black text-white mb-2 md:mb-3 leading-tight">Secure & Instant Payouts</h3>
+                <p className="text-zinc-400 text-[10px] md:text-sm leading-relaxed font-medium">
                   M-Pesa STK push and Card checkouts built natively. Instant payouts with zero withdrawal minimums or long waiting periods.
                 </p>
               </div>
@@ -478,30 +472,30 @@ const Landing = () => {
             </div>
             <div 
               id="creators" 
-              className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+              className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6"
             >
               {creators.map((creator, i) => (
-                <div key={i} className="flex-shrink-0 group relative bg-[#0d0e12] border border-zinc-800 rounded-3xl overflow-hidden hover:border-red-500/50 transition-all duration-300 shadow-xl flex flex-col justify-between">
-                  <div className="relative aspect-[4/5] sm:aspect-square overflow-hidden bg-zinc-900">
+                <div key={i} className="flex-shrink-0 group relative bg-[#0d0e12] border border-zinc-800 rounded-2xl sm:rounded-3xl overflow-hidden hover:border-red-500/50 transition-all duration-300 shadow-xl flex flex-col justify-between">
+                  <div className="relative aspect-square overflow-hidden bg-zinc-900">
                     <img src={creator.img} alt={creator.name} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     {/* Category badge */}
-                    <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-zinc-950/80 backdrop-blur-md border border-zinc-800 text-[11px] font-black uppercase tracking-wider text-red-400">
+                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2 sm:px-3 py-1 rounded-full bg-zinc-950/80 backdrop-blur-md border border-zinc-800 text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-red-400">
                       {creator.category}
                     </div>
                   </div>
-                  <div className="p-5 flex flex-col flex-1 justify-between gap-4">
+                  <div className="p-3 sm:p-5 flex flex-col flex-1 justify-between gap-3 sm:gap-4">
                     <div>
-                      <h3 className="text-base sm:text-lg font-black text-white mb-1 flex items-center gap-1.5">
+                      <h3 className="text-sm sm:text-lg font-black text-white mb-1 flex items-center gap-1.5 truncate">
                         {creator.name}
-                        <CheckCircle className="w-4 h-4 text-red-500 shrink-0 fill-red-500/10" />
+                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 shrink-0 fill-red-500/10" />
                       </h3>
-                      <div className="flex items-center justify-between text-xs sm:text-sm font-bold mt-2">
-                        <span className="text-zinc-400 font-medium">{creator.subs} subscribers</span>
+                      <div className="flex flex-col sm:flex-row justify-between text-[10px] sm:text-sm font-bold mt-1.5 sm:mt-2 gap-0.5 sm:gap-0">
+                        <span className="text-zinc-400 font-medium">{creator.subs} subs</span>
                         <span className="text-red-500 font-extrabold">{creator.price}</span>
                       </div>
                     </div>
 
-                    <button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500 py-3 rounded-2xl text-xs sm:text-sm font-black transition-all active:scale-95 shadow-lg shadow-red-600/20">
+                    <button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[11px] sm:text-sm font-black transition-all active:scale-95 shadow-lg shadow-red-600/20">
                       Subscribe
                     </button>
                   </div>

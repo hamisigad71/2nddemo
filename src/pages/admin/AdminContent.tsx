@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Flag, Eye, Check, X, ShieldAlert, Search, Trash2, Loader2, MessageSquare, Send } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAdminContentPosts, deletePost, sendAdminMessage } from '../../lib/db';
+import { toast } from '../../context/ToastContext';
 
 const allContent = [
   { id: 1, creator: 'ODC Music', type: 'Video', title: 'Behind the Scenes - Studio Session', reports: 4, reason: 'Inappropriate Content', status: 'pending', img: 'https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg', time: '2h ago' },
@@ -23,7 +24,7 @@ const reasonColors: Record<string, string> = {
   'Misleading Information': 'text-blue-400 bg-blue-500/10',
   'Spam': 'text-zinc-400 bg-zinc-500/10',
   'Explicit Content': 'text-red-500 bg-red-600/10 font-black',
-  'Fraud / Scam': 'text-pink-400 bg-pink-500/10',
+  'Fraud / Scam': 'text-red-400 bg-red-500/10',
 };
 
 const AdminContent = () => {
@@ -68,7 +69,7 @@ const AdminContent = () => {
         console.error("Failed to delete post:", err);
         // Revert status if deletion fails
         setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'pending' } : item));
-        alert("Failed to remove post from database.");
+        toast.error("Failed to remove post from database.");
       }
     }
   };
@@ -78,9 +79,9 @@ const AdminContent = () => {
     
     try {
       await sendAdminMessage(selectedPost.creatorId, messageText);
-      alert(`Message successfully delivered to ${selectedPost.creator}!`); 
+      toast.success(`Message delivered to ${selectedPost.creator}`); 
     } catch (err) {
-      alert("Failed to send message.");
+      toast.error("Failed to send message.");
     }
     
     setMessageText('');
@@ -98,7 +99,7 @@ const AdminContent = () => {
       <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#14161d] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#0d0e12] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-2">
@@ -275,7 +276,7 @@ const AdminContent = () => {
             </div>
 
             {/* Actions */}
-            <div className="p-6 border-t border-zinc-800 shrink-0 flex items-center justify-between bg-[#14161d] rounded-b-3xl">
+            <div className="p-6 border-t border-zinc-800 shrink-0 flex items-center justify-between bg-[#0d0e12] rounded-b-3xl">
               <button onClick={() => setIsMessaging(true)} className="px-5 py-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black text-sm hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" /> Message Creator
               </button>

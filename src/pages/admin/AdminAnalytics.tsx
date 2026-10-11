@@ -28,7 +28,7 @@ const AdminAnalytics = () => {
       <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#0d0e12] to-[#14161d] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#0d0e12] to-[#0d0e12] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-2">

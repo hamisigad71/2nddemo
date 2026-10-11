@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserProfile, updateUserProfile } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
+import { toast } from '../../context/ToastContext';
 
 const EditProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -154,7 +155,9 @@ const EditProfile = () => {
   const handleSaveAll = () => {
     console.log("Current Captured KYC Data:", kycData);
     console.log("Current Captured Payout Data:", payoutData);
-    alert("Changes saved! Check browser console to see the captured payload.");
+    toast.success('Changes saved', {
+      description: 'Your profile data has been captured successfully.'
+    });
   };
 
   const currentAvatar = avatarPreview || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pinimg.com/736x/c9/27/d6/c927d6a930299f0e5d0be9b217d09b16.jpg";
@@ -186,7 +189,7 @@ const EditProfile = () => {
               className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all relative ${
                 activeTab === tab.id
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/30 border border-red-500'
-                  : 'bg-[#14161d] text-zinc-400 hover:text-white hover:bg-zinc-800/60 border border-transparent'
+                  : 'bg-[#0d0e12] text-zinc-400 hover:text-white hover:bg-zinc-800/60 border border-transparent'
               }`}
             >
               <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-white' : 'text-zinc-400'}`} />
@@ -208,7 +211,7 @@ const EditProfile = () => {
           {activeTab === 'profile' && (
             <div>
               {/* Banner Area */}
-              <div className="h-56 bg-[#14161d] relative group cursor-pointer border-b border-zinc-800/80">
+              <div className="h-56 bg-[#0d0e12] relative group cursor-pointer border-b border-zinc-800/80">
                 <img 
                   src="https://images.unsplash.com/photo-1557683316-973673baf926?w=1200" 
                   alt="banner" 
@@ -230,7 +233,7 @@ const EditProfile = () => {
                       <img 
                         src={currentAvatar} 
                         alt="avatar" 
-                        className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-[#0d0e12] bg-[#14161d] object-cover group-hover:brightness-50 transition-all shadow-2xl" 
+                        className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-[#0d0e12] bg-[#0d0e12] object-cover group-hover:brightness-50 transition-all shadow-2xl" 
                       />
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-black/40">
                         <Camera className="w-8 h-8 text-white drop-shadow-lg" />
@@ -245,17 +248,17 @@ const EditProfile = () => {
                         <input 
                           type="text" 
                           defaultValue={currentName} 
-                          className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
+                          className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Username</label>
                         <div className="flex">
-                            <span className="bg-[#181a22] border border-zinc-800 border-r-0 px-4 py-3.5 rounded-l-2xl text-zinc-500 text-sm font-bold flex items-center">gentsdollhouse.com/</span>
+                            <span className="bg-[#0d0e12] border border-zinc-800 border-r-0 px-4 py-3.5 rounded-l-2xl text-zinc-500 text-sm font-bold flex items-center">gentsdollhouse.com/</span>
                             <input 
                               type="text" 
                               defaultValue="janedoe" 
-                              className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-r-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
+                              className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-r-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
                             />
                         </div>
                       </div>
@@ -266,7 +269,7 @@ const EditProfile = () => {
                       <textarea 
                         rows={4} 
                         defaultValue="Welcome to my exclusive page! 🌟 Custom requests open in DMs." 
-                        className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors resize-none" 
+                        className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors resize-none" 
                       />
                       <p className="text-xs text-zinc-500 mt-2 font-medium">Maximum 300 characters.</p>
                     </div>
@@ -277,7 +280,7 @@ const EditProfile = () => {
                         <input 
                           type="text" 
                           defaultValue="Nairobi, Kenya" 
-                          className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
+                          className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
                         />
                       </div>
                       <div>
@@ -285,7 +288,7 @@ const EditProfile = () => {
                         <input 
                           type="url" 
                           placeholder="https://instagram.com/yourhandle" 
-                          className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors placeholder:text-zinc-600" 
+                          className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors placeholder:text-zinc-600" 
                         />
                         <p className="text-xs text-zinc-500 mt-2 font-medium">Helps us verify your creator identity.</p>
                       </div>
@@ -321,7 +324,7 @@ const EditProfile = () => {
                       value={kycData.legalName} 
                       onChange={handleKycChange} 
                       placeholder="As it appears on your ID" 
-                      className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm font-medium" 
+                      className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm font-medium" 
                     />
                     <p className="text-xs text-zinc-500 mt-2 font-medium">Must match your M-Pesa registered name.</p>
                   </div>
@@ -333,7 +336,7 @@ const EditProfile = () => {
                       value={kycData.nationalId} 
                       onChange={handleKycChange} 
                       placeholder="e.g. 12345678" 
-                      className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm font-medium" 
+                      className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm font-medium" 
                     />
                   </div>
                 </div>
@@ -345,7 +348,7 @@ const EditProfile = () => {
                     name="dob" 
                     value={kycData.dob} 
                     onChange={handleKycChange} 
-                    className="w-full sm:w-1/2 bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white focus:border-red-500 focus:outline-none text-sm font-medium" 
+                    className="w-full sm:w-1/2 bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white focus:border-red-500 focus:outline-none text-sm font-medium" 
                   />
                   <p className="text-xs text-zinc-500 mt-2 font-medium">You must be 18+ to monetize on this platform.</p>
                 </div>
@@ -355,7 +358,7 @@ const EditProfile = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* ID Upload */}
-                    <div className="relative border-2 border-dashed border-zinc-800 rounded-2xl p-6 text-center hover:bg-[#14161d] hover:border-red-500/50 transition-all cursor-pointer group flex flex-col items-center justify-center h-44 overflow-hidden">
+                    <div className="relative border-2 border-dashed border-zinc-800 rounded-2xl p-6 text-center hover:bg-[#0d0e12] hover:border-red-500/50 transition-all cursor-pointer group flex flex-col items-center justify-center h-44 overflow-hidden">
                       <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleKycUpload(e, 'id')} />
                       {kycData.idDocumentPreview ? (
                          <img src={kycData.idDocumentPreview} alt="ID Preview" className="absolute inset-0 w-full h-full object-cover" />
@@ -371,7 +374,7 @@ const EditProfile = () => {
                     </div>
 
                     {/* Selfie Upload */}
-                    <div className="relative border-2 border-dashed border-zinc-800 rounded-2xl p-6 text-center hover:bg-[#14161d] hover:border-red-500/50 transition-all cursor-pointer group flex flex-col items-center justify-center h-44 overflow-hidden">
+                    <div className="relative border-2 border-dashed border-zinc-800 rounded-2xl p-6 text-center hover:bg-[#0d0e12] hover:border-red-500/50 transition-all cursor-pointer group flex flex-col items-center justify-center h-44 overflow-hidden">
                       <input type="file" accept="image/*" capture="user" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => handleKycUpload(e, 'selfie')} />
                       {kycData.selfiePreview ? (
                          <img src={kycData.selfiePreview} alt="Selfie Preview" className="absolute inset-0 w-full h-full object-cover" />
@@ -391,7 +394,9 @@ const EditProfile = () => {
                 <button 
                   onClick={() => {
                     console.log("Submitting KYC For Verification:", kycData);
-                    alert("KYC Submitted securely for review!");
+                    toast.success('KYC Submitted', {
+                      description: 'Your documents have been received and are under secure review.'
+                    });
                   }} 
                   className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-lg shadow-red-600/20 border border-red-500 transition-all"
                 >
@@ -421,7 +426,7 @@ const EditProfile = () => {
                 <p className="text-sm text-zinc-400 font-medium mb-6">Configure where you want your earnings sent. M-Pesa is our primary payout method.</p>
               </div>
 
-              <div className="bg-[#14161d] border border-zinc-800 p-6 sm:p-8 rounded-3xl relative overflow-hidden">
+              <div className="bg-[#0d0e12] border border-zinc-800 p-6 sm:p-8 rounded-3xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest border-l border-b border-emerald-500 shadow-md">Primary</div>
                 
                 <h3 className="font-black text-lg text-white mb-6 flex items-center gap-3">
@@ -492,7 +497,7 @@ const EditProfile = () => {
                 </div>
               </div>
 
-              <div className="bg-[#14161d] border border-zinc-800 p-6 sm:p-8 rounded-3xl">
+              <div className="bg-[#0d0e12] border border-zinc-800 p-6 sm:p-8 rounded-3xl">
                 <h3 className="font-black text-lg text-white mb-4">Tax Compliance Information</h3>
                 <div>
                   <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">KRA PIN (Optional)</label>
@@ -508,7 +513,7 @@ const EditProfile = () => {
                 </div>
               </div>
 
-              <div className="bg-[#14161d]/50 border border-zinc-800/60 p-6 rounded-3xl opacity-50 flex items-center justify-between">
+              <div className="bg-[#0d0e12]/50 border border-zinc-800/60 p-6 rounded-3xl opacity-50 flex items-center justify-between">
                 <div>
                   <h3 className="font-black text-white text-base">Bank Wire Transfer (SWIFT / RTGS)</h3>
                   <p className="text-xs text-zinc-400 font-medium">Direct-to-bank international payouts for high-volume creators.</p>
@@ -552,7 +557,7 @@ const EditProfile = () => {
                         <div className="font-bold text-white text-base">Platform Updates & Analytics</div>
                         <div className="text-xs text-zinc-400 font-medium">Receive weekly earnings insights and creator news.</div>
                      </div>
-                     <div className="w-14 h-8 bg-[#14161d] border border-zinc-800 rounded-full relative cursor-pointer transition-colors">
+                     <div className="w-14 h-8 bg-[#0d0e12] border border-zinc-800 rounded-full relative cursor-pointer transition-colors">
                         <div className="absolute left-1 top-1 bg-zinc-600 w-6 h-6 rounded-full"></div>
                      </div>
                   </div>
@@ -562,7 +567,7 @@ const EditProfile = () => {
                      <input 
                        type="email" 
                        placeholder="backup@example.com" 
-                       className="w-full bg-[#14161d] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none text-sm placeholder:text-zinc-600" 
+                       className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none text-sm placeholder:text-zinc-600" 
                      />
                      <p className="text-xs text-zinc-500 mt-2 font-medium">Used for security recovery if you lose access to your primary login method.</p>
                   </div>

@@ -62,7 +62,7 @@ const AdminUsers = () => {
       <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto custom-scrollbar overflow-y-auto">
 
         {/* Premium Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#14161d] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#0d0e12] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
           
           <div className="relative z-10 flex-1">
@@ -149,7 +149,7 @@ const AdminUsers = () => {
               <div className="overflow-x-auto min-h-[400px]">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-[#14161d] border-b border-zinc-800">
+                    <tr className="bg-[#0d0e12] border-b border-zinc-800">
                       <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">User profile</th>
                       <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Subscriptions</th>
                       <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Spent</th>
@@ -160,7 +160,7 @@ const AdminUsers = () => {
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
                     {filtered.map(u => (
-                      <tr key={u.id} className="group hover:bg-[#14161d]/50 transition-colors">
+                      <tr key={u.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
                         <td className="px-6 py-4 pl-8">
                           <div className="flex items-center gap-4">
                             <div className="relative shrink-0 w-12 h-12">
@@ -192,21 +192,21 @@ const AdminUsers = () => {
                         <td className="px-6 py-4 pr-8 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             {u.status === 'active' ? (
-                              <button className="px-4 py-2 bg-[#181a22] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                              <button className="px-4 py-2 bg-[#0d0e12] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                                 <UserX className="w-3.5 h-3.5" /> Ban
                               </button>
                             ) : (
-                              <button className="px-4 py-2 bg-[#181a22] text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                              <button className="px-4 py-2 bg-[#0d0e12] text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                                 <UserCheck className="w-3.5 h-3.5" /> Unban
                               </button>
                             )}
-                            <button className="px-4 py-2 bg-[#181a22] text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                            <button className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                               <RefreshCw className="w-3.5 h-3.5" /> Refund
                             </button>
-                            <button className="px-4 py-2 bg-[#181a22] text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                            <button className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
                               <MessageSquare className="w-3.5 h-3.5" /> Message
                             </button>
-                            <button className="p-2 bg-[#181a22] rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95">
+                            <button className="p-2 bg-[#0d0e12] rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95">
                               <MoreVertical className="w-4 h-4" />
                             </button>
                           </div>
@@ -236,7 +236,7 @@ const AdminUsers = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {pendingUsers.map(user => (
                   <div key={user.id} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl group shadow-xl hover:shadow-2xl transition-all flex flex-col overflow-hidden">
-                    <div className="px-6 py-5 border-b border-zinc-800/50 bg-[#14161d] flex items-center justify-between">
+                    <div className="px-6 py-5 border-b border-zinc-800/50 bg-[#0d0e12] flex items-center justify-between">
                        <div className="flex items-center gap-4">
                           <img src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`} alt="avatar" className="w-12 h-12 rounded-xl object-cover ring-2 ring-zinc-800" />
                           <div>
@@ -251,18 +251,18 @@ const AdminUsers = () => {
 
                     <div className="p-6 space-y-5 flex-1">
                       <div className="grid grid-cols-2 gap-3">
-                         <div className="bg-[#14161d] rounded-2xl p-4 border border-zinc-800/50">
+                         <div className="bg-[#0d0e12] rounded-2xl p-4 border border-zinc-800/50">
                             <span className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">National ID / Passport</span>
                             <span className="font-bold text-white text-sm font-mono tracking-wider">{user.national_id_number || 'N/A'}</span>
                          </div>
-                         <div className="bg-[#14161d] rounded-2xl p-4 border border-zinc-800/50">
+                         <div className="bg-[#0d0e12] rounded-2xl p-4 border border-zinc-800/50">
                             <span className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">Date of Birth</span>
                             <span className="font-bold text-white text-sm">{user.dob ? new Date(user.dob).toLocaleDateString() : 'N/A'}</span>
                          </div>
                       </div>
                     </div>
 
-                    <div className="px-6 py-4 bg-[#14161d]/80 border-t border-zinc-800 flex justify-end gap-3 mt-auto">
+                    <div className="px-6 py-4 bg-[#0d0e12]/80 border-t border-zinc-800 flex justify-end gap-3 mt-auto">
                       <button 
                          onClick={() => handleKycAction(user.id, 'rejected')}
                          disabled={actionLoading === user.id}

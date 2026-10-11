@@ -44,7 +44,7 @@ const AdminTransactions = () => {
       <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto custom-scrollbar overflow-y-auto">
 
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#14161d] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#0d0e12] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
           
           <div className="relative z-10 flex-1">
@@ -60,7 +60,7 @@ const AdminTransactions = () => {
           </div>
           
           <div className="relative z-10 shrink-0">
-            <button className="flex items-center gap-2 px-6 py-3.5 bg-[#181a22] border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-500 rounded-2xl text-xs font-black uppercase tracking-wider text-white transition-all shadow-lg active:scale-95 group">
+            <button className="flex items-center gap-2 px-6 py-3.5 bg-[#0d0e12] border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-500 rounded-2xl text-xs font-black uppercase tracking-wider text-white transition-all shadow-lg active:scale-95 group">
               <Download className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" /> Export CSV
             </button>
           </div>
@@ -109,7 +109,7 @@ const AdminTransactions = () => {
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#14161d] border-b border-zinc-800">
+                <tr className="bg-[#0d0e12] border-b border-zinc-800">
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">TXN ID</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Fan</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Creator</th>
@@ -133,7 +133,7 @@ const AdminTransactions = () => {
                     <td colSpan={9} className="py-12 text-center text-zinc-500 font-medium">No transactions found matching your criteria.</td>
                   </tr>
                 ) : filtered.map(t => (
-                  <tr key={t.id} className="group hover:bg-[#14161d]/50 transition-colors">
+                  <tr key={t.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
                     <td className="px-6 py-5 pl-8">
                       <span className="font-mono text-xs font-bold text-zinc-400 group-hover:text-white transition-colors">{t.id}</span>
                     </td>
@@ -147,7 +147,7 @@ const AdminTransactions = () => {
                       <span className={`inline-flex items-center px-3 py-1 rounded-lg border text-xs font-bold ${
                         t.method === 'M-Pesa' 
                           ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                          : 'bg-[#181a22] border-zinc-700 text-zinc-300'
+                          : 'bg-[#0d0e12] border-zinc-700 text-zinc-300'
                       }`}>
                         {t.method}
                       </span>

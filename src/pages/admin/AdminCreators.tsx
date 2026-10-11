@@ -58,7 +58,7 @@ const AdminCreators = () => {
       <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto custom-scrollbar overflow-y-auto">
 
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#14161d] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#0d0e12] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
           
           <div className="relative z-10 flex-1">
@@ -73,7 +73,7 @@ const AdminCreators = () => {
             </p>
           </div>
           <div className="relative z-10 flex gap-4 shrink-0">
-            <div className="bg-[#181a22] border border-zinc-800 rounded-2xl p-4 flex flex-col items-center justify-center min-w-[100px]">
+            <div className="bg-[#0d0e12] border border-zinc-800 rounded-2xl p-4 flex flex-col items-center justify-center min-w-[100px]">
               <span className="text-2xl font-black text-white">{creatorsList.length}</span>
               <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total</span>
             </div>
@@ -123,7 +123,7 @@ const AdminCreators = () => {
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#14161d] border-b border-zinc-800">
+                <tr className="bg-[#0d0e12] border-b border-zinc-800">
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">Creator details</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Niche</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Audience</th>
@@ -145,7 +145,7 @@ const AdminCreators = () => {
                     <td colSpan={7} className="py-12 text-center text-zinc-500 font-medium">No creators found matching your criteria.</td>
                   </tr>
                 ) : filtered.map(c => (
-                  <tr key={c.id} className="group hover:bg-[#14161d]/50 transition-colors">
+                  <tr key={c.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
                     <td className="px-6 py-4 pl-8">
                       <div className="flex items-center gap-4">
                         <div className="relative shrink-0 w-12 h-12">
@@ -192,16 +192,16 @@ const AdminCreators = () => {
                         {c.status === 'pending' && (
                           <>
                             <button onClick={() => handleStatusChange(c.id, 'active')} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[11px] uppercase tracking-wider font-black rounded-xl border border-red-500 shadow-lg shadow-red-600/20 transition-all active:scale-95">Approve</button>
-                            <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-4 py-2 bg-[#181a22] text-zinc-400 hover:text-red-400 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Reject</button>
+                            <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-red-400 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Reject</button>
                           </>
                         )}
                         {c.status === 'active' && (
-                          <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-4 py-2 bg-[#181a22] text-zinc-400 hover:text-red-400 hover:border-red-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Suspend</button>
+                          <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-red-400 hover:border-red-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Suspend</button>
                         )}
                         {c.status === 'suspended' && (
                           <button onClick={() => handleStatusChange(c.id, 'active')} className="px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95">Restore</button>
                         )}
-                        <button className="p-2 bg-[#181a22] rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95">
+                        <button className="p-2 bg-[#0d0e12] rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95">
                           <MoreVertical className="w-4 h-4" />
                         </button>
                       </div>
@@ -248,11 +248,11 @@ const AdminCreators = () => {
                 </div>
                 
                 <div className="space-y-3 mb-6 relative z-10">
-                  <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#14161d] p-3 rounded-xl">
+                  <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#0d0e12] p-3 rounded-xl">
                     <span className="text-zinc-400 font-medium tracking-wide">National ID</span>
                     <span className="text-emerald-400 font-bold flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" /> Uploaded</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#14161d] p-3 rounded-xl">
+                  <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#0d0e12] p-3 rounded-xl">
                     <span className="text-zinc-400 font-medium tracking-wide">Selfie Match</span>
                     <span className="text-yellow-400 font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Pending Review</span>
                   </div>
@@ -260,7 +260,7 @@ const AdminCreators = () => {
 
                 <div className="flex gap-3 relative z-10">
                   <button onClick={() => handleStatusChange(p.id, 'active')} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 transition-all border border-red-500 active:scale-95">Approve Now</button>
-                  <button className="w-14 flex items-center justify-center bg-[#181a22] hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl border border-zinc-700 transition-all active:scale-95">
+                  <button className="w-14 flex items-center justify-center bg-[#0d0e12] hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl border border-zinc-700 transition-all active:scale-95">
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </div>

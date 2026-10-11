@@ -81,6 +81,7 @@ export const createPost = async (
     media_url: mediaUrl,
     is_locked: isLocked,
     price: isLocked ? price : 0,
+    created_at: new Date().toISOString(),
   });
 };
 
@@ -499,6 +500,48 @@ export const sendAdminMessage = async (creatorId: string, message: string) => {
   } catch (err) {
     console.error("Failed to send admin message to creator:", err);
     throw err;
+  }
+};
+export const getUserNotifications = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user notifications:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.error('Error in getUserNotifications:', err);
+    return [];
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+    if (error) throw error;
+  } catch (err) {
+    console.error('Error marking notification as read:', err);
+  }
+};
+
+export const markAllNotificationsAsRead = async (userId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId);
+    if (error) throw error;
+  } catch (err) {
+    console.error('Error marking all notifications as read:', err);
   }
 };
 

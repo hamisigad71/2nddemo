@@ -44,7 +44,7 @@ const AdminPayouts = () => {
       <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#14161d] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-gradient-to-r from-[#0d0e12] to-[#0d0e12] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-2">
@@ -105,7 +105,7 @@ const AdminPayouts = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#14161d] border-b border-zinc-800">
+                <tr className="bg-[#0d0e12] border-b border-zinc-800">
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">Creator</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Request ID</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Amount</th>
@@ -119,7 +119,7 @@ const AdminPayouts = () => {
                 {filtered.length === 0 ? (
                   <tr><td colSpan={7} className="py-16 text-center text-zinc-500 font-medium">No payout requests match your criteria.</td></tr>
                 ) : filtered.map(p => (
-                  <tr key={p.id} className="group hover:bg-[#14161d]/50 transition-colors">
+                  <tr key={p.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
                     <td className="px-6 py-4 pl-8">
                       <div className="flex items-center gap-3">
                         <img src={p.img} className="w-10 h-10 rounded-full object-cover border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors shrink-0" />

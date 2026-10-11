@@ -57,7 +57,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 group ${
                 active
                   ? 'bg-red-600 text-white shadow-xl shadow-red-600/20'
-                  : 'text-zinc-400 hover:bg-[#14161d] hover:text-white'
+                  : 'text-zinc-400 hover:bg-[#0d0e12] hover:text-white'
               }`}
             >
               <Icon className={`w-[18px] h-[18px] shrink-0 transition-colors ${active ? 'text-white' : 'text-zinc-500 group-hover:text-red-400'}`} />
@@ -87,7 +87,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       <div className="border-t border-zinc-800 p-4 space-y-2 shrink-0 bg-[#0d0e12]">
         <button
           onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-[#14161d] hover:text-white transition-colors text-sm font-bold group"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-[#0d0e12] hover:text-white transition-colors text-sm font-bold group"
         >
           {theme === 'dark' ? <Sun className="w-[18px] h-[18px] text-zinc-500 group-hover:text-yellow-400" /> : <Moon className="w-[18px] h-[18px] text-zinc-500 group-hover:text-blue-400" />}
           {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}

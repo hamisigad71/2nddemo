@@ -21,7 +21,7 @@
   :root, .dark {
     --bg: hsl(0 0% 7%);
     --fg: hsl(30 15% 94%);
-    --primary: hsl(350 80% 50%);
+    --primary: hsl(0 85% 48%);
     --primary-fg: hsl(0 0% 100%);
     --secondary: hsl(15 65% 65%);
     --secondary-fg: hsl(0 0% 10%);
@@ -31,7 +31,7 @@
     --accent-fg: hsl(0 0% 10%);
     --border: hsl(0 0% 16%);
     --input: hsl(0 0% 14%);
-    --ring: hsl(350 80% 50%);
+    --ring: hsl(0 85% 48%);
   }
 
   .light {
@@ -69,6 +69,11 @@
 @keyframes slide-in-right {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes shrinkWidth {
+  from { width: 100%; }
+  to { width: 0%; }
 }
 
 .animate-float {

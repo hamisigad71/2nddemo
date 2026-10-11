@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import { supabase } from '../../lib/supabase';
 import type { EscortApplication } from '../../types/escort';
-import { Loader2, Check, X, User as UserIcon, AlertCircle } from 'lucide-react';
+import { Loader2, Check, X, User as UserIcon, AlertCircle, Users } from 'lucide-react';
 
 const AdminEscorts = () => {
   const [applications, setApplications] = useState<EscortApplication[]>([]);
@@ -71,11 +72,18 @@ const AdminEscorts = () => {
     <AdminLayout>
       <div className="p-6 max-w-6xl mx-auto space-y-6">
         
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-white tracking-tight">Escort Applications</h1>
             <p className="text-zinc-400 mt-1">Review and verify creators applying to be an escort.</p>
           </div>
+          <Link
+            to="/admin/escorts/hardcoded"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 rounded-xl transition-all shrink-0 self-start sm:self-auto"
+          >
+            <Users className="w-4 h-4 text-red-500" />
+            Manage Hardcoded Profiles
+          </Link>
         </div>
 
         {loading ? (
@@ -112,26 +120,26 @@ const AdminEscorts = () => {
                    
                    <div className="space-y-4 text-sm text-zinc-300">
                       <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-[#14161d] p-2.5 rounded-lg border border-zinc-800/50">
+                        <div className="bg-[#0d0e12] p-2.5 rounded-lg border border-zinc-800/50">
                           <span className="block text-[10px] text-zinc-500 uppercase font-black tracking-wider mb-0.5">Age</span>
                           <span className="font-semibold text-white">{app.age || 'N/A'}</span>
                         </div>
-                        <div className="bg-[#14161d] p-2.5 rounded-lg border border-zinc-800/50">
+                        <div className="bg-[#0d0e12] p-2.5 rounded-lg border border-zinc-800/50">
                           <span className="block text-[10px] text-zinc-500 uppercase font-black tracking-wider mb-0.5">Location</span>
                           <span className="font-semibold text-white truncate">{app.location || 'N/A'}</span>
                         </div>
-                        <div className="bg-[#14161d] p-2.5 rounded-lg border border-zinc-800/50">
+                        <div className="bg-[#0d0e12] p-2.5 rounded-lg border border-zinc-800/50">
                           <span className="block text-[10px] text-zinc-500 uppercase font-black tracking-wider mb-0.5">Build/Measure</span>
                           <span className="font-semibold text-white truncate">{app.measurements || 'N/A'}</span>
                         </div>
                       </div>
                       
-                      <div className="bg-[#14161d] p-3 rounded-lg border border-zinc-800/50">
+                      <div className="bg-[#0d0e12] p-3 rounded-lg border border-zinc-800/50">
                          <span className="flex items-center gap-1.5 text-xs font-black text-zinc-400 uppercase tracking-wider mb-1.5"><AlertCircle className="w-3.5 h-3.5" /> Bio / About</span>
                          <p className="line-clamp-3 text-zinc-300">{app.bio || 'No bio provided'}</p>
                       </div>
 
-                      <div className="bg-[#14161d] p-3 rounded-lg border border-zinc-800/50">
+                      <div className="bg-[#0d0e12] p-3 rounded-lg border border-zinc-800/50">
                          <span className="block text-xs font-black text-zinc-400 uppercase tracking-wider mb-1.5">Rates Overview</span>
                          <p className="line-clamp-2 text-zinc-300">{app.rates || 'No rates provided'}</p>
                       </div>

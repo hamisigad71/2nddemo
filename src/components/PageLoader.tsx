@@ -161,10 +161,10 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
           {/* Logo mark */}
           <div
-            className="hidden md:flex w-14 h-14 rounded-2xl items-center justify-center -ml-1"
+            className="flex w-14 h-14 rounded-2xl items-center justify-center -ml-1"
           >
             <img 
-              src="/logo.svg" 
+              src="/logo3.png" 
               alt="Logo" 
               className="w-full h-full object-contain" 
             />
@@ -174,7 +174,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
         {/* Brand name */}
         <div className="text-center relative z-10 mt-4">
           <div className="text-3xl font-black tracking-tighter mb-1 text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-            The Gents Dollhouse<span className="text-rose-500">.</span>
+            The Gents Dollhouse<span className="text-red-500">.</span>
           </div>
           <p className="text-xs text-white/80 font-bold tracking-[0.25em] uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             Creator Platform
@@ -188,13 +188,13 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
               className="h-full rounded-full"
               style={{
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, #f43f5e, #fb7185)',
+                background: 'linear-gradient(90deg, #dc2626, #ef4444)',
                 transition: 'width 0.15s ease-out',
-                boxShadow: '0 0 12px rgba(244,63,94,0.6)',
+                boxShadow: '0 0 12px rgba(239,68,68,0.6)',
               }}
             />
           </div>
-          <span className="text-[11px] font-black tabular-nums text-rose-400 tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+          <span className="text-[11px] font-black tabular-nums text-primary tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
             {progress}%
           </span>
         </div>

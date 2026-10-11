@@ -11,6 +11,11 @@ const UserSettings = () => {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
 
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [otpStep, setOtpStep] = useState<'idle' | 'sending' | 'input' | 'success'>('idle');
+  const [otpValue, setOtpValue] = useState('');
+  const [otpError, setOtpError] = useState('');
+
   const [kycData, setKycData] = useState({
     legalName: '',
     nationalId: '',
@@ -30,6 +35,7 @@ const UserSettings = () => {
         // Strip leading +254 for the input field display
         const raw = (profile.phone || '').replace(/^\+254/, '').replace(/^0/, '');
         setPhone(raw);
+        if (raw) setIsPhoneVerified(true);
         setKycStatus(profile.kyc_status || 'unverified');
         if (profile.legal_name) setKycData(prev => ({ ...prev, legalName: profile.legal_name }));
         if (profile.national_id_number) setKycData(prev => ({ ...prev, nationalId: profile.national_id_number }));
@@ -37,6 +43,28 @@ const UserSettings = () => {
       }
     });
   }, [user]);
+
+  const handleSendOtp = () => {
+    if (phone.length < 9) return;
+    setOtpStep('sending');
+    setOtpError('');
+    setTimeout(() => setOtpStep('input'), 1000);
+  };
+
+  const handleVerifyOtp = () => {
+    if (otpValue.length < 4) return;
+    setOtpStep('sending');
+    setTimeout(() => {
+      if (otpValue === '1234') { 
+        setOtpStep('success');
+        setIsPhoneVerified(true);
+        handleSave();
+      } else {
+        setOtpStep('input');
+        setOtpError('Invalid OTP code. Try 1234 for testing.');
+      }
+    }, 1000);
+  };
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -254,16 +282,67 @@ const UserSettings = () => {
              <div className="space-y-4 max-w-md">
                 <div>
                    <label className="block text-sm font-bold mb-1">M-Pesa Phone Number</label>
-                   <div className="flex">
-                      <span className="bg-muted border border-border border-r-0 px-3 py-2.5 rounded-l-lg text-muted-foreground text-sm flex items-center">+254</span>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        placeholder="7XX XXX XXX"
-                        className="w-full bg-muted/20 border border-border px-3 py-2.5 rounded-r-lg text-sm focus:outline-none focus:border-primary"
-                      />
+                   <div className="flex gap-2">
+                     <div className="flex flex-1">
+                        <span className="bg-muted border border-border border-r-0 px-3 py-2.5 rounded-l-lg text-muted-foreground text-sm flex items-center">+254</span>
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={e => {
+                            setPhone(e.target.value);
+                            setIsPhoneVerified(false);
+                            setOtpStep('idle');
+                          }}
+                          disabled={isPhoneVerified}
+                          placeholder="7XX XXX XXX"
+                          className="w-full bg-muted/20 border border-border px-3 py-2.5 rounded-r-lg text-sm focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 disabled:opacity-50 transition-all font-medium"
+                        />
+                     </div>
+                     
+                     {isPhoneVerified ? (
+                        <div className="shrink-0 px-4 flex items-center justify-center bg-green-500/10 text-green-500 font-bold text-xs rounded-lg border border-green-500/20">
+                          VERIFIED
+                        </div>
+                     ) : (
+                       phone.length >= 9 && otpStep === 'idle' && (
+                         <button 
+                           onClick={handleSendOtp} 
+                           className="shrink-0 px-4 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                         >
+                           Send OTP
+                         </button>
+                       )
+                     )}
                    </div>
+
+                   {otpStep === 'input' && (
+                     <div className="mt-4 p-5 border border-border bg-black/40 rounded-xl space-y-3 shadow-inner">
+                       <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Enter 4-digit code sent to +254 {phone}</label>
+                       <div className="flex gap-3">
+                         <input
+                           type="text"
+                           value={otpValue}
+                           onChange={e => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                           placeholder="••••"
+                           className="w-24 text-center tracking-[0.5em] bg-transparent border-b-2 border-red-500/50 pb-1 text-xl font-bold focus:outline-none focus:border-red-500 transition-colors text-white"
+                         />
+                         <button 
+                           onClick={handleVerifyOtp}
+                           disabled={otpValue.length < 4}
+                           className="px-6 bg-white hover:bg-zinc-200 text-black font-bold text-sm rounded-lg disabled:opacity-50 transition-colors active:scale-95"
+                         >
+                           Verify
+                         </button>
+                       </div>
+                       {otpError && <p className="text-xs text-red-500 font-bold">{otpError}</p>}
+                     </div>
+                   )}
+
+                   {otpStep === 'sending' && (
+                     <div className="mt-4 p-4 border border-border bg-black/40 rounded-xl text-xs font-bold text-muted-foreground flex items-center gap-3">
+                       <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" /> Processing request...
+                     </div>
+                   )}
                    <p className="text-[10px] text-muted-foreground mt-1">Saves you time during checkout (we won't ask you to type it every time).</p>
                 </div>
              </div>
