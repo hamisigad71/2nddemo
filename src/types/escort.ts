@@ -8,6 +8,7 @@ export interface EscortApplication {
   measurements: string | null;
   rates: string | null;
   photos: string[] | null;
+  verification_photos: string[] | null;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   updated_at: string;

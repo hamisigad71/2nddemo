@@ -40,18 +40,38 @@ const AdminContent = () => {
     loadContent();
   }, []);
 
+  const isVideoUrl = (url: string) =>
+    Boolean(url && (url.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) || url.includes('video')));
+
   const loadContent = async () => {
     setLoading(true);
     try {
       const posts = await getAdminContentPosts();
-      
-      // We mix the real posts from Supabase with our mock 'allContent' 
-      // just in case they have 0 real posts in DB during testing.
-      const mixed = [...posts, ...allContent.filter(c => !posts.find((p: any) => p.id === c.id))];
+
+      // Normalise real Supabase posts to match the card shape
+      const normalised = posts.map((p: any) => ({
+        ...p,
+        img: p.media_url || p.img || '',
+        title: p.content || p.title || '(no caption)',
+        creator: p.users?.name || p.creator || 'Unknown Creator',
+        creatorId: p.creator_id || p.creatorId,
+        type: p.media_type === 'video' || isVideoUrl(p.media_url || '')
+          ? 'Video'
+          : (p.media_url ? 'Photo' : 'Post'),
+        reports: p.reports ?? 0,
+        reason: p.reason || 'General Review',
+        status: p.status || 'pending',
+        time: p.created_at
+          ? new Date(p.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
+          : p.time || '',
+      }));
+
+      // Merge with mock data for demo purposes
+      const mixed = [...normalised, ...allContent.filter(c => !normalised.find((p: any) => p.id === c.id))];
       setItems(mixed);
     } catch (err) {
       console.error(err);
-      setItems(allContent); // Fallback to mock data on error
+      setItems(allContent);
     } finally {
       setLoading(false);
     }
@@ -165,7 +185,32 @@ const AdminContent = () => {
           ) : filtered.map(item => (
             <div key={item.id} className="bg-[#0d0e12] border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-colors group cursor-pointer" onClick={() => setSelectedPost(item)}>
               <div className="flex items-start gap-5">
-                <img src={item.img} className="w-14 h-14 rounded-2xl object-cover border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors shrink-0" />
+                {/* Thumbnail — video or image */}
+                <div className="relative w-14 h-14 shrink-0">
+                  {item.img && item.type === 'Video' ? (
+                    <div className="w-14 h-14 rounded-2xl bg-zinc-900 border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors flex items-center justify-center overflow-hidden">
+                      <video
+                        src={item.img}
+                        className="w-full h-full object-cover rounded-2xl"
+                        muted
+                        preload="metadata"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
+                        <Eye className="w-5 h-5 text-white/80" />
+                      </span>
+                    </div>
+                  ) : item.img ? (
+                    <img src={item.img} className="w-14 h-14 rounded-2xl object-cover border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-2xl bg-zinc-900 border-2 border-zinc-800 flex items-center justify-center text-zinc-600">
+                      <ShieldAlert className="w-6 h-6" />
+                    </div>
+                  )}
+                  {/* Video badge */}
+                  {item.type === 'Video' && (
+                    <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide shadow">▶</span>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                     <div>

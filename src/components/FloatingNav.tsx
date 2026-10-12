@@ -37,7 +37,7 @@ const FloatingNav = () => {
 
   return (
     <div 
-      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ease-in-out ${
+      className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ease-in-out ${
         isVisible ? 'translate-y-0 opacity-100 visible' : 'translate-y-10 opacity-0 invisible'
       }`}
     >

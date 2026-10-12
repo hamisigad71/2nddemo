@@ -64,7 +64,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-4',
     creator_id: 'creator-amina',
     content: 'Late night cooking in silk lingerie... 🍷✨ Unlock KES 200 for the full uncensored 4K video reel + private recipe guide!',
-    media_url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/b7/75/0b/b7750b0872ecc70a467ef3e193047f21.jpg',
     is_locked: true,
     price: 200,
     likes_count: 420,
@@ -72,14 +72,14 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     is_featured: true,
     users: {
       name: 'Chef Amina Seductive ',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
+      avatar: 'https://i.pinimg.com/736x/b7/75/0b/b7750b0872ecc70a467ef3e193047f21.jpg'
     }
   },
   {
     id: 'demo-post-5',
     creator_id: 'creator-vanessa',
     content: 'VIP Diani beach weekend dump  VIP subscribers get the spicy, unedited gallery sent directly to DM!',
-    media_url: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/89/f9/f6/89f9f6530bb2948cf90037ada5dc6625.jpg',
     is_locked: true,
     price: 500,
     likes_count: 1240,
@@ -87,7 +87,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     is_featured: true,
     users: {
       name: 'Vanessa VIP 💎',
-      avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=200&q=80'
+      avatar: 'https://i.pinimg.com/736x/89/f9/f6/89f9f6530bb2948cf90037ada5dc6625.jpg'
     }
   },
   {
@@ -109,7 +109,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-7',
     creator_id: 'creator-maya',
     content: 'My naughty bedroom polaroid set is finally ready 📸🔥 KES 400 to unlock all 15 exclusive photos!',
-    media_url: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/98/31/13/983113cb5055f3a435b0eda12a31c5fb.jpg',
     is_locked: true,
     price: 400,
     likes_count: 980,
@@ -124,7 +124,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-8',
     creator_id: 'creator-zola',
     content: 'Sunset views from my balcony in Mara safari suite 🌅 Unlock for KES 250 to see what I wore underneath!',
-    media_url: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/f9/6c/ff/f96cff8bc21c4d23cba1cfbbc19f0aac.jpg',
     is_locked: true,
     price: 250,
     likes_count: 1530,
@@ -139,7 +139,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-9',
     creator_id: 'creator-samantha',
     content: 'Good morning loves ☀️ Free preview of my premium photoshoot set. Full 4K video drop available for my VIP tier subscribers!',
-    media_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/1200x/36/a2/dc/36a2dc31c77aa8245e14a976919c0e13.jpg',
     is_locked: false,
     price: 0,
     likes_count: 730,
@@ -154,7 +154,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-10',
     creator_id: 'creator-njeri',
     content: 'Bedtime skin routine & silk lounge try-on 💄💋 Unlock to get full access to my exclusive video vault & 1-on-1 messaging!',
-    media_url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/1200x/7d/fe/82/7dfe82a4dc51db48f7da31f92c3e881e.jpg',
     is_locked: false,
     price: 0,
     likes_count: 610,
@@ -162,14 +162,14 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     is_featured: true,
     users: {
       name: 'Njeri Goddess ✨',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80'
+      avatar: 'https://i.pinimg.com/736x/a5/2c/24/a52c24b336999807ca6c0ff7cb50c206.jpg'
     }
   },
   {
     id: 'demo-post-11',
     creator_id: 'creator-gathoni',
     content: 'Late night spicy confessions & Q&A episode 🎙️🔥 Unlock for KES 150 to hear all the juicy answers I couldn’t post anywhere else!',
-    media_url: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/d5/66/c6/d566c67ba0259e09f88a8307c80844fc.jpg',
     is_locked: true,
     price: 150,
     likes_count: 480,
@@ -177,7 +177,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     is_featured: true,
     users: {
       name: 'Gathoni Uncut 🎙️🔥',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
+      avatar: 'https://i.pinimg.com/736x/70/32/54/703254b4991379a0bbfed17a50452027.jpg'
     }
   }
 ];

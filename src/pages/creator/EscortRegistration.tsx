@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { uploadFileToSupabase } from '../../lib/db';
 import CreatorLayout from '../../components/CreatorLayout';
 import type { EscortApplication } from '../../types/escort';
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Upload, Save, User as UserIcon } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Upload, Save, User as UserIcon, X, ImagePlus } from 'lucide-react';
 
 const EscortRegistration = () => {
   const { user } = useAuth();
@@ -21,21 +22,29 @@ const EscortRegistration = () => {
     rates: ''
   });
 
+  // Photo upload state
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
+  const photoDragCounter = useRef(0);
+
   useEffect(() => {
+    if (!user) return;
+
+    // Initial fetch
     const fetchApplication = async () => {
-      if (!user) return;
-      
       try {
         const { data, error } = await supabase
           .from('escort_applications')
           .select('*')
           .eq('creator_id', user.id)
           .single();
-          
-        if (error && error.code !== 'PGRST116') { // PGRST116 is not found
-          throw error;
-        }
-        
+
+        if (error && error.code !== 'PGRST116') throw error;
+
         if (data) {
           setApplication(data);
           setFormData({
@@ -46,6 +55,9 @@ const EscortRegistration = () => {
             measurements: data.measurements || '',
             rates: data.rates || ''
           });
+          if (data.verification_photos?.length) {
+            setExistingPhotoUrls(data.verification_photos);
+          }
         }
       } catch (err: any) {
         console.error('Error fetching application:', err);
@@ -53,8 +65,29 @@ const EscortRegistration = () => {
         setLoading(false);
       }
     };
-    
+
     fetchApplication();
+
+    // Realtime subscription — auto-update when admin approves/rejects
+    const channel = supabase
+      .channel(`escort_app_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'escort_applications',
+          filter: `creator_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setApplication(payload.new as any);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -62,14 +95,83 @@ const EscortRegistration = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const addPhotoFiles = (files: FileList | File[]) => {
+    const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (!validFiles.length) return;
+    setPhotoFiles(prev => [...prev, ...validFiles].slice(0, 6)); // max 6
+    validFiles.forEach(f => {
+      const url = URL.createObjectURL(f);
+      setPhotoPreviews(prev => [...prev, url].slice(0, 6));
+    });
+  };
+
+  const removeNewPhoto = (index: number) => {
+    setPhotoFiles(prev => prev.filter((_, i) => i !== index));
+    setPhotoPreviews(prev => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const removeExistingPhoto = (index: number) => {
+    setExistingPhotoUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePhotoDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    photoDragCounter.current += 1;
+    if (e.dataTransfer.items?.length) setIsDraggingPhoto(true);
+  };
+
+  const handlePhotoDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handlePhotoDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    photoDragCounter.current -= 1;
+    if (photoDragCounter.current <= 0) { photoDragCounter.current = 0; setIsDraggingPhoto(false); }
+  };
+
+  const handlePhotoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingPhoto(false);
+    photoDragCounter.current = 0;
+    if (e.dataTransfer.files?.length) addPhotoFiles(e.dataTransfer.files);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
+
     setSubmitting(true);
     setError(null);
-    
+
     try {
+      // Upload any new photos first
+      let allPhotoUrls = [...existingPhotoUrls];
+      if (photoFiles.length > 0) {
+        setUploadingPhotos(true);
+        const uploads = await Promise.all(
+          photoFiles.map(async (file) => {
+            const clean = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const path = `escort-verification/${user.id}/${Date.now()}_${clean}`;
+            return uploadFileToSupabase(file, 'hideaway post storage', path);
+          })
+        );
+        const successful = uploads.filter(Boolean) as string[];
+        allPhotoUrls = [...allPhotoUrls, ...successful];
+        setExistingPhotoUrls(allPhotoUrls);
+        setPhotoFiles([]);
+        setPhotoPreviews([]);
+        setUploadingPhotos(false);
+      }
+
       const payload = {
         creator_id: user.id,
         name: formData.name,
@@ -78,7 +180,8 @@ const EscortRegistration = () => {
         location: formData.location,
         measurements: formData.measurements,
         rates: formData.rates,
-        status: 'pending' // Always force to pending on submit/update
+        verification_photos: allPhotoUrls,
+        status: 'pending'
       };
 
       if (application) {
@@ -86,7 +189,6 @@ const EscortRegistration = () => {
           .from('escort_applications')
           .update(payload)
           .eq('id', application.id);
-          
         if (updateError) throw updateError;
         setApplication({ ...application, ...payload, status: 'pending' } as EscortApplication);
       } else {
@@ -95,7 +197,6 @@ const EscortRegistration = () => {
           .insert([payload])
           .select()
           .single();
-          
         if (insertError) throw insertError;
         setApplication(data as EscortApplication);
       }
@@ -104,6 +205,7 @@ const EscortRegistration = () => {
       setError(err.message || 'Failed to submit application');
     } finally {
       setSubmitting(false);
+      setUploadingPhotos(false);
     }
   };
 
@@ -238,13 +340,87 @@ const EscortRegistration = () => {
               />
            </div>
 
-           {/* Simple placeholder for Photos for now */}
-           <div className="space-y-2">
-              <label className="text-sm font-medium">Verification Photos</label>
-              <div className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-muted-foreground bg-input/5">
-                 <Upload className="w-8 h-8 mb-2 opacity-50" />
-                 <p className="text-sm">Photo upload will be available after initial approval.</p>
-              </div>
+           {/* Verification Photo Upload */}
+           <div className="space-y-3">
+             <label className="text-sm font-medium flex items-center gap-2">
+               <ImagePlus className="w-4 h-4 text-primary" />
+               Verification Photos
+               <span className="text-xs text-muted-foreground font-normal">(up to 6 photos)</span>
+             </label>
+
+             {/* Existing uploaded photos */}
+             {existingPhotoUrls.length > 0 && (
+               <div className="flex flex-wrap gap-3 mb-3">
+                 {existingPhotoUrls.map((url, i) => (
+                   <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-border group">
+                     <img src={url} alt={`verification ${i+1}`} className="w-full h-full object-cover" />
+                     <button
+                       type="button"
+                       onClick={() => removeExistingPhoto(i)}
+                       className="absolute top-1 right-1 w-5 h-5 bg-black/70 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                     >
+                       <X className="w-3 h-3" />
+                     </button>
+                   </div>
+                 ))}
+               </div>
+             )}
+
+             {/* New photo previews */}
+             {photoPreviews.length > 0 && (
+               <div className="flex flex-wrap gap-3 mb-3">
+                 {photoPreviews.map((url, i) => (
+                   <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-primary/40 group">
+                     <img src={url} alt={`new ${i+1}`} className="w-full h-full object-cover" />
+                     <div className="absolute top-1 left-1 bg-primary/80 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">NEW</div>
+                     <button
+                       type="button"
+                       onClick={() => removeNewPhoto(i)}
+                       className="absolute top-1 right-1 w-5 h-5 bg-black/70 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                     >
+                       <X className="w-3 h-3" />
+                     </button>
+                   </div>
+                 ))}
+               </div>
+             )}
+
+             {/* Drop zone — hidden if max photos reached */}
+             {(existingPhotoUrls.length + photoPreviews.length) < 6 && (
+               <div
+                 onClick={() => photoInputRef.current?.click()}
+                 onDragEnter={handlePhotoDragEnter}
+                 onDragOver={handlePhotoDragOver}
+                 onDragLeave={handlePhotoDragLeave}
+                 onDrop={handlePhotoDrop}
+                 className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-muted-foreground cursor-pointer transition-all duration-200 ${
+                   isDraggingPhoto
+                     ? 'border-primary bg-primary/10 ring-4 ring-primary/20 scale-[1.01]'
+                     : 'border-border hover:border-primary/50 hover:bg-muted/10'
+                 }`}
+               >
+                 <Upload className={`w-8 h-8 mb-2 transition-transform duration-200 ${isDraggingPhoto ? 'scale-125 text-primary animate-bounce' : 'opacity-50'}`} />
+                 <p className="text-sm font-semibold text-foreground">
+                   {isDraggingPhoto ? 'Drop photos here' : 'Click or drag & drop photos'}
+                 </p>
+                 <p className="text-xs mt-1">JPEG, PNG, WebP — max 6 photos total</p>
+                 <input
+                   ref={photoInputRef}
+                   type="file"
+                   accept="image/*"
+                   multiple
+                   className="hidden"
+                   onChange={e => e.target.files && addPhotoFiles(e.target.files)}
+                 />
+               </div>
+             )}
+
+             {uploadingPhotos && (
+               <div className="flex items-center gap-2 text-sm text-primary font-medium">
+                 <Loader2 className="w-4 h-4 animate-spin" />
+                 Uploading photos...
+               </div>
+             )}
            </div>
 
            <div className="pt-4 border-t border-border flex justify-end">

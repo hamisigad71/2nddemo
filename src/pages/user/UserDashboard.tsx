@@ -143,31 +143,36 @@ const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: 
               isLocked={post.is_locked}
             />
             {post.is_locked && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center backdrop-blur-md bg-black/40 px-6 text-center">
-                {/* Sleek Lock Badge without glow */}
-                <div className="w-14 h-14 rounded-2xl bg-black/70 border border-red-500/40 flex items-center justify-center mb-4 shadow-lg">
-                  <span className="text-xl">🔒</span>
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-4 text-center bg-black/20">
+                {/* Compact Floating Lock Card with Teaser Peek */}
+                <div className="backdrop-blur-md bg-black/75 border border-white/15 rounded-2xl px-6 py-5 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col items-center max-w-[280px] w-full">
+                  <div className="w-12 h-12 rounded-2xl bg-black/80 border border-red-500/50 flex items-center justify-center mb-3 shadow-lg">
+                    <span className="text-xl">🔒</span>
+                  </div>
+
+                  <p className="text-white font-bold text-sm tracking-tight mb-0.5">
+                    Subscribe to unlock
+                  </p>
+                  <p className="text-zinc-400 text-[11px] mb-4">
+                    VIP Sneak Peek · Teaser Preview
+                  </p>
+
+                  {/* Solid Red Button */}
+                  <button 
+                    onClick={() => {
+                      if (kycStatus !== 'verified') {
+                        toast.warning('Identity Verification Required', {
+                          description: 'Please verify your identity in settings to subscribe.'
+                        });
+                        return;
+                      }
+                      setIsSubscribeOpen(true);
+                    }}
+                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-xs tracking-wider uppercase py-2.5 px-6 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-600/30 cursor-pointer"
+                  >
+                    Subscribe
+                  </button>
                 </div>
-
-                <p className="text-white font-bold text-base tracking-tight mb-5">
-                  Subscribe to unlock
-                </p>
-
-                {/* Solid Red Button */}
-                <button 
-                  onClick={() => {
-                    if (kycStatus !== 'verified') {
-                      toast.warning('Identity Verification Required', {
-                        description: 'Please verify your identity in settings to subscribe.'
-                      });
-                      return;
-                    }
-                    setIsSubscribeOpen(true);
-                  }}
-                  className="bg-red-600 hover:bg-red-500 text-white font-bold text-sm tracking-wide py-2.5 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                >
-                  Subscribe
-                </button>
               </div>
             )}
           </div>
@@ -339,7 +344,7 @@ const EmptyFeed = () => (
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
-const LIMIT = 10;
+const LIMIT = 30;
 
 const UserDashboard = () => {
   const { user } = useAuth();
@@ -403,9 +408,10 @@ const UserDashboard = () => {
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
+    const rootContainer = sentinel.closest('main');
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting) loadMore(); },
-      { threshold: 0.1 }
+      { root: rootContainer, threshold: 0.1 }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -458,6 +464,17 @@ const UserDashboard = () => {
         {loading && (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 text-yellow-500 animate-spin" />
+          </div>
+        )}
+
+        {hasMore && !loading && posts.length > 0 && (
+          <div className="flex justify-center py-4">
+            <button
+              onClick={loadMore}
+              className="text-xs text-zinc-400 hover:text-white bg-zinc-900 border border-white/10 hover:border-white/20 rounded-full px-5 py-2 transition-all active:scale-95"
+            >
+              Load more posts
+            </button>
           </div>
         )}
 

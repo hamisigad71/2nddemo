@@ -143,6 +143,30 @@ const AdminEscorts = () => {
                          <span className="block text-xs font-black text-zinc-400 uppercase tracking-wider mb-1.5">Rates Overview</span>
                          <p className="line-clamp-2 text-zinc-300">{app.rates || 'No rates provided'}</p>
                       </div>
+
+                      {/* Verification Photos */}
+                      {app.verification_photos && app.verification_photos.length > 0 ? (
+                        <div className="bg-[#0d0e12] p-3 rounded-lg border border-zinc-800/50">
+                          <span className="block text-xs font-black text-zinc-400 uppercase tracking-wider mb-2">
+                            Verification Photos ({app.verification_photos.length})
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {app.verification_photos.map((url: string, i: number) => (
+                              <a key={i} href={url} target="_blank" rel="noopener noreferrer" title="Open full size">
+                                <img
+                                  src={url}
+                                  alt={`Verification ${i + 1}`}
+                                  className="w-20 h-20 object-cover rounded-lg border border-zinc-700 hover:border-red-500 hover:scale-105 transition-all cursor-zoom-in"
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-[#0d0e12] p-3 rounded-lg border border-zinc-800/50 text-zinc-500 text-xs font-medium">
+                          No verification photos submitted.
+                        </div>
+                      )}
                    </div>
                 </div>
                 <div className="p-4 bg-[#111217] flex justify-end gap-3 mt-auto">
