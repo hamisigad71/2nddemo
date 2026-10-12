@@ -60,27 +60,24 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
       setPollCount(count);
       setStatusMsg(`Checking payment... (${count}/12)`);
 
-      const status = await checkStkStatus(checkoutRequestId);
+      try {
+        const { checkPayHeroStatus } = await import('../lib/payhero');
+        const status = await checkPayHeroStatus(checkoutRequestId);
 
-      if (status.paid) {
-        clearInterval(pollRef.current!);
-        // Record in DB
-        if (amount && user) {
-          try {
-            await processPayment('tip', user.id, creatorId, amount, checkoutRequestId);
-          } catch (e) {
-            console.error('DB record error:', e);
+        if (status.paid) {
+          clearInterval(pollRef.current!);
+          if (amount && user) {
+            try {
+              await processPayment('tip', user.id, creatorId, amount, checkoutRequestId);
+            } catch (e) {
+              console.error('DB record error:', e);
+            }
           }
+          setStep('success');
+          return;
         }
-        setStep('success');
-        return;
-      }
-
-      if (status.cancelled) {
-        clearInterval(pollRef.current!);
-        setErrorMessage(status.resultDesc || 'Payment was cancelled or timed out.');
-        setStep('failed');
-        return;
+      } catch (e) {
+        console.warn('PayHero poll error:', e);
       }
 
       // Give up after 12 polls (~60 seconds)
@@ -122,7 +119,7 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
     setStep('method');
   };
 
-  // ── Daraja STK Push ──────────────────────────────────────────
+  // ── PayHero STK Push ──────────────────────────────────────────
   const handleDarajaSTK = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !user) return;
@@ -131,21 +128,28 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
     setErrorMessage(null);
     setPollCount(0);
 
-    const result = await initiateStkPush(
-      phone,
-      amount,
-      `Tip for ${creatorName}`
-    );
+    try {
+      const { initiatePayHeroSTK } = await import('../lib/payhero');
+      const payheroResult = await initiatePayHeroSTK({
+        amount,
+        phone_number: phone,
+        customer_name: user.user_metadata?.name || user.email || 'Donor',
+        external_reference: `TIP-${Date.now()}`
+      });
 
-    if (!result.success || !result.checkoutRequestId) {
-      setErrorMessage(result.error || 'Failed to send STK prompt. Try again.');
+      if (payheroResult.success && (payheroResult.reference || payheroResult.CheckoutRequestID)) {
+        setCheckoutRequestId(payheroResult.reference || payheroResult.CheckoutRequestID || 'payhero-ref');
+        setStatusMsg('Enter your M-Pesa PIN on your phone...');
+        return;
+      }
+
+      setErrorMessage(payheroResult.error || 'Failed to send STK prompt. Please check your phone number and try again.');
       setStep('failed');
-      return;
+    } catch (e: any) {
+      console.error('PayHero initiation error:', e);
+      setErrorMessage(e?.message || 'Failed to send STK prompt. Try again.');
+      setStep('failed');
     }
-
-    setCheckoutRequestId(result.checkoutRequestId);
-    setStatusMsg('Enter your M-Pesa PIN on your phone...');
-    // polling starts via the useEffect above
   };
 
   // ── Pesapal ─────────────────────────────────────────────────

@@ -21,6 +21,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/daraja/, ''),
         secure: true,
+      },
+      '/payhero': {
+        target: 'https://backend.payhero.co.ke',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/payhero/, ''),
+        secure: true,
       }
     }
   }

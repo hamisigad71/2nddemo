@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { ShieldCheck, MapPin, Share, MoreHorizontal, Lock } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getEscorts } from '../../lib/mockData';
+import TipModal from '../../components/TipModal';
 
 const CreatorProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
+  const [isTipOpen, setIsTipOpen] = useState(false);
 
   const creator = getEscorts().find(c => c.id === id);
 
@@ -62,7 +64,10 @@ const CreatorProfile = () => {
             <Link to="/checkout" className="flex-1 md:flex-none flex items-center justify-center gap-1 sm:gap-2 bg-primary text-primary-foreground font-bold px-3 sm:px-8 py-3 rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-primary/20 text-sm sm:text-base whitespace-nowrap">
               Book for KES {creator.price_hr}/hr
             </Link>
-            <button className="flex-1 md:flex-none flex items-center justify-center bg-input/30 hover:bg-input border border-border text-foreground font-bold px-3 sm:px-6 py-3 rounded-xl transition-colors text-sm sm:text-base whitespace-nowrap">
+            <button 
+              onClick={() => setIsTipOpen(true)}
+              className="flex-1 md:flex-none flex items-center justify-center bg-input/30 hover:bg-input border border-border text-foreground font-bold px-3 sm:px-6 py-3 rounded-xl transition-colors text-sm sm:text-base whitespace-nowrap cursor-pointer"
+            >
               Tip KES 100
             </button>
           </div>
@@ -196,9 +201,9 @@ const CreatorProfile = () => {
                     </div>
                     <h4 className="text-2xl font-black mb-2 text-white">Subscribe to Unlock</h4>
                     <p className="text-sm text-gray-300 mb-8 max-w-xs mx-auto leading-relaxed">
-                      This content is for subscribers only. Join for KES 500/month to unlock all exclusive posts and media.
+                      This content is for subscribers only. Join for KES 1,000/month to unlock all exclusive posts and media.
                     </p>
-                    <Link to="/checkout" className="group w-full max-w-xs flex items-center justify-center gap-2 bg-primary text-primary-foreground font-black px-8 py-3.5 rounded-xl hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(255,0,0,0.2)] hover:shadow-[0_0_30px_rgba(255,0,0,0.4)] hover:scale-[1.02]">
+                    <Link to="/checkout" state={{ creator: { name: creator.name, price: 'KES 1,000/mo', avatar: creator.avatar, id: creator.id } }} className="group w-full max-w-xs flex items-center justify-center gap-2 bg-primary text-primary-foreground font-black px-8 py-3.5 rounded-xl hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(255,0,0,0.2)] hover:shadow-[0_0_30px_rgba(255,0,0,0.4)] hover:scale-[1.02]">
                       Unlock Content
                     </Link>
                  </div>
@@ -215,6 +220,12 @@ const CreatorProfile = () => {
             </div>
           </div>
         )}
+        <TipModal
+          isOpen={isTipOpen}
+          onClose={() => setIsTipOpen(false)}
+          creatorName={creator.name}
+          creatorId={creator.id}
+        />
       </div>
     </div>
   );

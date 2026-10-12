@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+// import { useState, useEffect, useCallback } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import PageLoader from "./components/PageLoader";
+// import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
 import Discover from "./pages/public/Discover";
 import Login from "./pages/public/Login";
@@ -52,6 +52,7 @@ import EscortsPage from "./pages/user/EscortsPage";
 import UserWallet from "./pages/user/UserWallet";
 
 const AppRoutes = () => {
+  /* LOADER TEMPORARILY DISABLED - UNCOMMENT TO RESTORE
   const location = useLocation();
   const { user } = useAuth();
   const [displayLocation, setDisplayLocation] = useState(location);
@@ -82,14 +83,17 @@ const AppRoutes = () => {
     setIsTransitioning(false);
     if (initialLoad) setInitialLoad(false);
   }, [initialLoad]);
+  */
 
   return (
     <>
+      {/* LOADER TEMPORARILY DISABLED - UNCOMMENT TO RESTORE
       {(isTransitioning || initialLoad) && (
         <PageLoader onReady={handleLoaderReady} onComplete={handleLoaderComplete} />
       )}
+      */}
       <div className="min-h-screen bg-background text-foreground font-sans">
-        <Routes location={displayLocation}>
+        <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/login" element={<Login />} />

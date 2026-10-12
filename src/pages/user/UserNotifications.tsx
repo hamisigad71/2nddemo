@@ -31,13 +31,13 @@ const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'notif-1',
     category: 'admin',
-    title: 'Identity Verification (AML) Notice',
-    message: 'To comply with Kenya financial regulations, please upload your National ID in Account Settings to continue unlocking premium features.',
+    title: 'Welcome to Mali VIP',
+    message: 'Explore exclusive creator content, send tips, and enjoy seamless M-Pesa subscriptions anytime.',
     created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
     is_read: false,
-    action_label: 'Complete KYC',
-    action_url: '/user/settings',
-    badge: 'Urgent'
+    action_label: 'Explore Feed',
+    action_url: '/user',
+    badge: 'Welcome'
   },
   {
     id: 'notif-2',

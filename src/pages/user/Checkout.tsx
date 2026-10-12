@@ -4,12 +4,13 @@ import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from '../../context/ToastContext';
+import { submitPesapalOrder } from '../../lib/pesapal';
 
 const Checkout = () => {
   const location = useLocation();
   const creator = location.state?.creator || {
     name: "Jane Doe",
-    price: "KES 500/mo",
+    price: "KES 1,000/mo",
     avatar: "https://i.pravatar.cc/150?img=12"
   };
 
@@ -24,6 +25,17 @@ const Checkout = () => {
     if (!checkoutId || status !== 'pending') return;
     
     const checkStatus = async () => {
+       try {
+         const { checkPayHeroStatus } = await import('../../lib/payhero');
+         const res = await checkPayHeroStatus(checkoutId);
+         if (res.paid) {
+           setStatus('success');
+           return;
+         }
+       } catch (err) {
+         // fallback to supabase polling if applicable
+       }
+
        const { data } = await supabase.from('transactions')
           .select('status')
           .eq('provider_reference', checkoutId)
@@ -45,35 +57,79 @@ const Checkout = () => {
     if (!user) return;
     setStatus('pending');
     
-    const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 500;
+    const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
 
     try {
-      // 1. Invoke the Daraja STK Push Edge Function
-      const { data, error } = await supabase.functions.invoke('daraja-stk-push', {
-        body: {
-          amount,
-          phoneNumber: phone,
-          userId: user.id,
-          toCreatorId: creator.id || 'creator_dummy_id', // Fallback for prototype
-          type: 'subscription'
-        }
+      // 1. Invoke PayHero STK Push
+      const { initiatePayHeroSTK } = await import('../../lib/payhero');
+      const res = await initiatePayHeroSTK({
+        amount,
+        phone_number: phone,
+        customer_name: user.user_metadata?.name || user.email || 'Subscriber',
+        external_reference: `SUB-${Date.now()}`
       });
 
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-
-      // 2. Set the checkout ID so the polling effect starts watching the DB
-      if (data.checkoutRequestId) {
-         setCheckoutId(data.checkoutRequestId);
-      } else {
-         setStatus('failed');
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to trigger M-Pesa STK Push');
       }
-    } catch (err) {
+
+      toast.success('STK Prompt Sent', {
+        description: 'Please enter your M-Pesa PIN on your phone to complete payment.'
+      });
+
+      if (res.reference) {
+        setCheckoutId(res.reference);
+      }
+    } catch (err: any) {
       console.error(err);
       setStatus('failed');
       toast.error('STK Push failed', {
-        description: 'Please check your phone number and try again.'
+        description: err.message || 'Please check your phone number and try again.'
       });
+    }
+  };
+
+  const [cardLoading, setCardLoading] = useState(false);
+
+  const handleCardPay = async () => {
+    if (!user) {
+      toast.error('Sign In Required', {
+        description: 'Please sign in to complete your checkout.'
+      });
+      return;
+    }
+
+    setCardLoading(true);
+    const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
+
+    try {
+      const order = await submitPesapalOrder({
+        id: `SUB-${Date.now()}`,
+        currency: 'KES',
+        amount,
+        description: `Subscription to ${creator.name}`,
+        callback_url: `${window.location.origin}/checkout`,
+        billing_address: {
+          email_address: user.email || 'customer@gmail.com',
+          phone_number: phone || '0700000000',
+          first_name: user.user_metadata?.name?.split(' ')[0] || 'Subscriber',
+          last_name: user.user_metadata?.name?.split(' ')[1] || 'Fan',
+        },
+      });
+
+      if (order?.redirect_url) {
+        window.location.href = order.redirect_url;
+      } else {
+        toast.error('Card Payment Error', {
+          description: order?.error || 'Unable to connect to Pesapal card gateway.'
+        });
+      }
+    } catch (err: any) {
+      toast.error('Card Checkout Error', {
+        description: err?.message || 'Failed to start card session.'
+      });
+    } finally {
+      setCardLoading(false);
     }
   };
 
@@ -223,10 +279,32 @@ const Checkout = () => {
         )}
 
         {method === 'card' && (
-          <div className="text-center p-8 border border-dashed border-border rounded-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-bold mb-2">Card Payments Coming Soon</h3>
-            <p className="text-sm text-muted-foreground">For this prototype, please select M-Pesa to experience the flow.</p>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-4">
+            <div className="bg-input/10 border border-border rounded-2xl p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                <h4 className="font-bold text-sm text-foreground">Secure Card Checkout</h4>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Pay securely with Visa, Mastercard, or debit card via Pesapal 3D-Secure checkout.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCardPay}
+              disabled={cardLoading}
+              className="w-full font-bold text-lg rounded-xl py-4 transition-colors shadow-lg flex items-center justify-center gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-emerald-600 shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {cardLoading ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  Connecting to Card Gateway...
+                </>
+              ) : (
+                <>Pay {creator.price.replace('/mo', '')} with Card <ArrowRight className="w-5 h-5" /></>
+              )}
+            </button>
           </div>
         )}
       </div>

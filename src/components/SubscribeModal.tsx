@@ -24,7 +24,7 @@ type Step =
   | 'success'
   | 'failed';
 
-export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId = 'creator-default', price = 500 }: SubscribeModalProps) {
+export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId = 'creator-default', price = 1000 }: SubscribeModalProps) {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>('method');
   const [phone, setPhone] = useState('');
@@ -64,32 +64,30 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
     if (step !== 'mpesa_waiting' || !checkoutRequestId) return;
 
     let count = 0;
+    // Polling interval
     pollRef.current = setInterval(async () => {
       count++;
       setPollCount(count);
       setStatusMsg(`Checking payment... (${count}/12)`);
 
-      const status = await checkStkStatus(checkoutRequestId);
+      try {
+        const { checkPayHeroStatus } = await import('../lib/payhero');
+        const status = await checkPayHeroStatus(checkoutRequestId);
 
-      if (status.paid) {
-        clearInterval(pollRef.current!);
-        // Record in DB
-        if (price && user) {
-          try {
-            await subscribeToCreator(user.id, creatorId, 'Premium', price);
-          } catch (e) {
-            console.error('DB record error:', e);
+        if (status.paid) {
+          clearInterval(pollRef.current!);
+          if (price && user) {
+            try {
+              await subscribeToCreator(user.id, creatorId, 'Premium', price);
+            } catch (e) {
+              console.error('DB record error:', e);
+            }
           }
+          setStep('success');
+          return;
         }
-        setStep('success');
-        return;
-      }
-
-      if (status.cancelled) {
-        clearInterval(pollRef.current!);
-        setErrorMessage(status.resultDesc || 'Payment was cancelled or timed out.');
-        setStep('failed');
-        return;
+      } catch (err) {
+        console.warn('PayHero polling check error:', err);
       }
 
       // Give up after 12 polls (~60 seconds)
@@ -117,7 +115,7 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
     setStep('method');
   };
 
-  // ── Daraja STK Push ──────────────────────────────────────────
+  // ── PayHero STK Push ──────────────────────────────────────────
   const handleDarajaSTK = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!price || !user) return;
@@ -126,21 +124,28 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
     setErrorMessage(null);
     setPollCount(0);
 
-    const result = await initiateStkPush(
-      phone,
-      price,
-      `Subscribe to ${creatorName}`
-    );
+    try {
+      const { initiatePayHeroSTK } = await import('../lib/payhero');
+      const payheroResult = await initiatePayHeroSTK({
+        amount: price,
+        phone_number: phone,
+        customer_name: user.user_metadata?.name || user.email || 'Subscriber',
+        external_reference: `SUB-${Date.now()}`
+      });
 
-    if (!result.success || !result.checkoutRequestId) {
-      setErrorMessage(result.error || 'Failed to send STK prompt. Try again.');
+      if (payheroResult.success && (payheroResult.reference || payheroResult.CheckoutRequestID)) {
+        setCheckoutRequestId(payheroResult.reference || payheroResult.CheckoutRequestID || 'payhero-ref');
+        setStatusMsg('Enter your M-Pesa PIN on your phone...');
+        return;
+      }
+
+      setErrorMessage(payheroResult.error || 'Failed to send STK prompt. Please check your phone number and try again.');
       setStep('failed');
-      return;
+    } catch (e: any) {
+      console.error('PayHero initiation error:', e);
+      setErrorMessage(e?.message || 'Failed to send STK prompt. Try again.');
+      setStep('failed');
     }
-
-    setCheckoutRequestId(result.checkoutRequestId);
-    setStatusMsg('Enter your M-Pesa PIN on your phone...');
-    // polling starts via the useEffect above
   };
 
   // ── Pesapal ─────────────────────────────────────────────────

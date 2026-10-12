@@ -4,11 +4,8 @@ import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send } fr
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
-import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getUserProfile } from '../../lib/db';
+import { getFanFeed, getPostLikes, toggleLike, getComments, addComment } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
-import { Link } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
-import { toast } from '../../context/ToastContext';
 import FeedImage from '../../components/FeedImage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,7 +20,7 @@ interface Comment {
 
 // ─── Feed Post Component ──────────────────────────────────────────────────────
 
-const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: any; currentUserId: string; kycStatus: string; priority?: boolean }) => {
+const FeedPost = ({ post, currentUserId, priority = false }: { post: any; currentUserId: string; priority?: boolean }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
@@ -159,15 +156,7 @@ const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: 
 
                   {/* Solid Red Button */}
                   <button 
-                    onClick={() => {
-                      if (kycStatus !== 'verified') {
-                        toast.warning('Identity Verification Required', {
-                          description: 'Please verify your identity in settings to subscribe.'
-                        });
-                        return;
-                      }
-                      setIsSubscribeOpen(true);
-                    }}
+                    onClick={() => setIsSubscribeOpen(true)}
                     className="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-xs tracking-wider uppercase py-2.5 px-6 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-600/30 cursor-pointer"
                   >
                     Subscribe
@@ -212,30 +201,14 @@ const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: 
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                if (kycStatus !== 'verified') {
-                  toast.warning('Identity Verification Required', {
-                    description: 'Please verify your identity in settings to tip creators.'
-                  });
-                  return;
-                }
-                setIsTipOpen(true);
-              }}
+              onClick={() => setIsTipOpen(true)}
               className="text-white hover:bg-white/10 transition-all rounded-full px-3.5 py-1.5 font-medium text-[12px] border border-white/20 active:scale-95"
             >
               Tip 💸
             </button>
             {!post.is_locked && (
               <button
-                onClick={() => {
-                  if (kycStatus !== 'verified') {
-                    toast.warning('Identity Verification Required', {
-                      description: 'Please verify your identity in settings to subscribe.'
-                    });
-                    return;
-                  }
-                  setIsSubscribeOpen(true);
-                }}
+                onClick={() => setIsSubscribeOpen(true)}
                 className="bg-red-600 hover:bg-red-500 text-white transition-all rounded-full px-4 py-1.5 font-bold text-[12px] shadow-[0_2px_12px_rgba(220,38,38,0.3)] active:scale-95 tracking-wide flex items-center gap-1"
               >
                 Subscribe <span className="text-[10px]">⭐</span>
@@ -320,7 +293,7 @@ const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: 
         onClose={() => setIsSubscribeOpen(false)}
         creatorName={creatorName}
         creatorId={post.creator_id}
-        price={post.price || 500}
+        price={post.price || 1000}
       />
     </>
   );
@@ -353,15 +326,6 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const [kycStatus, setKycStatus] = useState<string>('verified'); // Default verified to avoid flash, then update
-
-  useEffect(() => {
-    if (user?.id) {
-      getUserProfile(user.id).then(profile => {
-        setKycStatus(profile?.kyc_status || 'unverified');
-      });
-    }
-  }, [user]);
 
   const loadMore = useCallback(async () => {
     if (!user || loading || !hasMore) return;
@@ -428,35 +392,11 @@ const UserDashboard = () => {
         </p>
       </div>
 
-      {kycStatus !== 'verified' && (
-        <div className="mb-10 mx-auto w-full max-w-lg bg-[#0b0a0a] border border-red-600/30 rounded-[1.25rem] p-5 shadow-[0_0_20px_rgba(220,38,38,0.1)] flex flex-col gap-5">
-          <div className="flex gap-4 items-start">
-            <div className="shrink-0 w-11 h-11 bg-[#0b0a0a] border border-red-600/40 rounded-[12px] flex items-center justify-center shadow-inner">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-            </div>
-            <div className="mt-0.5">
-              <h3 className="font-bold text-red-500 text-[17px] mb-1.5 tracking-tight">
-                Action Required: Identity Verification
-              </h3>
-              <p className="text-[13px] text-zinc-300 leading-relaxed font-medium">
-                You cannot access premium features like tipping or subscribing until your identity is verified for Kenya regulatory compliance (AML).
-              </p>
-            </div>
-          </div>
-          <Link 
-            to="/user/settings" 
-            className="w-full bg-[#f00000] hover:bg-red-600 text-white font-bold py-3.5 rounded-xl text-center text-sm shadow-[0_4px_15px_rgba(220,38,38,0.4)] transition-all active:scale-[0.98] uppercase tracking-wide"
-          >
-            UNVERIFIED
-          </Link>
-        </div>
-      )}
-
       <div className="max-w-xl mx-auto flex flex-col gap-5">
         {posts.length === 0 && !loading && <EmptyFeed />}
 
         {posts.map((post, index) => (
-          <FeedPost key={post.id} post={post} currentUserId={user?.id || ''} kycStatus={kycStatus} priority={index < 2} />
+          <FeedPost key={post.id} post={post} currentUserId={user?.id || ''} priority={index < 2} />
         ))}
 
         <div ref={sentinelRef} className="h-4" />
