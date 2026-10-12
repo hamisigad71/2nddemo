@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle2, Phone, Coins, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle } from 'lucide-react';
 import { submitPesapalOrder } from '../lib/pesapal';
-import { initiateStkPush, checkStkStatus, formatPhone } from '../lib/daraja';
+import { formatPhone } from '../lib/daraja';
 import { processPayment, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
