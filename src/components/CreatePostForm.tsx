@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
-import { UploadCloud, Lock, Unlock, ImagePlus, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { UploadCloud, Lock, Unlock, ImagePlus, Loader2, Video } from 'lucide-react';
 import { createPost, uploadFileToSupabase } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
 interface CreatePostFormProps {
   onPostCreated?: () => void;
 }
+
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB limit
 
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve) => {
@@ -63,6 +65,8 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [caption, setCaption] = useState('');
   const [isLocked, setIsLocked] = useState(false);
@@ -70,14 +74,89 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+
+  // Clean up blob URL for video preview on unmount or file change
+  useEffect(() => {
+    return () => {
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+      }
+    };
+  }, [videoPreview]);
+
+  const processFile = (file: File) => {
+    setUploadError(null);
+
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      setUploadError('Please select a valid image or video file.');
+      return;
+    }
+
+    if (file.type.startsWith('video/')) {
+      if (file.size > MAX_VIDEO_SIZE) {
+        setUploadError('Video file exceeds maximum size limit of 50MB.');
+        return;
+      }
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+      setSelectedFile(file);
+      setMediaType('video');
+      setPreview(null);
+      setVideoPreview(URL.createObjectURL(file));
+    } else {
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+        setVideoPreview(null);
+      }
+      setSelectedFile(file);
+      setMediaType('image');
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setPreview(reader.result as string);
-    reader.readAsDataURL(file);
+    processFile(file);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,12 +166,18 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
     setUploading(true);
     setUploadError(null);
     try {
-      const compressedFile = await compressImage(selectedFile);
-      const path = `posts/${user.id}/${Date.now()}_${compressedFile.name}`;
-      const mediaUrl = await uploadFileToSupabase(compressedFile, 'hideaway post storage', path);
+      let fileToUpload = selectedFile;
+      if (mediaType === 'image') {
+        fileToUpload = await compressImage(selectedFile);
+      }
+
+      // Safe clean filename
+      const cleanName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `posts/${user.id}/${Date.now()}_${cleanName}`;
+      const mediaUrl = await uploadFileToSupabase(fileToUpload, 'hideaway post storage', path);
 
       if (!mediaUrl) {
-        setUploadError('Image upload failed. Please check your storage settings or try a smaller file.');
+        setUploadError('Upload failed. Please check your storage settings or connection.');
         return;
       }
 
@@ -101,7 +186,8 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
         caption,
         mediaUrl,
         isLocked,
-        isLocked ? parseFloat(price) || 0 : 0
+        isLocked ? parseFloat(price) || 0 : 0,
+        mediaType
       );
 
       setSuccess(true);
@@ -109,12 +195,16 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
       setPrice('');
       setIsLocked(false);
       setPreview(null);
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+        setVideoPreview(null);
+      }
       setSelectedFile(null);
       onPostCreated?.();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      setUploadError('An unexpected error occurred. Please try again.');
+      setUploadError('An unexpected error occurred while publishing post.');
     } finally {
       setUploading(false);
     }
@@ -127,26 +217,62 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
       </h3>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Image Drop Zone */}
+        {/* Media Drop Zone */}
         <div
           onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl overflow-hidden flex items-center justify-center cursor-pointer transition-all min-h-48 group ${
-            preview ? 'border-primary/50' : 'border-border hover:border-primary/50 hover:bg-muted/30'
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`relative border-2 border-dashed rounded-xl overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 min-h-48 group ${
+            isDragging
+              ? 'border-primary bg-primary/10 ring-4 ring-primary/20 scale-[1.01]'
+              : preview || videoPreview
+                ? 'border-primary/50 bg-black/40'
+                : 'border-border hover:border-primary/50 hover:bg-muted/30'
           }`}
         >
-          {preview ? (
-            <img src={preview} alt="preview" className="w-full max-h-72 object-cover rounded-xl" />
+          {/* Overlay when dragging over existing preview */}
+          {isDragging && (preview || videoPreview) && (
+            <div className="absolute inset-0 z-30 bg-black/85 backdrop-blur-sm border-2 border-dashed border-primary flex flex-col items-center justify-center text-primary gap-2 pointer-events-none animate-in fade-in duration-200">
+              <UploadCloud className="w-12 h-12 animate-bounce" />
+              <p className="font-bold text-sm text-white">Drop to replace media</p>
+              <p className="text-xs text-muted-foreground">Release your file here</p>
+            </div>
+          )}
+
+          {videoPreview ? (
+            <div className="w-full flex flex-col items-center p-2 relative">
+              <video
+                src={videoPreview}
+                controls
+                playsInline
+                className="w-full max-h-72 object-contain rounded-lg shadow-md"
+              />
+              <span className="mt-2 text-xs text-primary font-semibold flex items-center gap-1">
+                <Video className="w-3.5 h-3.5" /> Video attached · Click or drag to change
+              </span>
+            </div>
+          ) : preview ? (
+            <div className="w-full relative flex flex-col items-center">
+              <img src={preview} alt="preview" className="w-full max-h-72 object-cover rounded-xl" />
+              <span className="mt-2 text-xs text-muted-foreground font-medium">
+                Click or drag another file to replace
+              </span>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-2 text-muted-foreground text-center p-8 group-hover:text-primary transition-colors">
-              <UploadCloud className="w-10 h-10 mb-2" />
-              <p className="font-bold text-sm">Click to upload a photo</p>
-              <p className="text-xs">JPEG, PNG, WebP — max 10MB</p>
+              <UploadCloud className={`w-10 h-10 mb-2 transition-transform duration-200 ${isDragging ? 'scale-125 text-primary animate-bounce' : ''}`} />
+              <p className="font-bold text-sm text-foreground">
+                {isDragging ? 'Drop your file now' : 'Click or drag & drop to upload'}
+              </p>
+              <p className="text-xs">Images (JPEG, PNG, WebP) or Videos (MP4, WebM) — max 50MB</p>
             </div>
           )}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/mp4,video/webm,video/quicktime"
             className="hidden"
             onChange={handleFileSelect}
           />

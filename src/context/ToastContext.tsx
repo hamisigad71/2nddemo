@@ -64,7 +64,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addToast = useCallback((type: ToastType, title: string, options?: ToastOptions) => {
     const id = Math.random().toString(36).substring(2, 9);
-    const duration = options?.duration ?? 4000;
+    const duration = options?.duration ?? 8000; // 8 seconds before disappearing
     const newToast: ToastItem = {
       id,
       type,
@@ -138,10 +138,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
 
-      {/* Floating Toast Container */}
+      {/* Centered Toast Container */}
       <div 
         aria-live="polite" 
-        className="fixed top-5 right-5 z-[99999] flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4 sm:px-0"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[99999] flex flex-col items-center gap-3 max-w-md w-[calc(100%-2rem)] pointer-events-none"
       >
         {toasts.map((t) => {
           const config = getTypeStyles(t.type);
@@ -150,7 +150,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto relative overflow-hidden rounded-2xl bg-[#0e1017]/95 border ${config.border} backdrop-blur-xl ${config.glow} p-4 text-white shadow-2xl transition-all duration-300 animate-in slide-in-from-top-4 fade-in`}
+              className={`pointer-events-auto relative overflow-hidden rounded-2xl bg-[#0e1017]/95 border ${config.border} backdrop-blur-xl ${config.glow} p-4.5 text-white shadow-2xl transition-all duration-300 animate-in zoom-in-95 fade-in w-full`}
             >
               <div className="flex items-start gap-3">
                 <div className={`p-1.5 rounded-xl ${config.bg} shrink-0`}>

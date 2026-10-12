@@ -19,7 +19,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-1',
     creator_id: 'creator-wairimu',
     content: 'Unedited BTS from today’s golden hour poolside shoot 👙✨ Unlock the full 25+ HD photo gallery & exclusive video clip below!',
-    media_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg',
     is_locked: false,
     price: 0,
     likes_count: 342,
@@ -49,7 +49,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-3',
     creator_id: 'creator-chloe',
     content: 'Midnight audio voice note + secret lounge photoshoot 💋🎶 Subscribers get instant access to my private feed & custom request inbox!',
-    media_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/07/e6/cf/07e6cf77a0f77ad57c801c7d47bfeb6b.jpg',
     is_locked: false,
     price: 0,
     likes_count: 890,
@@ -94,7 +94,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-6',
     creator_id: 'creator-stacy',
     content: 'New lace try-on haul drops today! 👠✨ Sneak peek here — subscribe to see the full try-on video & exclusive photos!',
-    media_url: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/1200x/4d/bf/10/4dbf1060dbefbb66bf90f1e104d95aa3.jpg',
     is_locked: false,
     price: 0,
     likes_count: 675,
@@ -146,8 +146,8 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     created_at: new Date(Date.now() - 1000 * 60 * 960).toISOString(),
     is_featured: true,
     users: {
-      name: 'Samantha Seduction ',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
+      name: 'Samantha Seduction 💋',
+      avatar: 'https://i.pinimg.com/736x/db/fc/0c/dbfc0ce39862d0dc21444df706e75de2.jpg'
     }
   },
   {

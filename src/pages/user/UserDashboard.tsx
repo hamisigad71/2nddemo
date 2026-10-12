@@ -143,9 +143,9 @@ const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: 
               isLocked={post.is_locked}
             />
             {post.is_locked && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center backdrop-blur-md bg-black/40 px-6 text-center">
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center backdrop-blur-md bg-black/40 px-6 text-center">
                 {/* Sleek Lock Badge without glow */}
-                <div className="w-14 h-14 rounded-2xl bg-black/70 border border-red-500/40 flex items-center justify-center mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-black/70 border border-red-500/40 flex items-center justify-center mb-4 shadow-lg">
                   <span className="text-xl">🔒</span>
                 </div>
 
@@ -164,7 +164,7 @@ const FeedPost = ({ post, currentUserId, kycStatus, priority = false }: { post: 
                     }
                     setIsSubscribeOpen(true);
                   }}
-                  className="bg-red-600 hover:bg-red-500 text-white font-bold text-sm tracking-wide py-2.5 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-red-600 hover:bg-red-500 text-white font-bold text-sm tracking-wide py-2.5 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
                   Subscribe
                 </button>

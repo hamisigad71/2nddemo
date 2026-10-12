@@ -73,12 +73,14 @@ export const createPost = async (
   content: string,
   mediaUrl: string | null,
   isLocked: boolean,
-  price: number
+  price: number,
+  mediaType: 'image' | 'video' = 'image'
 ) => {
   await supabase.from('posts').insert({
     creator_id: creatorId,
     content,
     media_url: mediaUrl,
+    media_type: mediaType,
     is_locked: isLocked,
     price: isLocked ? price : 0,
     created_at: new Date().toISOString(),
