@@ -1,12 +1,3 @@
-// PayHero M-Pesa STK Push Integration
-// Docs: https://backend.payhero.co.ke/api/v2/payments
-
-const PAYHERO_API_KEY = import.meta.env.VITE_PAYHERO_API_KEY || '';
-const PAYHERO_CHANNEL_ID = import.meta.env.VITE_PAYHERO_CHANNEL_ID || '';
-
-// Proxy endpoint for local dev (avoids CORS) or direct URL
-const PAYHERO_BASE = import.meta.env.DEV ? '/payhero' : 'https://backend.payhero.co.ke';
-
 /**
  * Format phone number to standard local/Safaricom format (e.g. 07XXXXXXXX or 01XXXXXXXX)
  * PayHero accepts e.g. "0787677676" or "2547..."
@@ -30,7 +21,6 @@ export interface PayHeroPaymentRequest {
   phone_number: string;
   customer_name?: string;
   external_reference?: string;
-  callback_url?: string;
 }
 
 export interface PayHeroResponse {
@@ -48,53 +38,29 @@ export const initiatePayHeroSTK = async (
   request: PayHeroPaymentRequest
 ): Promise<PayHeroResponse> => {
   try {
-    const formattedPhone = formatPayHeroPhone(request.phone_number);
-    const channelId = Number(PAYHERO_CHANNEL_ID) || 133;
-
-    const payload = {
-      amount: Math.round(request.amount),
-      phone_number: formattedPhone,
-      channel_id: channelId,
-      provider: 'm-pesa',
-      external_reference: request.external_reference || `REF-${Date.now()}`,
-      customer_name: request.customer_name || 'Customer',
-      callback_url: request.callback_url || `${window.location.origin}/payment/callback`
-    };
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-
-    if (PAYHERO_API_KEY) {
-      // Basic Auth token as specified in PayHero docs
-      headers['Authorization'] = PAYHERO_API_KEY.startsWith('Basic ')
-        ? PAYHERO_API_KEY
-        : `Basic ${PAYHERO_API_KEY}`;
-    }
-
-    const response = await fetch(`${PAYHERO_BASE}/api/v2/payments`, {
+    const response = await fetch('/api/pay', {
       method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        amount: Math.round(request.amount),
+        phone: formatPayHeroPhone(request.phone_number),
+        name: request.customer_name,
+        reference: request.external_reference,
+      })
     });
 
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      const errorMsg = data?.message || data?.error || `HTTP ${response.status}: Failed to initiate STK`;
-      return {
-        success: false,
-        error: errorMsg
-      };
+      return { success: false, error: data?.error || `HTTP ${response.status}: Failed to initiate STK` };
     }
 
-    if (data?.success || data?.status === 'QUEUED' || data?.CheckoutRequestID) {
+    if (data?.success && (data?.reference || data?.CheckoutRequestID)) {
       return {
         success: true,
-        status: data.status,
-        reference: data.reference,
-        CheckoutRequestID: data.CheckoutRequestID
+        status: data?.status,
+        reference: data?.reference,
+        CheckoutRequestID: data?.CheckoutRequestID
       };
     }
 
@@ -102,11 +68,11 @@ export const initiatePayHeroSTK = async (
       success: false,
       error: data?.message || 'Unexpected response from PayHero'
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('PayHero STK Error:', err);
     return {
       success: false,
-      error: err.message || 'Network error while contacting PayHero API'
+      error: err instanceof Error ? err.message : 'Network error while contacting payment service'
     };
   }
 };
@@ -116,34 +82,24 @@ export const initiatePayHeroSTK = async (
  */
 export const checkPayHeroStatus = async (reference: string): Promise<{ paid: boolean; status?: string; error?: string }> => {
   try {
-    const headers: Record<string, string> = {
-      'Accept': 'application/json'
-    };
-
-    if (PAYHERO_API_KEY) {
-      headers['Authorization'] = PAYHERO_API_KEY.startsWith('Basic ')
-        ? PAYHERO_API_KEY
-        : `Basic ${PAYHERO_API_KEY}`;
-    }
-
-    const response = await fetch(`${PAYHERO_BASE}/api/v2/payments/${reference}`, {
-      method: 'GET',
-      headers
+    const response = await fetch(`/api/pay/status?ref=${encodeURIComponent(reference)}`, {
+      headers: { 'Accept': 'application/json' }
     });
 
+    const data = await response.json().catch(() => null);
     if (!response.ok) {
-      return { paid: false, error: `HTTP ${response.status}` };
+      return { paid: false, error: data?.error || `HTTP ${response.status}` };
     }
 
-    const data = await response.json();
-    const status = (data?.status || '').toUpperCase();
-
-    if (status === 'SUCCESS' || status === 'COMPLETED' || status === 'PAID') {
-      return { paid: true, status };
-    }
-
-    return { paid: false, status };
-  } catch (err: any) {
-    return { paid: false, error: err.message };
+    return {
+      paid: Boolean(data?.paid),
+      status: data?.status,
+      error: data?.error
+    };
+  } catch (err: unknown) {
+    return {
+      paid: false,
+      error: err instanceof Error ? err.message : 'Network error while checking payment status'
+    };
   }
 };

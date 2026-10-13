@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, CheckCircle, MapPin, Lock } from 'lucide-react';
+import { Search, Filter, CheckCircle, CheckCircle2, MapPin, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 
@@ -84,7 +84,7 @@ const Discover = () => {
                   {/* Name & Handle */}
                   <h3 className="text-sm sm:text-xl font-bold flex items-center gap-1 text-white truncate w-full shadow-sm">
                     <span className="truncate">{creator.name}</span>
-                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-primary shrink-0 drop-shadow-md" />
+                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white fill-blue-500 shrink-0 drop-shadow-md" />
                   </h3>
                   <p className="text-[10px] sm:text-sm text-gray-300 font-medium truncate drop-shadow-sm">{creator.handle}</p>
                   

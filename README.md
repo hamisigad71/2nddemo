@@ -30,3 +30,13 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## PayHero payments
+
+PayHero requests are sent through the server-side `/api/pay` and `/api/pay/status` routes. Configure these server environment variables in Vercel:
+
+- `PAYHERO_API_KEY`: the complete Basic Auth token from PayHero.
+- `PAYHERO_CHANNEL_ID`: the active M-Pesa payment channel ID (not the PayHero account ID).
+- `PAYHERO_CALLBACK_URL`: a public HTTPS URL ending in `/api/pay/callback`. If omitted, Vercel's deployment URL is used.
+
+For local serverless development, use `vercel dev` rather than Vite's `npm run dev`, since Vite alone does not run the `/api` functions. Set `PAYHERO_CALLBACK_URL` to a public HTTPS tunnel when testing callbacks locally. Keep these values server-side; never expose the PayHero API key through a `VITE_` variable.

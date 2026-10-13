@@ -1,4 +1,4 @@
-import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar, Loader2, AlertCircle } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
@@ -28,9 +28,21 @@ const CreatorDashboard = () => {
            <h1 className="text-3xl font-bold mb-1">Dashboard</h1>
            <p className="text-muted-foreground">Welcome back, {(user?.user_metadata?.name || user?.user_metadata?.full_name)?.split(' ')[0] || 'Creator'}. Here's how your content is performing.</p>
          </div>
-         <div className="flex items-center gap-2 bg-input/20 border border-border rounded-xl px-4 py-2 text-sm text-foreground">
-           <Calendar className="w-4 h-4 text-muted-foreground" />
-           Last 30 Days
+         <div className="flex items-center gap-3">
+           {user?.id && (
+             <Link
+               to={`/creator/${user.id}`}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl border border-white/10 text-xs font-bold transition-all shadow-md"
+             >
+               <Eye className="w-4 h-4 text-red-500" /> View Public Profile <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+             </Link>
+           )}
+           <div className="flex items-center gap-2 bg-input/20 border border-border rounded-xl px-4 py-2 text-sm text-foreground">
+             <Calendar className="w-4 h-4 text-muted-foreground" />
+             Last 30 Days
+           </div>
          </div>
        </div>
 

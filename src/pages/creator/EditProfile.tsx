@@ -1,8 +1,9 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock } from 'lucide-react';
+import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check, Plus, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile } from '../../lib/db';
+import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 
@@ -12,6 +13,25 @@ const EditProfile = () => {
   
   // States
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [profileData, setProfileData] = useState({
+    displayName: '',
+    username: '',
+    bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
+    location: 'Nairobi, Kenya',
+    monthlyPrice: 1000,
+    age: 24,
+    tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
+    promoDiscount: 50,
+    promoActive: true,
+    coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
+    socialLink: '',
+    avatarUrl: '',
+  });
   
   const [kycData, setKycData] = useState({
     legalName: '',
@@ -33,13 +53,49 @@ const EditProfile = () => {
   const [otpMessage, setOtpMessage] = useState({ text: "", type: "" });
   const [isLoadingOtp, setIsLoadingOtp] = useState(false);
 
-  // Load existing phone from DB
+  // Load existing profile from DB
   useEffect(() => {
     if (!user?.id) return;
-    getUserProfile(user.id).then((profile) => {
-      if (profile?.phone) {
-        const raw = profile.phone.replace(/^\+254/, '').replace(/^0/, '');
-        setPayoutData(prev => ({ ...prev, phoneNumber: raw }));
+    getUserProfile(user.id).then(async (profile) => {
+      if (profile) {
+        if (profile.phone) {
+          const raw = profile.phone.replace(/^\+254/, '').replace(/^0/, '');
+          setPayoutData(prev => ({ ...prev, phoneNumber: raw }));
+        }
+        if (profile.avatar) {
+          setAvatarPreview(profile.avatar);
+        }
+        setProfileData(prev => ({
+          ...prev,
+          displayName: profile.name || user.user_metadata?.full_name || user.user_metadata?.name || '',
+          bio: profile.bio || prev.bio,
+          avatarUrl: profile.avatar || prev.avatarUrl,
+        }));
+      }
+      try {
+        const { data: creatorMeta } = await supabase
+          .from('creator_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (creatorMeta) {
+          if (creatorMeta.cover_image) {
+            setBannerPreview(creatorMeta.cover_image);
+          }
+          setProfileData(prev => ({
+            ...prev,
+            bio: creatorMeta.bio || prev.bio,
+            monthlyPrice: creatorMeta.monthly_price || prev.monthlyPrice,
+            location: creatorMeta.location || prev.location,
+            coverImage: creatorMeta.cover_image || prev.coverImage,
+            age: creatorMeta.age || prev.age,
+            tags: creatorMeta.tags || prev.tags,
+            promoDiscount: creatorMeta.promo_discount || prev.promoDiscount,
+            promoActive: creatorMeta.promo_active !== false,
+          }));
+        }
+      } catch {
+        // non-fatal
       }
     });
   }, [user]);
@@ -54,7 +110,16 @@ const EditProfile = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setBannerFile(file);
+      setBannerPreview(URL.createObjectURL(file));
     }
   };
 
@@ -152,16 +217,67 @@ const EditProfile = () => {
     }
   };
 
-  const handleSaveAll = () => {
-    console.log("Current Captured KYC Data:", kycData);
-    console.log("Current Captured Payout Data:", payoutData);
-    toast.success('Changes saved', {
-      description: 'Your profile data has been captured successfully.'
-    });
+  const handleSaveAll = async () => {
+    if (!user?.id) return;
+    setSaving(true);
+    try {
+      let finalAvatarUrl = profileData.avatarUrl;
+      let finalCoverUrl = bannerPreview || profileData.coverImage;
+
+      // 1. Upload avatar if new file picked
+      if (avatarFile) {
+        const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `avatars/${user.id}/${Date.now()}_${cleanName}`;
+        const uploaded = await uploadFileToSupabase(avatarFile, 'hideaway post storage', path);
+        if (uploaded) {
+          finalAvatarUrl = uploaded;
+        }
+      }
+
+      // 2. Upload header banner if new file picked
+      if (bannerFile) {
+        const cleanName = bannerFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `covers/${user.id}/${Date.now()}_${cleanName}`;
+        const uploaded = await uploadFileToSupabase(bannerFile, 'hideaway post storage', path);
+        if (uploaded) {
+          finalCoverUrl = uploaded;
+        }
+      }
+
+      // 3. Update users table
+      await updateUserProfile(user.id, {
+        ...(profileData.displayName ? { name: profileData.displayName } : {}),
+        bio: profileData.bio,
+        ...(finalAvatarUrl ? { avatar: finalAvatarUrl } : {})
+      });
+
+      // 4. Update creator_profiles table
+      await updateCreatorProfile(user.id, {
+        bio: profileData.bio,
+        monthly_price: Number(profileData.monthlyPrice) || 1000,
+        location: profileData.location,
+        cover_image: finalCoverUrl,
+        age: Number(profileData.age) || 24,
+        tags: profileData.tags,
+        promo_discount: Number(profileData.promoDiscount) || 50,
+        promo_active: profileData.promoActive,
+      });
+
+      toast.success('Changes saved', {
+        description: 'Your profile, images, and VIP subscription settings are updated live.'
+      });
+    } catch (err: any) {
+      console.error('Save error:', err);
+      toast.error('Save failed', {
+        description: err?.message || 'Could not update profile.'
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const currentAvatar = avatarPreview || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pinimg.com/736x/c9/27/d6/c927d6a930299f0e5d0be9b217d09b16.jpg";
-  const currentName = user?.user_metadata?.name || user?.user_metadata?.full_name || "Jane Doe";
+  const currentAvatar = avatarPreview || profileData.avatarUrl || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pinimg.com/736x/c9/27/d6/c927d6a930299f0e5d0be9b217d09b16.jpg";
+  const currentName = profileData.displayName || user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator";
 
   return (
     <CreatorLayout>
@@ -172,12 +288,25 @@ const EditProfile = () => {
             <h1 className="text-3xl font-black text-white tracking-tight mb-1">Edit Profile</h1>
             <p className="text-zinc-400 text-sm font-medium">Manage your creator identity, verification, and payout settings.</p>
           </div>
-          <button 
-            onClick={handleSaveAll} 
-            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-black px-6 py-3 rounded-2xl shadow-lg shadow-red-600/20 border border-red-500 transition-all transform active:scale-95"
-          >
-            <Save className="w-5 h-5" /> Save Changes
-          </button>
+          <div className="flex items-center gap-3">
+            {user?.id && (
+              <Link 
+                to={`/creator/${user.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white font-bold px-4 py-3 rounded-2xl border border-white/10 transition-all text-xs"
+              >
+                <Eye className="w-4 h-4 text-red-500" /> View Public Profile <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+              </Link>
+            )}
+            <button 
+              onClick={handleSaveAll} 
+              disabled={saving}
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-black px-6 py-3 rounded-2xl shadow-lg shadow-red-600/20 border border-red-500 transition-all transform active:scale-95 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Save Changes
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation Bar */}
@@ -210,28 +339,37 @@ const EditProfile = () => {
           {/* 1. PUBLIC PROFILE TAB */}
           {activeTab === 'profile' && (
             <div>
-              {/* Banner Area */}
+              {/* Banner Area with Real File Upload */}
               <div className="h-56 bg-[#0d0e12] relative group cursor-pointer border-b border-zinc-800/80">
-                <img 
-                  src="https://images.unsplash.com/photo-1557683316-973673baf926?w=1200" 
-                  alt="banner" 
-                  className="w-full h-full object-cover group-hover:brightness-50 transition-all duration-300" 
+                <input 
+                  type="file" 
+                  id="bannerUpload" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleBannerChange} 
                 />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <label htmlFor="bannerUpload" className="w-full h-full block cursor-pointer">
+                  <img 
+                    src={bannerPreview || profileData.coverImage} 
+                    alt="banner" 
+                    className="w-full h-full object-cover group-hover:brightness-50 transition-all duration-300" 
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="bg-black/80 text-white border border-zinc-700 px-5 py-2.5 rounded-full font-bold flex items-center gap-2 text-sm backdrop-blur-md shadow-2xl">
-                      <Camera className="w-4 h-4 text-red-500" /> Change Header Banner
+                      <Camera className="w-4 h-4 text-red-500" /> Click to Change Header Banner
                     </div>
-                </div>
+                  </div>
+                </label>
               </div>
 
               {/* Profile Body */}
               <div className="p-6 sm:p-10">
-                {/* Avatar with Camera Overlay */}
+                {/* Avatar with Camera Overlay & Real File Upload */}
                 <div className="relative -mt-20 sm:-mt-24 mb-8 inline-block group cursor-pointer">
                     <input type="file" id="avatarUpload" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                     <label htmlFor="avatarUpload" className="cursor-pointer block relative rounded-full">
                       <img 
-                        src={currentAvatar} 
+                        src={avatarPreview || currentAvatar} 
                         alt="avatar" 
                         className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-[#0d0e12] bg-[#0d0e12] object-cover group-hover:brightness-50 transition-all shadow-2xl" 
                       />
@@ -242,55 +380,208 @@ const EditProfile = () => {
                 </div>
 
                 <div className="space-y-6 max-w-3xl">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                      <div className="sm:col-span-2">
                         <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Display Name</label>
                         <input 
                           type="text" 
-                          defaultValue={currentName} 
+                          value={profileData.displayName}
+                          onChange={e => setProfileData(p => ({ ...p, displayName: e.target.value }))}
+                          placeholder={currentName}
                           className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Username</label>
+                        <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Age</label>
+                        <input 
+                          type="number"
+                          min="18"
+                          max="99"
+                          value={profileData.age}
+                          onChange={e => setProfileData(p => ({ ...p, age: Number(e.target.value) || 24 }))}
+                          className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Monthly VIP Subscription Price (KES)</label>
                         <div className="flex">
-                            <span className="bg-[#0d0e12] border border-zinc-800 border-r-0 px-4 py-3.5 rounded-l-2xl text-zinc-500 text-sm font-bold flex items-center">gentsdollhouse.com/</span>
+                            <span className="bg-[#0d0e12] border border-zinc-800 border-r-0 px-4 py-3.5 rounded-l-2xl text-zinc-400 text-sm font-bold flex items-center">KES</span>
                             <input 
-                              type="text" 
-                              defaultValue="janedoe" 
+                              type="number"
+                              min="100"
+                              step="50"
+                              value={profileData.monthlyPrice}
+                              onChange={e => setProfileData(p => ({ ...p, monthlyPrice: Number(e.target.value) || 0 }))}
                               className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-r-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
                             />
                         </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Bio</label>
-                      <textarea 
-                        rows={4} 
-                        defaultValue="Welcome to my exclusive page! 🌟 Custom requests open in DMs." 
-                        className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors resize-none" 
-                      />
-                      <p className="text-xs text-zinc-500 mt-2 font-medium">Maximum 300 characters.</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Location (Optional)</label>
+                        <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Location</label>
                         <input 
                           type="text" 
-                          defaultValue="Nairobi, Kenya" 
+                          value={profileData.location}
+                          onChange={e => setProfileData(p => ({ ...p, location: e.target.value }))}
+                          placeholder="Nairobi, Kenya"
                           className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
                         />
                       </div>
-                      <div>
-                        <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Primary Social Link</label>
-                        <input 
-                          type="url" 
-                          placeholder="https://instagram.com/yourhandle" 
-                          className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors placeholder:text-zinc-600" 
-                        />
-                        <p className="text-xs text-zinc-500 mt-2 font-medium">Helps us verify your creator identity.</p>
+                    </div>
+
+                    {/* Limited-Time Promotional Discount Offer */}
+                    <div className="p-5 rounded-2xl bg-black/60 border border-white/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-bold text-sm text-white flex items-center gap-2">
+                            <Flame className="w-4 h-4 text-red-500" /> Limited-Time Promo Offer
+                          </h4>
+                          <p className="text-xs text-zinc-400">
+                            Display a high-converting discount banner on your public profile page.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setProfileData(p => ({ ...p, promoActive: !p.promoActive }))}
+                          className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${profileData.promoActive ? 'bg-red-600' : 'bg-zinc-800'}`}
+                        >
+                          <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${profileData.promoActive ? 'left-7' : 'left-1'}`} />
+                        </button>
+                      </div>
+
+                      {profileData.promoActive && (
+                        <div className="flex items-center gap-2 sm:gap-3 pt-2 border-t border-white/5 flex-wrap">
+                          <span className="text-xs font-bold text-zinc-400">Discount:</span>
+                          {[15, 25, 35, 50, 70].map(pct => (
+                            <button
+                              key={pct}
+                              type="button"
+                              onClick={() => setProfileData(p => ({ ...p, promoDiscount: pct }))}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                profileData.promoDiscount === pct
+                                  ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                                  : 'bg-zinc-900 text-zinc-400 hover:text-white border border-white/10'
+                              }`}
+                            >
+                              {pct}% OFF
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Bio / About</label>
+                      <textarea 
+                        rows={4} 
+                        value={profileData.bio}
+                        onChange={e => setProfileData(p => ({ ...p, bio: e.target.value }))}
+                        className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors resize-none" 
+                        placeholder="Welcome to my exclusive page! VIP posts, private chats, and weekly content drops."
+                      />
+                      <p className="text-xs text-zinc-500 mt-2 font-medium">Maximum 300 characters.</p>
+                    </div>
+
+                    {/* Content Specialties / Tags */}
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Content Specialties & Badges</label>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {['VIP Content', 'Direct Chat', 'Exclusive Photos', 'Private Videos', 'Behind The Scenes', 'Fitness', 'Custom Requests'].map(tag => {
+                          const isSelected = profileData.tags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => {
+                                setProfileData(p => ({
+                                  ...p,
+                                  tags: isSelected ? p.tags.filter(t => t !== tag) : [...p.tags, tag]
+                                }));
+                              }}
+                              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-red-600/20 border border-red-500/60 text-red-400 font-black' 
+                                  : 'bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3.5 h-3.5 text-red-400" />} {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Live Subscriber View Preview Card */}
+                    <div className="pt-8 border-t border-zinc-800">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-base font-black text-white flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-red-500" /> Live Subscriber View Preview
+                          </h3>
+                          <p className="text-xs text-zinc-400">
+                            How potential subscribers see your profile and banner on their end.
+                          </p>
+                        </div>
+                        {user?.id && (
+                          <Link
+                            to={`/creator/${user.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1"
+                          >
+                            Open Public Page <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* Live Preview Card */}
+                      <div className="rounded-3xl border border-white/15 bg-black overflow-hidden shadow-2xl max-w-xl mx-auto">
+                        <div className="h-32 relative bg-zinc-900">
+                          <img
+                            src={bannerPreview || profileData.coverImage}
+                            alt="cover preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                        </div>
+                        <div className="px-5 pb-5 pt-0 relative">
+                          <div className="relative -mt-10 mb-3 flex items-end justify-between">
+                            <div className="relative">
+                              <img
+                                src={avatarPreview || currentAvatar}
+                                alt="avatar preview"
+                                className="w-20 h-20 rounded-full border-4 border-black object-cover shadow-xl"
+                              />
+                              <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black" />
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[11px] font-black uppercase tracking-wider text-red-400 bg-red-500/10 border border-red-500/30 px-2.5 py-1 rounded-full">
+                                KES {profileData.monthlyPrice.toLocaleString()} /mo
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="font-black text-base text-white flex items-center gap-1.5">
+                            <span>{profileData.displayName || 'Your Name'}</span>
+                            <CheckCircle2 className="w-4 h-4 text-white fill-blue-500" />
+                          </div>
+                          <p className="text-xs text-zinc-400 mt-1 line-clamp-2">
+                            {profileData.bio || 'Your bio will appear here...'}
+                          </p>
+
+                          {profileData.promoActive && (
+                            <div className="mt-3 p-2.5 rounded-xl bg-red-950/40 border border-red-500/30 flex items-center justify-between text-xs">
+                              <span className="font-bold text-red-300 flex items-center gap-1">
+                                <Flame className="w-3.5 h-3.5 text-red-500" /> Special Offer: {profileData.promoDiscount}% OFF
+                              </span>
+                              <span className="text-white font-extrabold text-[11px] bg-red-600 px-2 py-0.5 rounded-md">
+                                Limited Offer
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                 </div>

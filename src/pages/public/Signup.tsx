@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, ArrowRight, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 
 const Signup = () => {
@@ -18,6 +18,7 @@ const Signup = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Only auto-redirect if OTP step is not active or user is confirmed
   useEffect(() => {
@@ -247,7 +248,17 @@ const Signup = () => {
               
               <div>
                 <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm" placeholder="Create a strong password" />
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 pr-11 text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm" placeholder="Create a strong password" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               
               <button disabled={loading} className="w-full bg-red-600 hover:bg-red-700 text-white font-black rounded-xl py-3.5 mt-2 transition-all shadow-lg shadow-red-600/20 border border-red-500 flex items-center justify-center gap-2">

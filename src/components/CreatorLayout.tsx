@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getUserNotifications } from '../lib/db';
 
 interface CreatorLayoutProps {
   children: React.ReactNode;
@@ -31,6 +32,23 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const loadUnread = async () => {
+      try {
+        const notifs = await getUserNotifications(user.id);
+        const unread = notifs.filter(n => !n.is_read).length;
+        setUnreadNotifs(unread);
+      } catch {}
+    };
+    loadUnread();
+
+    const handleUpdate = () => loadUnread();
+    window.addEventListener('notifications_updated', handleUpdate);
+    return () => window.removeEventListener('notifications_updated', handleUpdate);
+  }, [user?.id]);
 
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
@@ -47,9 +65,21 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
           <img src="/logo.svg" alt="Logo" className="w-9 h-9 object-contain drop-shadow-md" />
           <span className="text-lg font-bold tracking-tighter text-foreground">The Gents Dollhouse<span className="text-primary">.</span></span>
         </Link>
-        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -mr-2 text-foreground">
-          <Menu className="w-7 h-7" />
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/notifications"
+            className="p-2 text-foreground relative hover:text-primary transition-colors"
+            title="Notifications"
+          >
+            <Bell className="w-6 h-6" />
+            {unreadNotifs > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-background animate-pulse" />
+            )}
+          </Link>
+          <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -mr-2 text-foreground">
+            <Menu className="w-7 h-7" />
+          </button>
+        </div>
       </div>
 
       {/* Sidebar Overlay (Mobile) */}
@@ -93,6 +123,11 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                 )}
                 <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'} shrink-0`} />
                 <span className="text-[15px]">{item.name}</span>
+                {item.name === 'Notifications' && unreadNotifs > 0 && (
+                  <span className="ml-auto bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                    {unreadNotifs}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -107,14 +142,25 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         
         <div className="pt-4 mt-auto shrink-0 mb-safe gap-2 flex flex-col border-t border-border/50 relative z-10 pt-5">
            <div className="p-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/50 rounded-2xl flex items-center justify-between transition-colors">
-             <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 w-full group overflow-hidden pl-1">
+             <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 flex-1 min-w-0 group overflow-hidden pl-1">
                <img src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pinimg.com/736x/c9/27/d6/c927d6a930299f0e5d0be9b217d09b16.jpg"} alt="avatar" referrerPolicy="no-referrer" className="w-[38px] h-[38px] rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
-               <div className="flex-1 min-w-0 pr-2">
-                  <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{user?.user_metadata?.name || user?.user_metadata?.full_name || "Jane Doe"}</div>
-                  <div className="text-[12px] text-muted-foreground truncate">View Profile</div>
+               <div className="flex-1 min-w-0 pr-1">
+                  <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator"}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">Edit Profile</div>
                </div>
              </Link>
-             <button onClick={handleLogout} className="p-2.5 text-muted-foreground hover:bg-red-500/20 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">
+             {user?.id && (
+               <Link
+                 to={`/creator/${user.id}`}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="p-2 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-colors shrink-0"
+                 title="View Public Profile"
+               >
+                 <Eye className="w-[18px] h-[18px]" />
+               </Link>
+             )}
+             <button onClick={handleLogout} className="p-2 text-muted-foreground hover:bg-red-500/20 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">
                <LogOut className="w-[18px] h-[18px]" />
              </button>
            </div>

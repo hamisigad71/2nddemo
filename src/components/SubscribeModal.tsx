@@ -11,6 +11,9 @@ interface SubscribeModalProps {
   creatorName: string;
   creatorId?: string;
   price?: number;
+  durationDays?: number;
+  tierName?: string;
+  onSuccess?: (sub: { tierName: string; durationDays: number; expiresAt: string }) => void;
 }
 
 type Step =
@@ -24,7 +27,16 @@ type Step =
   | 'success'
   | 'failed';
 
-export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId = 'creator-default', price = 1000 }: SubscribeModalProps) {
+export default function SubscribeModal({
+  isOpen,
+  onClose,
+  creatorName,
+  creatorId = 'creator-default',
+  price = 1000,
+  durationDays = 30,
+  tierName = 'VIP Tier',
+  onSuccess
+}: SubscribeModalProps) {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>('method');
   const [phone, setPhone] = useState('');
@@ -78,7 +90,12 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
           clearInterval(pollRef.current!);
           if (price && user) {
             try {
-              await subscribeToCreator(user.id, creatorId, 'Premium', price);
+              const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
+              onSuccess?.({
+                tierName,
+                durationDays,
+                expiresAt: sub.expiresAt
+              });
             } catch (e) {
               console.error('DB record error:', e);
             }
@@ -101,7 +118,7 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [step, checkoutRequestId, price, user, creatorId]);
+  }, [step, checkoutRequestId, price, user, creatorId, tierName, durationDays, onSuccess]);
 
   if (!isOpen) return null;
 
@@ -156,7 +173,12 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
 
     const referenceId = `SUB-${Date.now()}`;
     try {
-      await subscribeToCreator(user.id, creatorId, 'Premium', price); // NOTE: This adds subscription before confirmation if pesapal URL redirects. Usually it should be webhook, but simulating success for now if they reach here as old codebase does. Wait, old TipModal processed tip beforehand, let's keep consistency.
+      const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
+      onSuccess?.({
+        tierName,
+        durationDays,
+        expiresAt: sub.expiresAt
+      });
       const order = await submitPesapalOrder({
         id: referenceId,
         currency: 'KES',
@@ -269,10 +291,10 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
           {step === 'method' && (
             <div className="animate-in slide-in-from-right-4 duration-500 fade-in pb-2">
               <h2 className="text-2xl font-bold tracking-tight text-white mb-1">
-                Premium Access
+                {tierName}
               </h2>
               <p className="text-zinc-400 text-sm mb-6">
-                Subscribe to {creatorName} for <span className="text-red-500 font-extrabold">KES {price}</span>
+                Subscribe to {creatorName} for <span className="text-red-500 font-extrabold">KES {price}</span> ({durationDays} days access)
               </p>
               
               {errorMessage && (
@@ -325,7 +347,7 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
               </button>
               <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Confirm Payment</h2>
               <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
-                A prompt for <span className="text-red-500 font-bold">KES {price}</span> will be sent to the number below.
+                A prompt for <span className="text-red-500 font-bold">KES {price}</span> ({durationDays} days access) will be sent to the number below.
               </p>
               <form onSubmit={handleDarajaSTK}>
                 <div className="mb-6 relative">
@@ -369,12 +391,36 @@ export default function SubscribeModal({ isOpen, onClose, creatorName, creatorId
                   ))}
                 </div>
               )}
-              <button
-                 onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep('method'); }}
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (pollRef.current) clearInterval(pollRef.current);
+                    if (price && user) {
+                      try {
+                        const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
+                        onSuccess?.({
+                          tierName,
+                          durationDays,
+                          expiresAt: sub.expiresAt
+                        });
+                      } catch (e) {
+                        console.error('Simulated sub error:', e);
+                      }
+                    }
+                    setStep('success');
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300 underline font-semibold transition-colors"
+                >
+                  Simulate Instant PIN Approval (Demo)
+                </button>
+                <button
+                   onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep('method'); }}
+                  className="text-sm text-zinc-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
 
