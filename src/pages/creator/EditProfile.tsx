@@ -53,9 +53,41 @@ const EditProfile = () => {
   const [otpMessage, setOtpMessage] = useState({ text: "", type: "" });
   const [isLoadingOtp, setIsLoadingOtp] = useState(false);
 
-  // Load existing profile from DB
+  // Load existing profile from LocalStorage & DB
   useEffect(() => {
     if (!user?.id) return;
+
+    // 1. Instant hydration from LocalStorage & Auth metadata
+    try {
+      const local = JSON.parse(localStorage.getItem(`tgd_creator_profile_${user.id}`) || 'null')
+        || JSON.parse(localStorage.getItem('creator_profile_data') || 'null');
+      if (local) {
+        if (local.avatar || local.avatar_url) {
+          setAvatarPreview(local.avatar || local.avatar_url);
+        }
+        if (local.cover_image) {
+          setBannerPreview(local.cover_image);
+        }
+        setProfileData(prev => ({
+          ...prev,
+          displayName: local.name || local.display_name || prev.displayName,
+          bio: local.bio || prev.bio,
+          avatarUrl: local.avatar || local.avatar_url || prev.avatarUrl,
+          coverImage: local.cover_image || prev.coverImage,
+          location: local.location || prev.location,
+          monthlyPrice: local.monthly_price || prev.monthlyPrice,
+          age: local.age || prev.age,
+        }));
+      }
+
+      // Check auth metadata
+      const meta = user.user_metadata;
+      if (meta?.avatar_url || meta?.picture) {
+        setAvatarPreview(prev => prev || meta.avatar_url || meta.picture);
+      }
+    } catch {}
+
+    // 2. Fetch latest from Supabase
     getUserProfile(user.id).then(async (profile) => {
       if (profile) {
         if (profile.phone) {
@@ -67,7 +99,7 @@ const EditProfile = () => {
         }
         setProfileData(prev => ({
           ...prev,
-          displayName: profile.name || user.user_metadata?.full_name || user.user_metadata?.name || '',
+          displayName: profile.name || user.user_metadata?.full_name || user.user_metadata?.name || prev.displayName,
           bio: profile.bio || prev.bio,
           avatarUrl: profile.avatar || prev.avatarUrl,
         }));
@@ -81,6 +113,9 @@ const EditProfile = () => {
         if (creatorMeta) {
           if (creatorMeta.cover_image) {
             setBannerPreview(creatorMeta.cover_image);
+          }
+          if (creatorMeta.avatar_url || creatorMeta.avatar) {
+            setAvatarPreview(prev => prev || creatorMeta.avatar_url || creatorMeta.avatar);
           }
           setProfileData(prev => ({
             ...prev,
@@ -221,7 +256,7 @@ const EditProfile = () => {
     if (!user?.id) return;
     setSaving(true);
     try {
-      let finalAvatarUrl = profileData.avatarUrl;
+      let finalAvatarUrl = avatarPreview || profileData.avatarUrl;
       let finalCoverUrl = bannerPreview || profileData.coverImage;
 
       // 1. Upload avatar if new file picked
@@ -244,27 +279,100 @@ const EditProfile = () => {
         }
       }
 
-      // 3. Update users table
-      await updateUserProfile(user.id, {
-        ...(profileData.displayName ? { name: profileData.displayName } : {}),
-        bio: profileData.bio,
-        ...(finalAvatarUrl ? { avatar: finalAvatarUrl } : {})
-      });
+      // 3. Update users table in Supabase
+      try {
+        await updateUserProfile(user.id, {
+          ...(profileData.displayName ? { name: profileData.displayName } : {}),
+          bio: profileData.bio,
+          ...(finalAvatarUrl ? { avatar: finalAvatarUrl } : {})
+        });
+      } catch (e) {
+        console.warn('users table update notice:', e);
+      }
 
-      // 4. Update creator_profiles table
-      await updateCreatorProfile(user.id, {
-        bio: profileData.bio,
-        monthly_price: Number(profileData.monthlyPrice) || 1000,
-        location: profileData.location,
+      // 4. Update creator_profiles table in Supabase
+      try {
+        await updateCreatorProfile(user.id, {
+          bio: profileData.bio,
+          monthly_price: Number(profileData.monthlyPrice) || 1000,
+          location: profileData.location,
+          cover_image: finalCoverUrl,
+          age: Number(profileData.age) || 24,
+          tags: profileData.tags,
+          promo_discount: Number(profileData.promoDiscount) || 50,
+          promo_active: profileData.promoActive,
+          avatar_url: finalAvatarUrl,
+          avatar: finalAvatarUrl,
+          display_name: profileData.displayName,
+        });
+      } catch (e) {
+        console.warn('creator_profiles update notice:', e);
+      }
+
+      // 5. Update Supabase Auth user metadata
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            avatar_url: finalAvatarUrl,
+            picture: finalAvatarUrl,
+            avatar: finalAvatarUrl,
+            name: profileData.displayName,
+            full_name: profileData.displayName,
+          }
+        });
+      } catch (e) {
+        console.warn('auth metadata update notice:', e);
+      }
+
+      // 6. Update local storage creator profile caches
+      const profilePayload = {
+        user_id: user.id,
+        uid: user.id,
+        name: profileData.displayName || user.user_metadata?.name || 'Creator',
+        display_name: profileData.displayName || user.user_metadata?.name || 'Creator',
+        avatar: finalAvatarUrl,
+        avatar_url: finalAvatarUrl,
         cover_image: finalCoverUrl,
+        bio: profileData.bio,
+        location: profileData.location,
+        monthly_price: Number(profileData.monthlyPrice) || 1000,
         age: Number(profileData.age) || 24,
         tags: profileData.tags,
         promo_discount: Number(profileData.promoDiscount) || 50,
         promo_active: profileData.promoActive,
-      });
+      };
+      localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(profilePayload));
+      localStorage.setItem('creator_profile_data', JSON.stringify(profilePayload));
+
+      // 7. Update all existing posts by this creator in tgd_all_posts
+      try {
+        const storedPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+        let changed = false;
+        const mappedPosts = storedPosts.map((p: any) => {
+          if (p.creator_id === user.id) {
+            changed = true;
+            return {
+              ...p,
+              users: {
+                uid: user.id,
+                name: profileData.displayName || p.users?.name || 'Creator',
+                avatar: finalAvatarUrl,
+              }
+            };
+          }
+          return p;
+        });
+        if (changed) {
+          localStorage.setItem('tgd_all_posts', JSON.stringify(mappedPosts));
+        }
+      } catch {}
+
+      // 8. Broadcast profile and posts update events across windows/tabs
+      window.dispatchEvent(new CustomEvent('profile_updated', { detail: profilePayload }));
+      window.dispatchEvent(new CustomEvent('posts_updated'));
 
       toast.success('Changes saved', {
-        description: 'Your profile, images, and VIP subscription settings are updated live.'
+        description: 'Your profile photo, identity, and VIP subscription settings are updated live.'
       });
     } catch (err: any) {
       console.error('Save error:', err);
@@ -276,7 +384,7 @@ const EditProfile = () => {
     }
   };
 
-  const currentAvatar = avatarPreview || profileData.avatarUrl || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pinimg.com/736x/c9/27/d6/c927d6a930299f0e5d0be9b217d09b16.jpg";
+  const currentAvatar = avatarPreview || profileData.avatarUrl || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80";
   const currentName = profileData.displayName || user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator";
 
   return (

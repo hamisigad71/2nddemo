@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getUserNotifications } from '../lib/db';
+import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
 
 interface CreatorLayoutProps {
   children: React.ReactNode;
@@ -33,9 +33,42 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [creatorAvatar, setCreatorAvatar] = useState<string | null>(null);
+  const [creatorName, setCreatorName] = useState<string>('Creator');
 
   useEffect(() => {
     if (!user?.id) return;
+
+    // 1. Instant load from local cache or auth metadata
+    const local = getStoredCreatorProfile(user.id);
+    if (local?.avatar || local?.avatar_url) {
+      setCreatorAvatar(local.avatar || local.avatar_url);
+    }
+    if (local?.name || local?.display_name) {
+      setCreatorName(local.name || local.display_name);
+    }
+
+    const meta = user.user_metadata;
+    if (meta?.avatar_url || meta?.picture) {
+      setCreatorAvatar(prev => prev || meta.avatar_url || meta.picture);
+    }
+    if (meta?.name || meta?.full_name) {
+      setCreatorName(prev => (prev === 'Creator' ? (meta.name || meta.full_name) : prev));
+    }
+
+    // 2. Fetch from DB
+    getUserProfile(user.id).then(profile => {
+      if (profile?.avatar) setCreatorAvatar(profile.avatar);
+      if (profile?.name) setCreatorName(profile.name);
+    }).catch(() => {});
+
+    // 3. Listen to profile_updated events
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail?.avatar) setCreatorAvatar(e.detail.avatar);
+      if (e.detail?.name) setCreatorName(e.detail.name);
+    };
+    window.addEventListener('profile_updated', handleProfileUpdate);
+
     const loadUnread = async () => {
       try {
         const notifs = await getUserNotifications(user.id);
@@ -47,7 +80,10 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
 
     const handleUpdate = () => loadUnread();
     window.addEventListener('notifications_updated', handleUpdate);
-    return () => window.removeEventListener('notifications_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('notifications_updated', handleUpdate);
+      window.removeEventListener('profile_updated', handleProfileUpdate);
+    };
   }, [user?.id]);
 
   const handleLogout = async () => {
@@ -143,9 +179,9 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         <div className="pt-4 mt-auto shrink-0 mb-safe gap-2 flex flex-col border-t border-border/50 relative z-10 pt-5">
            <div className="p-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/50 rounded-2xl flex items-center justify-between transition-colors">
              <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 flex-1 min-w-0 group overflow-hidden pl-1">
-               <img src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pinimg.com/736x/c9/27/d6/c927d6a930299f0e5d0be9b217d09b16.jpg"} alt="avatar" referrerPolicy="no-referrer" className="w-[38px] h-[38px] rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
+               <img src={creatorAvatar || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"} alt="avatar" referrerPolicy="no-referrer" className="w-[38px] h-[38px] rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
                <div className="flex-1 min-w-0 pr-1">
-                  <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator"}</div>
+                  <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{creatorName || user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator"}</div>
                   <div className="text-[11px] text-muted-foreground truncate">Edit Profile</div>
                </div>
              </Link>

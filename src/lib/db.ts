@@ -823,7 +823,11 @@ export const getFanSubscriptions = async (fanId: string) => {
           };
         }
 
-        // 2. Check Supabase users table
+        // 2. Check Local Cache & Supabase users table
+        const localProfile = getStoredCreatorProfile(sub.creator_id);
+        let creatorAvatar = localProfile?.avatar || localProfile?.avatar_url || null;
+        let creatorName = localProfile?.name || localProfile?.display_name || sub.creator_name || 'Creator';
+
         try {
           const { data: userProfile } = await supabase
             .from('users')
@@ -832,30 +836,23 @@ export const getFanSubscriptions = async (fanId: string) => {
             .maybeSingle();
 
           if (userProfile) {
-            return {
-              ...sub,
-              creator: {
-                id: userProfile.uid,
-                name: userProfile.name || 'Creator',
-                avatar: userProfile.avatar || `https://i.pravatar.cc/150?u=${userProfile.uid}`,
-                handle: `@${(userProfile.name || 'creator').replace(/\s+/g, '').toLowerCase()}`,
-                isVerified: true,
-                price: 1000,
-              }
-            };
+            creatorName = userProfile.name || creatorName;
+            creatorAvatar = userProfile.avatar || creatorAvatar;
           }
         } catch {
-          // continue to fallback
+          // continue
         }
+
+        const fallbackAvatar = creatorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
 
         return {
           ...sub,
           creator: {
             id: sub.creator_id,
-            name: sub.creator_name || 'Creator',
-            avatar: `https://i.pravatar.cc/150?u=${sub.creator_id}`,
-            handle: `@creator_${String(sub.creator_id).slice(0, 5)}`,
-            isVerified: false,
+            name: creatorName,
+            avatar: fallbackAvatar,
+            handle: `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`,
+            isVerified: true,
             price: 1000,
           }
         };
@@ -939,28 +936,35 @@ export const cancelSubscription = async (subId: string) => {
 };
 
 export const getCreatorProfile = async (id: string) => {
-  // 1. Escorts / hardcoded check
-  const escort = getEscorts().find(e => e.id === id);
-  if (escort) {
-    return {
-      id: escort.id,
-      name: escort.name,
-      avatar: escort.avatar,
-      cover_image: escort.cover_image,
-      bio: escort.bio,
-      location: escort.location,
-      rating: escort.rating,
-      isVerified: escort.isVerified,
-      isOnline: escort.isOnline,
-      price_hr: escort.price_hr,
-      age: escort.age,
-      services: escort.services,
-      gallery: escort.gallery || [],
-      isEscort: true,
-    };
+  // 1. Escorts / hardcoded check ONLY if ID starts with 'escort-'
+  if (id.startsWith('escort-')) {
+    const escort = getEscorts().find(e => e.id === id);
+    if (escort) {
+      return {
+        id: escort.id,
+        name: escort.name,
+        avatar: escort.avatar,
+        cover_image: escort.cover_image,
+        bio: escort.bio,
+        location: escort.location,
+        rating: escort.rating,
+        isVerified: escort.isVerified,
+        isOnline: escort.isOnline,
+        price_hr: escort.price_hr,
+        age: escort.age,
+        services: escort.services,
+        gallery: escort.gallery || [],
+        promo_discount: 50,
+        promo_active: true,
+        isEscort: true,
+      };
+    }
   }
 
-  // 2. Database user check
+  // 2. Check local creator cache first (fastest and most accurate for user-set profile photos)
+  const localCreator = getStoredCreatorProfile(id);
+
+  // 3. Database user check
   try {
     const { data: userRow } = await supabase
       .from('users')
@@ -968,41 +972,111 @@ export const getCreatorProfile = async (id: string) => {
       .eq('uid', id)
       .maybeSingle();
 
-    if (userRow) {
-      let creatorMeta: any = null;
-      try {
-        const { data } = await supabase
-          .from('creator_profiles')
-          .select('*')
-          .eq('user_id', id)
-          .maybeSingle();
-        creatorMeta = data;
-      } catch {
-        // creator_profiles table may not have row yet
-      }
+    let creatorMeta: any = null;
+    try {
+      const { data } = await supabase
+        .from('creator_profiles')
+        .select('*')
+        .eq('user_id', id)
+        .maybeSingle();
+      creatorMeta = data;
+    } catch {}
 
+    let appMeta: any = null;
+    try {
+      const { data } = await supabase
+        .from('escort_applications')
+        .select('*')
+        .eq('creator_id', id)
+        .maybeSingle();
+      appMeta = data;
+    } catch {}
+
+    let authMeta: any = null;
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user?.id === id) {
+        authMeta = data.user.user_metadata;
+      }
+    } catch {}
+
+    const resolvedAvatar = localCreator?.avatar
+      || localCreator?.avatar_url
+      || userRow?.avatar
+      || creatorMeta?.avatar_url
+      || creatorMeta?.avatar
+      || authMeta?.avatar_url
+      || authMeta?.picture
+      || appMeta?.verification_photos?.[0]
+      || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+
+    const resolvedName = localCreator?.name
+      || localCreator?.display_name
+      || userRow?.name
+      || creatorMeta?.display_name
+      || authMeta?.name
+      || authMeta?.full_name
+      || appMeta?.name
+      || 'Creator';
+
+    const resolvedCover = localCreator?.cover_image
+      || creatorMeta?.cover_image
+      || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80';
+
+    const resolvedBio = localCreator?.bio
+      || creatorMeta?.bio
+      || userRow?.bio
+      || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.';
+
+    if (userRow || localCreator || creatorMeta || authMeta || appMeta) {
       return {
-        id: userRow.uid,
-        name: userRow.name || 'Creator',
-        avatar: userRow.avatar || `https://i.pravatar.cc/150?u=${userRow.uid}`,
-        cover_image: creatorMeta?.cover_image || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
-        bio: creatorMeta?.bio || userRow.bio || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
-        location: creatorMeta?.location || 'Nairobi, Kenya',
+        id: id,
+        name: resolvedName,
+        avatar: resolvedAvatar,
+        cover_image: resolvedCover,
+        bio: resolvedBio,
+        location: localCreator?.location || creatorMeta?.location || 'Nairobi, Kenya',
         rating: 4.9,
         isVerified: true,
         isOnline: true,
-        price_hr: creatorMeta?.monthly_price || 1000,
-        age: creatorMeta?.age || 24,
-        services: creatorMeta?.tags || ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
-        gallery: creatorMeta?.gallery || [],
-        promo_discount: creatorMeta?.promo_discount || 50,
-        promo_active: creatorMeta?.promo_active !== false,
+        price_hr: localCreator?.monthly_price || creatorMeta?.monthly_price || 1000,
+        age: localCreator?.age || creatorMeta?.age || 24,
+        services: localCreator?.tags || creatorMeta?.tags || ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
+        gallery: localCreator?.gallery || creatorMeta?.gallery || [],
+        promo_discount: localCreator?.promo_discount ?? creatorMeta?.promo_discount ?? 50,
+        promo_active: localCreator?.promo_active ?? (creatorMeta?.promo_active !== false),
         isEscort: false,
       };
     }
   } catch (err) {
     console.error('Error fetching creator profile from DB:', err);
   }
+
+  // Fallback to localCreator if DB query failed
+  if (localCreator) {
+    return {
+      id: id,
+      name: localCreator.name || 'Creator',
+      avatar: localCreator.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      cover_image: localCreator.cover_image || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
+      bio: localCreator.bio || 'Welcome to my official creator page!',
+      location: localCreator.location || 'Nairobi, Kenya',
+      rating: 4.9,
+      isVerified: true,
+      isOnline: true,
+      price_hr: localCreator.monthly_price || 1000,
+      age: localCreator.age || 24,
+      services: localCreator.tags || ['VIP Content', 'Exclusive Photos'],
+      gallery: [],
+      promo_discount: 50,
+      promo_active: true,
+      isEscort: false,
+    };
+  }
+
+  // Last fallback if matches escort
+  const escortFallback = getEscorts().find(e => e.id === id);
+  if (escortFallback) return escortFallback;
 
   return null;
 };

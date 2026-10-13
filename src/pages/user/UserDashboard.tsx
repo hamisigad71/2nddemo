@@ -5,7 +5,7 @@ import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, Che
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
-import { getFanFeed, getPostLikes, toggleLike, getComments, addComment } from '../../lib/db';
+import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getStoredCreatorProfile } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { getEscorts } from '../../lib/mockData';
 import FeedImage from '../../components/FeedImage';
@@ -41,14 +41,14 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
   const navigate = useNavigate();
 
   const creator = post.users;
-  const avatarUrl = creator?.avatar || `https://i.pravatar.cc/150?u=${post.creator_id}`;
-  const creatorName = creator?.name || 'Creator';
-
-  // Find corresponding escort/creator profile for banner & cover
-  const escort = getEscorts().find(e => e.id === post.creator_id || (e.name && e.name.toLowerCase().includes(creatorName.toLowerCase().replace(/[^a-z]/g, ''))));
-  const coverUrl = escort?.cover_image || post.media_url || avatarUrl;
+  const localProfile = getStoredCreatorProfile(post.creator_id);
+  const escort = getEscorts().find(e => e.id === post.creator_id);
+  
+  const creatorName = creator?.name || localProfile?.name || localProfile?.display_name || escort?.name || 'Creator';
+  const avatarUrl = creator?.avatar || localProfile?.avatar || localProfile?.avatar_url || escort?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+  const coverUrl = escort?.cover_image || localProfile?.cover_image || post.media_url || avatarUrl;
   const creatorHandle = escort ? `@${escort.name.replace(/\s+/g, '').toLowerCase()}` : `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`;
-  const profileRoute = `/creator/${escort?.id || post.creator_id || 'escort-1'}`;
+  const profileRoute = `/creator/${post.creator_id || escort?.id || 'escort-1'}`;
   const formatPostTime = (dateStr?: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
