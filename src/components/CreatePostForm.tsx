@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { UploadCloud, Lock, Unlock, ImagePlus, Loader2, Video } from 'lucide-react';
-import { createPost, uploadFileToSupabase } from '../lib/db';
+import { UploadCloud, ImagePlus, Loader2, Video, Save } from 'lucide-react';
+import { createPost, uploadFileToSupabase, uploadPrivatePostMedia } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
 interface CreatePostFormProps {
@@ -69,10 +69,11 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [caption, setCaption] = useState('');
-  const [isLocked, setIsLocked] = useState(false);
+  const [visibility, setVisibility] = useState<'public' | 'subscribers' | 'ppv'>('public');
   const [price, setPrice] = useState('');
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('Post published successfully!');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
@@ -161,39 +162,56 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedFile) return;
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const status = submitter?.value === 'draft' ? 'draft' : 'published';
+    if (!user || (status === 'published' && !selectedFile)) return;
+    if (status === 'draft' && !selectedFile && !caption.trim()) {
+      setUploadError('Add a caption or media before saving a draft.');
+      return;
+    }
+    const numericPrice = Number(price);
+    if (visibility === 'ppv' && status === 'published' && (!Number.isSafeInteger(numericPrice) || numericPrice < 1)) {
+      setUploadError('Enter a whole-number PPV price of at least KES 1.');
+      return;
+    }
 
     setUploading(true);
     setUploadError(null);
     try {
-      let fileToUpload = selectedFile;
-      if (mediaType === 'image') {
-        fileToUpload = await compressImage(selectedFile);
-      }
+      let mediaUrl: string | null = null;
+      if (selectedFile) {
+        let fileToUpload = selectedFile;
+        if (mediaType === 'image') {
+          fileToUpload = await compressImage(selectedFile);
+        }
 
-      // Safe clean filename
-      const cleanName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `posts/${user.id}/${Date.now()}_${cleanName}`;
-      const mediaUrl = await uploadFileToSupabase(fileToUpload, 'hideaway post storage', path);
+        const cleanName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = `${Date.now()}_${cleanName}`;
+        mediaUrl = visibility === 'public' && status === 'published'
+          ? await uploadFileToSupabase(fileToUpload, 'hideaway post storage', `posts/${user.id}/${fileName}`)
+          : await uploadPrivatePostMedia(fileToUpload, user.id, `posts/${fileName}`);
 
-      if (!mediaUrl) {
-        setUploadError('Upload failed. Please check your storage settings or connection.');
-        return;
+        if (!mediaUrl) {
+          setUploadError('Upload failed. Please check your storage settings or connection.');
+          return;
+        }
       }
 
       await createPost(
         user.id,
         caption,
         mediaUrl,
-        isLocked,
-        isLocked ? parseFloat(price) || 0 : 0,
-        mediaType
+        visibility === 'ppv',
+        visibility === 'ppv' ? numericPrice : 0,
+        mediaType,
+        { visibility, status }
       );
 
+      setStatusMessage(status === 'draft' ? 'Draft saved successfully!' : 'Post published successfully!');
       setSuccess(true);
       setCaption('');
       setPrice('');
-      setIsLocked(false);
+      setVisibility('public');
       setPreview(null);
       if (videoPreview) {
         URL.revokeObjectURL(videoPreview);
@@ -204,7 +222,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      setUploadError('An unexpected error occurred while publishing post.');
+      setUploadError(err instanceof Error ? err.message : 'An unexpected error occurred while saving the post.');
     } finally {
       setUploading(false);
     }
@@ -287,23 +305,26 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
           placeholder="Write a caption..."
         />
 
-        {/* Lock Toggle */}
-        <div className="flex items-center justify-between bg-muted/30 rounded-xl px-4 py-3 border border-border">
-          <div className="flex items-center gap-2">
-            {isLocked ? <Lock className="w-4 h-4 text-primary" /> : <Unlock className="w-4 h-4 text-muted-foreground" />}
-            <span className="text-sm font-bold">Pay-Per-View (Locked Post)</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsLocked(v => !v)}
-            className={`w-11 h-6 rounded-full transition-colors relative ${isLocked ? 'bg-primary' : 'bg-muted'}`}
+        <div>
+          <label htmlFor="post-visibility" className="block text-xs font-black uppercase tracking-wider text-muted-foreground mb-2">
+            Who can view this post?
+          </label>
+          <select
+            id="post-visibility"
+            value={visibility}
+            onChange={e => setVisibility(e.target.value as typeof visibility)}
+            className="w-full bg-muted/30 border border-border rounded-xl px-4 py-3 text-sm font-bold"
           >
-            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${isLocked ? 'left-6' : 'left-1'}`} />
-          </button>
+            <option value="public">Public — anyone can view</option>
+            <option value="subscribers">Subscribers only — included with subscription</option>
+            <option value="ppv">Pay per view — charge separately</option>
+          </select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Subscriber-only posts are covered by a subscription. PPV posts require a separate purchase.
+          </p>
         </div>
 
-        {/* Price (shown only if locked) */}
-        {isLocked && (
+        {visibility === 'ppv' && (
           <div className="flex items-center gap-2">
             <span className="bg-muted border border-border rounded-l-xl px-4 py-3 text-muted-foreground text-sm font-bold">KES</span>
             <input
@@ -325,17 +346,28 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
 
         {success && (
           <div className="text-primary text-sm font-bold bg-primary/10 rounded-xl px-4 py-3 text-center">
-            ✅ Post published successfully!
+            ✅ {statusMessage}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={!selectedFile || uploading}
-          className="w-full bg-primary text-primary-foreground font-bold rounded-xl py-3.5 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
-        >
-          {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</> : 'Publish Post'}
-        </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="submit"
+            value="published"
+            disabled={!selectedFile || uploading}
+            className="bg-primary text-primary-foreground font-bold rounded-xl py-3.5 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
+          >
+            {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Publish Now'}
+          </button>
+          <button
+            type="submit"
+            value="draft"
+            disabled={uploading}
+            className="bg-muted text-foreground font-bold rounded-xl py-3.5 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          >
+            <Save className="w-4 h-4" /> Save as Draft
+          </button>
+        </div>
       </form>
     </div>
   );

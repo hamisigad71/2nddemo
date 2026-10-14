@@ -27,7 +27,7 @@ const MediaVault = () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const posts = await getPostsByCreator(user.id);
+      const posts = await getPostsByCreator(user.id, user.id);
       const mediaPosts = (posts || [])
         .filter((p: any) => p.media_url)
         .map((p: any) => ({

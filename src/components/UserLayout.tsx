@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftClose, PanelLeftOpen, Megaphone } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftOpen, Megaphone } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,18 +9,33 @@ interface UserLayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { name: 'Feed', path: '/user', icon: Home, badge: 'Live' },
-  { name: 'VIP Perks & Deals', path: '/user/ads', icon: Megaphone, badge: 'New' },
-  { name: 'Notifications', path: '/user/notifications', icon: Bell, badge: '3' },
-  { name: 'Messages', path: '/user/messages', icon: MessageCircle },
-  { name: 'Purchases', path: '/user/vault', icon: FolderHeart },
-  { name: 'Membership', path: '/user/membership', icon: Crown, badge: 'Upgrade' },
-  { name: 'Escorts', path: '/user/escorts', icon: Flame, badge: 'New' },
-  { name: 'Subscriptions', path: '/user/subscriptions', icon: CreditCard },
-  { name: 'Wallet', path: '/user/wallet', icon: Wallet },
-  { name: 'Payment Methods', path: '/user/payments', icon: CreditCard },
-  { name: 'Settings', path: '/user/settings', icon: Settings },
+const navGroups = [
+  {
+    name: 'Discover',
+    items: [
+      { name: 'Feed', path: '/user', icon: Home, badge: 'Live' },
+      { name: 'VIP Perks & Deals', path: '/user/ads', icon: Megaphone, badge: 'New' },
+      { name: 'Escorts', path: '/user/escorts', icon: Flame, badge: 'New' },
+    ],
+  },
+  {
+    name: 'Your activity',
+    items: [
+      { name: 'Notifications', path: '/user/notifications', icon: Bell, badge: '3' },
+      { name: 'Messages', path: '/user/messages', icon: MessageCircle },
+    ],
+  },
+  {
+    name: 'Your account',
+    items: [
+      { name: 'Purchases', path: '/user/vault', icon: FolderHeart },
+      { name: 'Membership', path: '/user/membership', icon: Crown, badge: 'Upgrade' },
+      { name: 'Subscriptions', path: '/user/subscriptions', icon: CreditCard },
+      { name: 'Wallet', path: '/user/wallet', icon: Wallet },
+      { name: 'Payment Methods', path: '/user/payments', icon: CreditCard },
+      { name: 'Settings', path: '/user/settings', icon: Settings },
+    ],
+  },
 ];
 
 const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
@@ -79,7 +94,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       )}
 
       {/* Classic & Premium Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 bg-[#0D0E12] border-r border-white/10 p-5 flex flex-col h-screen transform transition-all duration-300 shadow-2xl ${
+      <aside className={`fixed inset-y-0 left-0 z-50 bg-[#100F12] border-r border-white/[0.08] p-4 flex flex-col h-screen transform transition-all duration-300 shadow-2xl ${
         isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full'
       } ${
         isSidebarOpen 
@@ -90,19 +105,19 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         {/* Desktop Edge Close Pill Button */}
         <button
           onClick={() => setIsSidebarOpen(false)}
-          className="hidden md:flex absolute -right-3.5 top-7 z-50 w-7 h-7 bg-[#0d0e12] border border-white/20 hover:border-red-500 rounded-full items-center justify-center text-zinc-400 hover:text-white shadow-xl transition-all hover:scale-110 active:scale-95"
+          className="hidden md:flex absolute -right-3.5 top-7 z-50 w-7 h-7 bg-[#100F12] border border-white/15 hover:border-primary/60 rounded-full items-center justify-center text-zinc-400 hover:text-white shadow-xl transition-all hover:scale-110 active:scale-95"
           title="Close Sidebar"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
         
         {/* Brand Header */}
-        <div className="flex justify-between items-center mb-6 pt-1">
-          <Link to="/user" className="flex items-center gap-3 group min-w-0">
-            <img src="/logo.svg" alt="Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-md shrink-0" />
+        <div className="flex justify-between items-center mb-5 pt-1">
+          <Link to="/user" className="flex items-center gap-2.5 group min-w-0">
+            <img src="/logo.svg" alt="Logo" className="w-10 h-10 object-contain shrink-0" />
             <div className="flex flex-col min-w-0">
-              <span className="text-[1.1rem] md:text-xl font-black tracking-tight text-white leading-tight truncate">The Gents Dollhouse<span className="text-primary">.</span></span>
-              <span className="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 mt-0.5">VIP Portal</span>
+              <span className="text-[15px] font-bold tracking-tight text-white leading-tight truncate">The Gents Dollhouse<span className="text-primary">.</span></span>
+              <span className="text-[10px] text-muted-foreground/70 mt-1">Your member space</span>
             </div>
           </Link>
 
@@ -111,85 +126,82 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
             <X className="w-5 h-5" />
           </button>
 
-          {/* Close button for Desktop Header */}
-          <button 
-            onClick={() => setIsSidebarOpen(false)} 
-            className="hidden md:flex p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
-            title="Close Sidebar"
-          >
-            <PanelLeftClose className="w-5 h-5 text-zinc-400 hover:text-red-500" />
-          </button>
         </div>
 
         {/* Global Search Box */}
         <div className="relative mb-6 group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70 group-focus-within:text-primary transition-colors" />
           <input 
             type="text" 
             placeholder="Search creators..." 
-            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:bg-white/[0.07] transition-all shadow-inner" 
+            aria-label="Search creators"
+            className="w-full pl-9 pr-3 py-2.5 bg-[#19171B] border border-white/[0.09] rounded-lg text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-colors"
           />
         </div>
 
-        {/* Navigation Items */}
-        <div className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground/50 px-3 mb-2">Navigation</div>
-        <nav className="flex-1 space-y-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                to={item.path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`relative flex items-center justify-between px-3.5 py-3 rounded-xl transition-all duration-200 group text-xs font-semibold ${
-                  isActive
-                    ? 'bg-gradient-to-r from-primary/20 via-primary/10 to-transparent text-primary font-bold shadow-sm'
-                    : 'text-muted-foreground hover:bg-white/[0.04] hover:text-foreground'
-                }`}
-              >
-                {/* Active Indicator Bar */}
-                {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full shadow-lg shadow-primary" />
-                )}
+        <nav aria-label="Member navigation" className="flex-1 space-y-5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1">
+          {navGroups.map((group) => (
+            <div key={group.name}>
+              <div className="px-3 mb-1.5 text-[10px] font-semibold text-muted-foreground/55">{group.name}</div>
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`relative flex items-center justify-between min-h-10 px-3 rounded-lg transition-colors group text-xs ${
+                        isActive
+                          ? 'bg-primary/[0.12] text-white font-semibold'
+                          : 'text-muted-foreground hover:bg-white/[0.045] hover:text-foreground'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3 min-w-0">
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground/80 group-hover:text-foreground'}`} />
+                        <span className="truncate">{item.name}</span>
+                      </span>
 
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-4.5 h-4.5 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
-                  <span>{item.name}</span>
-                </div>
-
-                {item.badge && (
-                  <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                    item.badge === 'New' || item.badge === 'Live'
-                      ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]' 
-                      : 'bg-primary/20 text-primary border-primary/30'
-                  }`}>
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+                      {item.badge && (
+                        <span className={`ml-2 shrink-0 ${
+                          item.badge === '3'
+                            ? 'min-w-5 h-5 px-1 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-semibold'
+                            : item.badge === 'Upgrade'
+                              ? 'text-[9px] font-semibold text-primary/80'
+                              : 'text-[9px] font-medium text-emerald-400'
+                        }`}>
+                          {item.badge === 'Live' && <span className="inline-block w-1.5 h-1.5 mr-1 rounded-full bg-emerald-400 align-middle" />}
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* User Card & Settings */}
-        <div className="pt-4 border-t border-white/10 mt-auto shrink-0 space-y-3">
+        <div className="pt-3 border-t border-white/[0.09] mt-3 shrink-0 space-y-2">
           
           {/* User Profile Pill */}
-          <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md flex items-center justify-between group hover:bg-white/[0.06] transition-all">
+          <div className="p-2 rounded-xl bg-white/[0.035] border border-white/[0.08] flex items-center justify-between group hover:bg-white/[0.06] transition-colors">
             <Link to="/user/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 min-w-0 flex-1">
               <div className="relative">
                 <img 
                   src={userAvatar} 
                   alt="avatar" 
                   referrerPolicy="no-referrer" 
-                  className="w-9 h-9 rounded-full object-cover border border-white/20 shadow-md group-hover:border-primary/50 transition-colors" 
+                  className="w-9 h-9 rounded-full object-cover border border-white/15 group-hover:border-primary/50 transition-colors"
                 />
-                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#0D0E12]" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#100F12]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-xs text-foreground truncate group-hover:text-primary transition-colors">{userName}</div>
-                <div className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                <div className="font-semibold text-xs text-foreground truncate group-hover:text-primary transition-colors">{userName}</div>
+                <div className="text-[10px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
                   View Profile <ChevronRight className="w-2.5 h-2.5 opacity-60" />
                 </div>
               </div>
@@ -197,7 +209,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
             
             <button 
               onClick={handleLogout} 
-              className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all active:scale-95 shrink-0" 
+              className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -207,7 +219,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
           {/* Theme Switcher Toggle */}
           <button 
             onClick={toggleTheme} 
-            className="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold text-muted-foreground hover:bg-white/[0.04] hover:text-foreground w-full"
+            className="flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-xs font-medium text-muted-foreground hover:bg-white/[0.04] hover:text-foreground w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="flex items-center gap-3">
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}

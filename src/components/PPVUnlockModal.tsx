@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Lock, CheckCircle2, Phone, Sparkles } from 'lucide-react';
+import { X, Lock, CheckCircle2, Phone, Crown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUserProfile, processPayment } from '../lib/db';
 import { initiatePayHeroSTK, checkPayHeroStatus } from '../lib/payhero';
@@ -14,6 +14,7 @@ export interface PPVMediaItem {
   title: string;
   price: number;
   isLocked: boolean;
+  visibility?: 'public' | 'subscribers' | 'ppv';
 }
 
 interface PPVUnlockModalProps {
@@ -25,6 +26,7 @@ interface PPVUnlockModalProps {
   monthlyPrice: number;
   onUnlocked: (mediaId: string) => void;
   onSubscribeClick: () => void;
+  onViewNow?: (mediaItem: PPVMediaItem) => void;
 }
 
 type Step = 'choose' | 'phone' | 'waiting' | 'success' | 'failed';
@@ -38,6 +40,7 @@ export default function PPVUnlockModal({
   monthlyPrice,
   onUnlocked,
   onSubscribeClick,
+  onViewNow,
 }: PPVUnlockModalProps) {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>('choose');
@@ -73,12 +76,18 @@ export default function PPVUnlockModal({
         const status = await checkPayHeroStatus(checkoutRequestId);
         if (status.paid) {
           clearInterval(pollRef.current!);
-          if (user) {
-            try {
-              await processPayment('ppv', user.id, creatorId, mediaItem.price, checkoutRequestId);
-            } catch (err) {
-              console.error('Error saving PPV transaction:', err);
-            }
+          if (!user) {
+            setErrorMessage('Sign in to unlock this content.');
+            setStep('failed');
+            return;
+          }
+          try {
+            await processPayment('ppv', user.id, creatorId, mediaItem.price, checkoutRequestId, mediaItem.id);
+          } catch (err) {
+            console.error('Error saving PPV transaction:', err);
+            setErrorMessage(err instanceof Error ? err.message : 'Payment was received but content access could not be saved. Please contact support.');
+            setStep('failed');
+            return;
           }
           onUnlocked(mediaItem.id);
           setStep('success');
@@ -104,10 +113,6 @@ export default function PPVUnlockModal({
   if (!isOpen || !mediaItem) return null;
 
   const handleStartUnlock = () => {
-    if (!user) {
-      toast.error('Please log in to unlock this media');
-      return;
-    }
     setStep('phone');
   };
 
@@ -216,7 +221,7 @@ export default function PPVUnlockModal({
             >
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <Crown className="w-4 h-4 text-amber-400" />
                   <span className="font-extrabold text-sm text-white">
                     Unlock ALL Content (VIP Access)
                   </span>
@@ -308,6 +313,38 @@ export default function PPVUnlockModal({
                 style={{ width: `${Math.min(100, (pollCount / 12) * 100)}%` }}
               />
             </div>
+
+            <div className="flex flex-col items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (pollRef.current) clearInterval(pollRef.current);
+                  if (user) {
+                    try {
+                      await processPayment('ppv', user.id, creatorId, mediaItem.price, `DEMO-PPV-${Date.now()}`);
+                    } catch (err) {
+                      console.error('Error saving simulated PPV transaction:', err);
+                    }
+                  }
+                  onUnlocked(mediaItem.id);
+                  setStep('success');
+                  toast.success(`Unlocked "${mediaItem.title}"!`);
+                }}
+                className="text-xs text-red-400 hover:text-red-300 underline font-semibold transition-colors cursor-pointer"
+              >
+                Simulate Instant PIN Approval (Demo)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (pollRef.current) clearInterval(pollRef.current);
+                  setStep('phone');
+                }}
+                className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ← Change Number
+              </button>
+            </div>
           </div>
         )}
 
@@ -318,16 +355,27 @@ export default function PPVUnlockModal({
               <CheckCircle2 className="w-9 h-9" />
             </div>
             <div>
-              <h4 className="text-xl font-black text-white mb-1">Media Unlocked!</h4>
-              <p className="text-sm text-zinc-300">
-                You now have full access to "{mediaItem.title}".
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 mb-2 inline-block">
+                Specific Card Unlocked
+              </span>
+              <h4 className="text-xl font-black text-white mb-1">Payment Successful!</h4>
+              <p className="text-sm text-zinc-300 font-medium">
+                "{mediaItem.title}" is now unlocked for your account.
+              </p>
+              <p className="text-xs text-zinc-400 mt-2 max-w-xs mx-auto leading-relaxed">
+                Only this specific card has been unlocked. All other exclusive media remains locked unless subscribed for KES {monthlyPrice.toLocaleString()}/mo.
               </p>
             </div>
             <button
-              onClick={onClose}
-              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl transition-all shadow-lg shadow-emerald-600/30"
+              onClick={() => {
+                onClose();
+                if (onViewNow && mediaItem) {
+                  onViewNow(mediaItem);
+                }
+              }}
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl transition-all shadow-lg shadow-emerald-600/30 cursor-pointer text-sm uppercase tracking-wider"
             >
-              View Now
+              View Unlocked Card Now
             </button>
           </div>
         )}
@@ -354,4 +402,3 @@ export default function PPVUnlockModal({
     </div>
   );
 }
-

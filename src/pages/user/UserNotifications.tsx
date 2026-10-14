@@ -3,8 +3,12 @@ import UserLayout from '../../components/UserLayout';
 import { 
   Bell, 
   ShieldAlert, 
+  ShieldCheck,
   CreditCard, 
-  Megaphone, 
+  UserRound,
+  Image as ImageIcon,
+  MessageCircle,
+  DollarSign,
   CheckCircle2, 
   CheckCheck, 
   ArrowRight, 
@@ -194,11 +198,11 @@ const UserNotifications = () => {
     };
   }, [notifications]);
 
-  const getCategoryConfig = (category: NotificationItem['category']) => {
-    switch (category) {
+  const getCategoryConfig = (item: NotificationItem) => {
+    switch (item.category) {
       case 'admin':
         return {
-          icon: ShieldAlert,
+          icon: /welcome|verified|approved/i.test(item.title) ? ShieldCheck : ShieldAlert,
           color: 'text-amber-400',
           bg: 'bg-amber-500/10 border-amber-500/20',
           label: 'Admin Alert',
@@ -206,7 +210,11 @@ const UserNotifications = () => {
         };
       case 'creator':
         return {
-          icon: Megaphone,
+          icon: /post|media|photo|video/i.test(`${item.title} ${item.message}`)
+            ? ImageIcon
+            : /message|chat/i.test(`${item.title} ${item.message}`)
+              ? MessageCircle
+              : UserRound,
           color: 'text-rose-400',
           bg: 'bg-rose-500/10 border-rose-500/20',
           label: 'Creator',
@@ -214,7 +222,7 @@ const UserNotifications = () => {
         };
       case 'payment':
         return {
-          icon: CreditCard,
+          icon: /tip/i.test(`${item.title} ${item.message}`) ? DollarSign : CreditCard,
           color: 'text-emerald-400',
           bg: 'bg-emerald-500/10 border-emerald-500/20',
           label: 'Payment',
@@ -225,33 +233,33 @@ const UserNotifications = () => {
 
   return (
     <UserLayout>
-      <div className="max-w-4xl mx-auto space-y-7 pb-12">
+      <div className="max-w-5xl mx-auto space-y-6 pb-12">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/[0.08]">
           <div className="space-y-1.5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white shadow-inner">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-white">
                 <Bell className="w-5 h-5 text-rose-500" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                 Notifications
               </h1>
               {unreadCount > 0 && (
-                <span className="bg-rose-500/10 text-rose-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-rose-500/20 tabular-nums">
+                <span className="bg-rose-500/10 text-rose-300 text-xs font-semibold px-2.5 py-1 rounded-full border border-rose-500/20 tabular-nums">
                   {unreadCount} unread
                 </span>
               )}
             </div>
             <p className="text-zinc-400 text-xs sm:text-sm font-normal max-w-xl leading-relaxed">
-              Real-time activity from your subscribed creators, tips, and secure M-Pesa billing.
+              Updates from creators, your account, and payments.
             </p>
           </div>
 
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="self-start sm:self-auto flex items-center gap-2 text-xs font-semibold text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+              className="self-start sm:self-auto flex items-center gap-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/[0.1] px-3.5 py-2.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
             >
               <CheckCheck className="w-3.5 h-3.5 text-rose-500" />
               <span>Mark all as read</span>
@@ -259,8 +267,8 @@ const UserNotifications = () => {
           )}
         </div>
 
-        {/* Filter Navigation - Refined Segmented Control */}
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-950/80 rounded-2xl border border-white/[0.08] backdrop-blur-md overflow-x-auto scrollbar-hide">
+        {/* Filter Navigation */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {[
             { id: 'all', label: 'All Alerts', count: tabCounts.all },
             { id: 'creator', label: 'Creators', count: tabCounts.creator },
@@ -272,16 +280,16 @@ const UserNotifications = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-2 ${
+                className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-2 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 ${
                   isActive
-                    ? 'bg-white text-zinc-950 font-bold shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+                    ? 'bg-rose-600 text-white border-rose-500'
+                    : 'bg-zinc-950 text-zinc-400 border-white/[0.1] hover:text-white hover:border-white/20'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold tabular-nums ${
-                    isActive ? 'bg-zinc-950/15 text-zinc-950' : 'bg-white/[0.06] text-zinc-400'
+                    isActive ? 'bg-black/20 text-white' : 'bg-white/[0.06] text-zinc-400'
                   }`}
                 >
                   {tab.count}
@@ -292,14 +300,14 @@ const UserNotifications = () => {
         </div>
 
         {/* Notifications Stream */}
-        <div className="space-y-3">
+        <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-950/40 divide-y divide-white/[0.07]">
           {loading ? (
-            <div className="p-16 flex flex-col items-center justify-center text-zinc-500 gap-3 bg-zinc-950/40 rounded-3xl border border-white/[0.06]">
+            <div className="p-16 flex flex-col items-center justify-center text-zinc-500 gap-3">
               <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
               <p className="text-xs font-medium text-zinc-400">Loading notifications...</p>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="p-16 text-center text-zinc-500 bg-zinc-950/30 rounded-3xl border border-white/[0.06] flex flex-col items-center justify-center">
+            <div className="p-16 text-center text-zinc-500 flex flex-col items-center justify-center">
               <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center mb-3 text-zinc-500">
                 <Inbox className="w-5 h-5" />
               </div>
@@ -310,27 +318,29 @@ const UserNotifications = () => {
             </div>
           ) : (
             filteredNotifications.map(item => {
-              const config = getCategoryConfig(item.category);
+              const config = getCategoryConfig(item);
               const IconComponent = config.icon;
 
               return (
-                <div
+                <article
                   key={item.id}
-                  onClick={() => !item.is_read && handleMarkAsRead(item.id)}
-                  className={`group relative p-4 sm:p-5 rounded-2xl transition-all duration-200 flex flex-col sm:flex-row sm:items-start gap-4 border cursor-pointer ${
+                  className={`group relative p-4 sm:px-6 sm:py-5 transition-colors flex flex-col sm:flex-row sm:items-start gap-4 ${
                     !item.is_read
-                      ? 'bg-zinc-900/70 border-white/[0.1] hover:bg-zinc-900/90 shadow-lg shadow-black/30'
-                      : 'bg-zinc-950/40 border-white/[0.04] hover:bg-zinc-900/40 opacity-80 hover:opacity-100'
+                      ? 'bg-rose-950/15 hover:bg-rose-950/25'
+                      : 'hover:bg-white/[0.025]'
                   }`}
                 >
                   {/* Subtle Unread Indicator Dot */}
                   {!item.is_read && (
-                    <div className="absolute top-4 right-4 sm:top-5 sm:right-5 flex items-center gap-1.5">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleMarkAsRead(item.id)}
+                      aria-label={`Mark "${item.title}" as read`}
+                      title="Mark as read"
+                      className="absolute top-4 right-4 sm:top-5 sm:right-5 p-1 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                    >
+                      <span className="block h-2.5 w-2.5 rounded-full bg-rose-500" />
+                    </button>
                   )}
 
                   {/* Left Avatar / Icon Container */}
@@ -347,16 +357,16 @@ const UserNotifications = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border shadow-inner transition-colors ${config.bg} ${config.color}`}>
-                        <IconComponent className="w-5 h-5" />
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${config.bg} ${config.color}`}>
+                        <IconComponent className="w-5 h-5" strokeWidth={1.8} />
                       </div>
                     )}
                   </div>
 
                   {/* Body Details */}
                   <div className="flex-1 min-w-0 space-y-1.5 pr-6 sm:pr-8">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-md border ${config.badgeBg}`}>
+                    <div className="flex items-center gap-x-2 gap-y-1 flex-wrap">
+                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-md border ${config.badgeBg}`}>
                         {item.badge || config.label}
                       </span>
                       <h3 className={`text-sm font-bold tracking-tight transition-colors ${
@@ -366,9 +376,9 @@ const UserNotifications = () => {
                       </h3>
                       <span 
                         title={formatFullDate(item.created_at)}
-                        className="text-zinc-500 text-xs font-normal tabular-nums ml-auto sm:ml-0"
+                        className="text-zinc-500 text-xs font-normal tabular-nums sm:ml-auto"
                       >
-                        · {formatNotificationTime(item.created_at)}
+                        {formatNotificationTime(item.created_at)}
                       </span>
                     </div>
 
@@ -406,7 +416,7 @@ const UserNotifications = () => {
                       )}
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })
           )}

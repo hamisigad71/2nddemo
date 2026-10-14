@@ -32,7 +32,7 @@ const CreatePost = () => {
               Create New Post <Sparkles className="w-6 h-6 text-red-500" />
             </h1>
             <p className="text-zinc-400 text-sm">
-              Upload photos and videos as free public teasers or locked VIP content with pay-per-view.
+              Upload photos and videos as public posts, subscriber-only content, or pay-per-view media. Save unfinished work as a draft.
             </p>
           </div>
 
@@ -97,7 +97,23 @@ const CreatePost = () => {
               Pay-Per-View (PPV)
             </div>
             <p className="text-zinc-300 text-xs leading-relaxed">
-              Lock exclusive videos or full sets with a custom price (e.g. KES 250). Fans can unlock individually via M-Pesa or get all access with monthly VIP.
+              Charge separately for an individual photo or video. Fans unlock it via M-Pesa; a subscription does not include PPV content.
+            </p>
+          </div>
+          <div className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between">
+            <div className="text-xs uppercase font-extrabold tracking-wider text-blue-400 mb-2">
+              Subscriber-only
+            </div>
+            <p className="text-zinc-300 text-xs leading-relaxed">
+              Share posts included with an active subscription. Subscribers do not pay an extra PPV charge.
+            </p>
+          </div>
+          <div className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between">
+            <div className="text-xs uppercase font-extrabold tracking-wider text-zinc-300 mb-2">
+              Drafts
+            </div>
+            <p className="text-zinc-300 text-xs leading-relaxed">
+              Save a caption or upload privately and publish it later from My Feed.
             </p>
           </div>
         </div>

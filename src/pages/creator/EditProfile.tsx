@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
+import CreatePostForm from '../../components/CreatePostForm';
 
 const EditProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -136,6 +137,7 @@ const EditProfile = () => {
 
   const tabs = [
     { id: 'profile', label: 'Public Profile', icon: User, requiresAttention: false },
+    { id: 'media', label: 'Media & Posts', icon: UploadCloud, requiresAttention: false },
     { id: 'kyc', label: 'KYC Verification', icon: ShieldCheck, requiresAttention: true },
     { id: 'payouts', label: 'Payouts', icon: Wallet, requiresAttention: true },
     { id: 'preferences', label: 'Preferences', icon: Sliders, requiresAttention: false },
@@ -442,6 +444,26 @@ const EditProfile = () => {
 
         {/* Main Content Card Container */}
         <div className="bg-[#0d0e12] border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
+
+          {activeTab === 'media' && (
+            <div className="p-6 sm:p-10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-black text-white">Media & Posts</h2>
+                  <p className="text-sm text-zinc-400 mt-1">Upload content, choose who can access it, or save it as a draft.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Link to="/feed" className="px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-bold hover:bg-zinc-800">
+                    Manage Posts
+                  </Link>
+                  <Link to="/vault" className="px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-bold hover:bg-zinc-800">
+                    Media Vault
+                  </Link>
+                </div>
+              </div>
+              <CreatePostForm />
+            </div>
+          )}
           
           {/* 1. PUBLIC PROFILE TAB */}
           {activeTab === 'profile' && (

@@ -80,15 +80,25 @@ export default function CreatorProfile() {
 
   // Load unlocked items from localStorage
   useEffect(() => {
-    if (user?.id) {
-      try {
-        const stored = localStorage.getItem(`tgd_ppv_unlocked_${user.id}`);
-        if (stored) {
-          setUnlockedMediaIds(new Set(JSON.parse(stored)));
-        }
-      } catch (e) {
-        console.warn("Error reading unlocked PPV items:", e);
+    try {
+      const combined = new Set<string>();
+      const globalStored = localStorage.getItem("tgd_ppv_unlocked_global");
+      if (globalStored) {
+        try {
+          (JSON.parse(globalStored) as string[]).forEach((id) => combined.add(id));
+        } catch {}
       }
+      if (user?.id) {
+        const userStored = localStorage.getItem(`tgd_ppv_unlocked_${user.id}`);
+        if (userStored) {
+          try {
+            (JSON.parse(userStored) as string[]).forEach((id) => combined.add(id));
+          } catch {}
+        }
+      }
+      setUnlockedMediaIds(combined);
+    } catch (e) {
+      console.warn("Error reading unlocked PPV items:", e);
     }
   }, [user?.id]);
 
@@ -114,9 +124,9 @@ export default function CreatorProfile() {
         setSubscribePrice(profile.price_hr || 1000);
 
         // Fetch creator posts
-        const creatorPosts = await getPostsByCreator(id);
+        const creatorPosts = await getPostsByCreator(id, user?.id);
         if (isMounted) {
-          setPosts(creatorPosts || []);
+          setPosts((creatorPosts || []).filter((post: any) => post.status !== "draft"));
         }
 
         // Check subscription
@@ -289,21 +299,28 @@ export default function CreatorProfile() {
     },
     // Include real posts with media
     ...posts
-      .filter((p) => p.media_url)
-      .map((p, idx) => ({
-        id: p.id,
-        type: (p.media_type === "video" || p.media_url.includes(".mp4")
-          ? "video"
-          : "image") as "video" | "image",
-        url: p.media_url,
-        duration: p.media_type === "video" ? "6:12" : undefined,
-        photoCount: p.media_type !== "video" ? 1 : undefined,
-        title: p.content
-          ? p.content.slice(0, 40) + "..."
-          : `Exclusive Media #${idx + 1}`,
-        price: p.price || 200,
-        isLocked: p.is_locked && !isSubscribed && !unlockedMediaIds.has(p.id),
-      })),
+      .filter((p) => p.media_url || (p.visibility !== "public" && p.status !== "draft"))
+      .map((p) => {
+        const visibility = p.visibility || (p.is_locked ? "ppv" : "public");
+        return {
+          id: p.id,
+          type: (p.media_type === "video" || p.media_url?.includes(".mp4")
+            ? "video"
+            : "image") as "video" | "image",
+          url: p.media_url || creator.avatar,
+          duration: p.media_type === "video" ? "6:12" : undefined,
+          photoCount: p.media_type !== "video" ? 1 : undefined,
+          title: visibility === "public" && p.content
+            ? p.content.slice(0, 40) + "..."
+            : "Exclusive content",
+          price: p.price || 200,
+          visibility,
+          isLocked: !p.media_access_granted && !isSubscribed && (
+            visibility === "subscribers" ||
+            (visibility === "ppv" && !unlockedMediaIds.has(p.id))
+          ),
+        };
+      }),
   ];
 
   const photosCount = mediaItems.filter((m) => m.type === "image").length;
@@ -317,24 +334,57 @@ export default function CreatorProfile() {
 
   const handleMediaClick = (item: PPVMediaItem) => {
     if (item.isLocked) {
-      setSelectedPPVItem(item);
+      if (item.visibility === "subscribers") {
+        setSubscribePrice(creatorPrice);
+        setSubscribeDuration(30);
+        setSubscribeTierName("VIP Monthly");
+        setIsSubscribeOpen(true);
+      } else {
+        setSelectedPPVItem(item);
+      }
     } else {
       setActiveLightbox({ url: item.url, type: item.type, title: item.title });
     }
   };
 
-  const handleMediaUnlocked = (mediaId: string) => {
+  const handleMediaUnlocked = async (mediaId: string) => {
     setUnlockedMediaIds((prev) => {
       const next = new Set(prev);
       next.add(mediaId);
-      if (user?.id) {
+      try {
+        const globalStored = localStorage.getItem("tgd_ppv_unlocked_global");
+        const globalSet = new Set(globalStored ? JSON.parse(globalStored) : []);
+        globalSet.add(mediaId);
         localStorage.setItem(
-          `tgd_ppv_unlocked_${user.id}`,
-          JSON.stringify(Array.from(next)),
+          "tgd_ppv_unlocked_global",
+          JSON.stringify(Array.from(globalSet)),
         );
+
+        if (user?.id) {
+          localStorage.setItem(
+            `tgd_ppv_unlocked_${user.id}`,
+            JSON.stringify(Array.from(next)),
+          );
+        }
+      } catch (err) {
+        console.error("Error saving unlocked PPV items:", err);
       }
       return next;
     });
+
+    const refreshedPosts = id
+      ? await getPostsByCreator(id, user?.id)
+      : [];
+    setPosts(refreshedPosts.filter((post: any) => post.status !== "draft"));
+    const targetItem = mediaItems.find((m) => m.id === mediaId);
+    const refreshedPost = refreshedPosts.find((post: any) => post.id === mediaId);
+    if (targetItem) {
+      setActiveLightbox({
+        url: refreshedPost?.media_url || targetItem.url,
+        type: targetItem.type,
+        title: targetItem.title,
+      });
+    }
   };
 
   return (
@@ -705,9 +755,8 @@ export default function CreatorProfile() {
                           <Lock className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
 
-                        {/* PPV Price Badge */}
                         <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-red-600/90 text-white font-black text-[10px] shadow">
-                          KES {item.price}
+                          {item.visibility === "subscribers" ? "SUBSCRIBERS" : `KES ${item.price}`}
                         </div>
 
                         {/* Bottom Metadata Badges */}
@@ -743,7 +792,7 @@ export default function CreatorProfile() {
                             )}
                           </span>
                           <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                            UNLOCKED
+                            {isSubscribed ? "VIP ALL UNLOCKED" : `PAID (KES ${item.price})`}
                           </span>
                         </div>
                       </div>
@@ -761,7 +810,9 @@ export default function CreatorProfile() {
             {/* Real Posts from DB */}
             {posts.length > 0 &&
               posts.map((post: any) => {
-                const isPostLocked = post.is_locked && !isSubscribed;
+                const isPostLocked =
+                  (post.visibility === "subscribers" && !isSubscribed && !post.media_access_granted) ||
+                  (post.is_locked && !post.media_access_granted && !isSubscribed && !unlockedMediaIds.has(post.id));
                 return (
                   <div
                     key={post.id}
@@ -790,7 +841,7 @@ export default function CreatorProfile() {
 
                     <div className="px-4 pb-3">
                       <p className="text-sm text-zinc-200 leading-relaxed">
-                        {post.content}
+                        {isPostLocked ? "Exclusive content — unlock to view this post." : post.content}
                       </p>
                     </div>
 
@@ -802,17 +853,32 @@ export default function CreatorProfile() {
                               <Lock className="w-6 h-6" />
                             </div>
                             <h4 className="text-lg font-black text-white mb-1">
-                              Subscriber-Only Content
+                              {post.visibility === "subscribers" ? "Subscriber-Only Content" : "Pay-Per-View Content"}
                             </h4>
                             <p className="text-xs text-zinc-400 mb-4 max-w-xs">
-                              Subscribe for KES {creatorPrice.toLocaleString()}
-                              /month to view this post.
+                              {post.visibility === "subscribers"
+                                ? `Subscribe for KES ${creatorPrice.toLocaleString()}/month to view this post.`
+                                : `Unlock this post for KES ${post.price}.`}
                             </p>
                             <button
-                              onClick={() => setIsSubscribeOpen(true)}
+                              onClick={() => {
+                                if (post.visibility === "subscribers") {
+                                  setIsSubscribeOpen(true);
+                                } else {
+                                  setSelectedPPVItem({
+                                    id: post.id,
+                                    type: post.media_type === "video" ? "video" : "image",
+                                    url: post.media_url,
+                                    title: post.content || "Exclusive content",
+                                    price: post.price,
+                                    isLocked: true,
+                                    visibility: "ppv",
+                                  });
+                                }
+                              }}
                               className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-red-600/30 hover:scale-105 cursor-pointer"
                             >
-                              Unlock Post
+                              {post.visibility === "subscribers" ? "Subscribe to Unlock" : "Unlock for KES " + post.price}
                             </button>
                           </div>
                         ) : post.media_type === "video" ? (
@@ -860,7 +926,7 @@ export default function CreatorProfile() {
               <div className="px-4 pb-3">
                 <p className="text-sm text-zinc-200 leading-relaxed">
                   Welcome to my official page! Here's a free preview. Subscribe
-                  to unlock all full videos and private DMs! ✨
+                  to unlock all full videos and private DMs!
                 </p>
               </div>
 
@@ -911,7 +977,7 @@ export default function CreatorProfile() {
               <div className="px-4 pb-3">
                 <p className="text-sm text-zinc-200 leading-relaxed">
                   Exclusive behind-the-scenes content & private high-resolution
-                  gallery just for my subscribers! 💎✨
+                  gallery just for my subscribers!
                 </p>
               </div>
 
@@ -1049,6 +1115,11 @@ export default function CreatorProfile() {
             setIsSubscribed(true);
             setSubscriptionTier(sub.tierName);
             setSubscriptionExpiresAt(sub.expiresAt);
+            if (id) {
+              getPostsByCreator(id, user?.id).then((updatedPosts) =>
+                setPosts(updatedPosts.filter((post: any) => post.status !== "draft")),
+              );
+            }
             toast.success(
               `Welcome to ${creator.name}'s VIP Club! All content is now unlocked for ${sub.durationDays} days.`,
             );
@@ -1068,6 +1139,14 @@ export default function CreatorProfile() {
           creatorId={creator.id}
           monthlyPrice={creatorPrice}
           onUnlocked={handleMediaUnlocked}
+          onViewNow={(item) => {
+            setSelectedPPVItem(null);
+            setActiveLightbox({
+              url: item.url,
+              type: item.type,
+              title: item.title,
+            });
+          }}
           onSubscribeClick={() => {
             setSelectedPPVItem(null);
             setIsSubscribeOpen(true);

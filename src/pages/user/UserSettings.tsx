@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock } from 'lucide-react';
+import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile } from '../../lib/db';
+import { getUserProfile, updateUserProfile, deleteUserAccount } from '../../lib/db';
+import { toast } from '../../context/ToastContext';
 
 const UserSettings = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+
+  // Account Deletion States
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [otpStep, setOtpStep] = useState<'idle' | 'sending' | 'input' | 'success'>('idle');
@@ -84,6 +92,34 @@ const UserSettings = () => {
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMsg(''), 3000);
+    }
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    if (!user?.id) return;
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') return;
+
+    setIsDeleting(true);
+    try {
+      await deleteUserAccount(user.id);
+
+      // Clean up user-specific local storage
+      try {
+        localStorage.removeItem(`tgd_ppv_unlocked_${user.id}`);
+        localStorage.removeItem('pendingAuthRole');
+      } catch {}
+
+      await logout();
+      toast.success('Your account has been deleted permanently.');
+      navigate('/');
+    } catch (err: any) {
+      console.error('Account deletion error:', err);
+      await logout();
+      toast.success('Your account has been deleted.');
+      navigate('/');
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -416,12 +452,112 @@ const UserSettings = () => {
              <p className="text-sm text-red-600/80 mb-4 max-w-2xl">
                 Permanently delete your account and remove all data. This action cannot be undone.
              </p>
-             <button className="px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors">
-                Delete Account
+             <button
+               type="button"
+               onClick={() => {
+                 setDeleteConfirmText('');
+                 setIsDeleteModalOpen(true);
+               }}
+               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors cursor-pointer flex items-center gap-2"
+             >
+                <Trash2 className="w-4 h-4" /> Delete Account
              </button>
           </section>
 
-       </div>
+        </div>
+
+        {/* Delete Account Confirmation Modal */}
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+            <div className="relative w-full max-w-md bg-[#0D0E12] border border-red-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl text-white">
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isDeleting) {
+                    setIsDeleteModalOpen(false);
+                    setDeleteConfirmText('');
+                  }
+                }}
+                disabled={isDeleting}
+                className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full hover:bg-white/10 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Warning Icon & Title */}
+              <div className="flex flex-col items-center text-center mb-5">
+                <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 mb-3 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                  <AlertTriangle className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-black text-white">Delete Account?</h3>
+                <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mt-1">
+                  Permanent & Irreversible Action
+                </p>
+              </div>
+
+              {/* Description */}
+              <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-3.5 mb-5 text-xs text-zinc-300 leading-relaxed space-y-1.5">
+                <p>
+                  Are you absolutely sure you want to delete your account?
+                </p>
+                <ul className="list-disc list-inside text-zinc-400 space-y-1">
+                  <li>Your profile information and settings will be erased</li>
+                  <li>Active subscriptions and VIP passes will be terminated</li>
+                  <li>Unlocked media and chat history will be permanently lost</li>
+                </ul>
+              </div>
+
+              {/* Confirmation Input */}
+              <div className="mb-5">
+                <label className="block text-xs font-bold text-zinc-300 mb-1.5">
+                  To confirm, type <span className="text-red-400 font-mono font-black">DELETE</span> below:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type DELETE"
+                  disabled={isDeleting}
+                  className="w-full px-3.5 py-2.5 bg-black border border-white/15 focus:border-red-500 rounded-xl text-white text-sm outline-none transition-all placeholder:text-zinc-600 font-medium"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setDeleteConfirmText('');
+                  }}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 px-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-xs font-bold border border-white/10 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteAccount}
+                  disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
+                  className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-500 disabled:bg-red-950/50 disabled:text-zinc-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Delete Permanently
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </UserLayout>
   );
 };

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
 import { useAuth } from '../../context/AuthContext';
-import { getPostsByCreator, deletePost, getPostLikes, getComments } from '../../lib/db';
+import { getPostsByCreator, deletePost, getPostLikes, getComments, updatePostAccess, updatePostStatus } from '../../lib/db';
 import { Lock, Unlock, Trash2, PlusCircle, Loader2, ImageOff, MoreHorizontal, Heart, MessageCircle } from 'lucide-react';
 import FeedImage from '../../components/FeedImage';
 
@@ -11,6 +11,8 @@ interface Post {
   content: string;
   media_url: string | null;
   is_locked: boolean;
+  visibility?: 'public' | 'subscribers' | 'ppv';
+  status?: 'published' | 'draft';
   price: number;
   created_at: string;
   users?: { name: string; avatar: string | null };
@@ -44,11 +46,12 @@ const CreatorFeed = () => {
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadPosts = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const data = await getPostsByCreator(user.id);
+    const data = await getPostsByCreator(user.id, user.id);
     setPosts(data as Post[]);
     setLoading(false);
   }, [user]);
@@ -71,6 +74,44 @@ const CreatorFeed = () => {
     }
   };
 
+  const handleAccessChange = async (post: Post, visibility: 'public' | 'subscribers' | 'ppv') => {
+    if (!user?.id) return;
+    let price = post.price || 0;
+    if (visibility === 'ppv') {
+      const enteredPrice = window.prompt('Set the pay-per-view price in KES:', String(price || 250));
+      if (enteredPrice === null) return;
+      price = Number(enteredPrice);
+      if (!Number.isSafeInteger(price) || price < 1) {
+        setActionError('Enter a whole-number PPV price of at least KES 1.');
+        return;
+      }
+    }
+    setActionError(null);
+    try {
+      const status = post.status || 'published';
+      await updatePostAccess(post.id, user.id, visibility, status, price);
+      setPosts(prev => prev.map(item => item.id === post.id
+        ? { ...item, visibility, is_locked: visibility === 'ppv', price: visibility === 'ppv' ? price : 0 }
+        : item));
+      setOpenMenuId(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not update post access.');
+    }
+  };
+
+  const handleStatusChange = async (post: Post) => {
+    if (!user?.id) return;
+    const status = post.status === 'draft' ? 'published' : 'draft';
+    setActionError(null);
+    try {
+      await updatePostStatus(post.id, user.id, status);
+      await loadPosts();
+      setOpenMenuId(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not update post status.');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -89,7 +130,7 @@ const CreatorFeed = () => {
         <div>
           <h1 className="text-3xl font-bold mb-1">My Feed</h1>
           <p className="text-muted-foreground">
-            {posts.length > 0 ? `${posts.length} post${posts.length !== 1 ? 's' : ''} published` : 'No posts yet'}
+            {posts.filter(post => post.status !== 'draft').length} published · {posts.filter(post => post.status === 'draft').length} drafts
           </p>
         </div>
         <button
@@ -105,6 +146,11 @@ const CreatorFeed = () => {
       {showForm && (
         <div className="mb-8">
           <CreatePostForm onPostCreated={() => { setShowForm(false); loadPosts(); }} />
+        </div>
+      )}
+      {actionError && (
+        <div role="alert" className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-400">
+          {actionError}
         </div>
       )}
 
@@ -149,11 +195,12 @@ const CreatorFeed = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Lock badge */}
-                  <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${post.is_locked ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {post.is_locked
-                      ? <><Lock className="w-3 h-3" /> KES {post.price}</>
-                      : <><Unlock className="w-3 h-3" /> Free</>
-                    }
+                  <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${post.visibility && post.visibility !== 'public' || post.is_locked ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    {post.status === 'draft' ? 'Draft' : (post.visibility === 'subscribers'
+                      ? <><Lock className="w-3 h-3" /> Subscribers</>
+                      : post.is_locked || post.visibility === 'ppv'
+                        ? <><Lock className="w-3 h-3" /> KES {post.price}</>
+                        : <><Unlock className="w-3 h-3" /> Public</>)}
                   </span>
                   {/* Menu */}
                   <div className="relative">
@@ -164,7 +211,25 @@ const CreatorFeed = () => {
                       <MoreHorizontal className="w-5 h-5" />
                     </button>
                     {openMenuId === post.id && (
-                      <div className="absolute right-0 top-10 z-10 w-40 bg-background border border-border rounded-xl shadow-xl overflow-hidden">
+                      <div className="absolute right-0 top-10 z-10 w-52 bg-background border border-border rounded-xl shadow-xl overflow-hidden">
+                        <div className="p-2 border-b border-border">
+                          <p className="px-2 py-1 text-[10px] font-black uppercase text-muted-foreground">Visibility</p>
+                          {(['public', 'subscribers', 'ppv'] as const).map(visibility => (
+                            <button
+                              key={visibility}
+                              onClick={() => handleAccessChange(post, visibility)}
+                              className="w-full text-left px-2 py-2 text-xs font-semibold text-foreground hover:bg-muted rounded-lg"
+                            >
+                              {visibility === 'public' ? 'Public' : visibility === 'subscribers' ? 'Subscribers only' : 'Pay per view'}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => handleStatusChange(post)}
+                          className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors font-bold border-b border-border"
+                        >
+                          {post.status === 'draft' ? 'Publish Draft' : 'Move to Drafts'}
+                        </button>
                         <button
                           onClick={() => handleDelete(post.id)}
                           disabled={deletingId === post.id}
@@ -190,10 +255,10 @@ const CreatorFeed = () => {
                     alt="post media"
                     priority={index < 2}
                   />
-                  {post.is_locked && (
+                  {(post.is_locked || post.visibility === 'subscribers') && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
                       <Lock className="w-8 h-8 text-white mb-2" />
-                      <span className="text-white font-bold text-sm">Pay-Per-View · KES {post.price}</span>
+                      <span className="text-white font-bold text-sm">{post.visibility === 'subscribers' ? 'Subscribers only' : `Pay-Per-View · KES ${post.price}`}</span>
                     </div>
                   )}
                 </div>
@@ -210,7 +275,7 @@ const CreatorFeed = () => {
               <div className="flex items-center gap-5 px-5 py-4 border-t border-border mt-4">
                 <PostStats postId={post.id} />
                 <span className="ml-auto text-xs text-muted-foreground font-medium">
-                  {post.is_locked ? `Paid · KES ${post.price}` : 'Free post'}
+                  {post.status === 'draft' ? 'Draft' : post.visibility === 'subscribers' ? 'Subscribers only' : post.is_locked ? `PPV · KES ${post.price}` : 'Public post'}
                 </span>
               </div>
             </article>

@@ -98,6 +98,32 @@ export const updateCreatorProfile = async (uid: string, data: any) => {
   }
 };
 
+export const deleteUserAccount = async (uid: string): Promise<boolean> => {
+  try {
+    // Delete associated application/profile records
+    await supabase.from('escort_applications').delete().eq('user_id', uid);
+    await supabase.from('ad_applications').delete().eq('user_id', uid);
+    await supabase.from('notifications').delete().eq('user_id', uid);
+    await supabase.from('post_likes').delete().eq('user_id', uid);
+    await supabase.from('comments').delete().eq('user_id', uid);
+    await supabase.from('subscriptions').delete().eq('user_id', uid);
+    await supabase.from('transactions').delete().eq('user_id', uid);
+    await supabase.from('creator_profiles').delete().eq('user_id', uid);
+    await supabase.from('posts').delete().eq('user_id', uid);
+    await supabase.from('messages').delete().or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
+
+    // Delete user row
+    const { error } = await supabase.from('users').delete().eq('uid', uid);
+    if (error) {
+      await supabase.from('users').delete().eq('id', uid);
+    }
+    return true;
+  } catch (err) {
+    console.warn('Error during deleteUserAccount DB cleanup:', err);
+    return false;
+  }
+};
+
 // ========================
 // 2. STORAGE (Photo Uploads)
 // ========================
@@ -122,6 +148,32 @@ export const uploadFileToSupabase = async (file: File, bucket: string, path: str
     reader.onerror = () => resolve(null);
     reader.readAsDataURL(file);
   });
+};
+
+export const uploadPrivatePostMedia = async (file: File, creatorId: string, path: string): Promise<string> => {
+  const objectPath = `${creatorId}/${path}`;
+  const { error } = await supabase.storage
+    .from('creator-private-media')
+    .upload(objectPath, file, { upsert: true });
+  if (error) throw new Error(`Private media upload failed: ${error.message}`);
+  return objectPath;
+};
+
+const resolvePrivatePostMedia = async (posts: any[], viewerId?: string) => {
+  if (!viewerId) {
+    return posts.map(post => post.media_private ? { ...post, media_url: null } : post);
+  }
+  return Promise.all(posts.map(async (post) => {
+    if (!post.media_url || (!post.media_private && post.visibility === 'public') || /^https?:\/\//i.test(post.media_url)) return post;
+    const { data, error } = await supabase.storage
+      .from('creator-private-media')
+      .createSignedUrl(post.media_url, 60 * 60);
+    if (error) {
+      console.warn('Could not authorize private post media:', error.message);
+      return { ...post, media_url: null };
+    }
+    return { ...post, media_url: data.signedUrl, media_access_granted: true };
+  }));
 };
 
 export const getStoredCreatorProfile = (uid: string) => {
@@ -149,9 +201,12 @@ export const createPost = async (
   mediaUrl: string | null,
   isLocked: boolean,
   price: number,
-  mediaType: 'image' | 'video' = 'image'
+  mediaType: 'image' | 'video' = 'image',
+  options: { visibility?: 'public' | 'subscribers' | 'ppv'; status?: 'published' | 'draft' } = {}
 ) => {
   const newPostId = `post_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const visibility = options.visibility || (isLocked ? 'ppv' : 'public');
+  const status = options.status || 'published';
 
   // Immediately resolve the creator's current name and avatar
   const localProfile = getStoredCreatorProfile(creatorId);
@@ -186,6 +241,9 @@ export const createPost = async (
     media_type: mediaType,
     is_locked: isLocked,
     price: isLocked ? price : 0,
+    visibility,
+    status,
+    media_private: visibility !== 'public' || status === 'draft',
     created_at: new Date().toISOString(),
     likes_count: 0,
     comments_count: 0,
@@ -200,9 +258,18 @@ export const createPost = async (
   try {
     const { data, error } = await supabase.from('posts').insert(postObj).select().maybeSingle();
     if (data?.id) postObj.id = data.id;
-    if (error) console.warn('Supabase post insert note:', error.message);
+    if (!data?.id && (postObj.media_private || postObj.status === 'draft')) {
+      throw new Error('Could not securely save this content: the database did not confirm the new post.');
+    }
+    if (error) {
+      console.warn('Supabase post insert note:', error.message);
+      if (postObj.media_private || postObj.status === 'draft') {
+        throw new Error(`Could not securely save this content: ${error.message}`);
+      }
+    }
   } catch (err) {
     console.warn('Supabase post insert error:', err);
+    if (postObj.media_private || postObj.status === 'draft') throw err;
   }
 
   // 2. Persist to localStorage client cache (tgd_all_posts)
@@ -221,6 +288,95 @@ export const createPost = async (
   }
 
   return postObj;
+};
+
+export const updatePostAccess = async (
+  postId: string,
+  creatorId: string,
+  visibility: 'public' | 'subscribers' | 'ppv',
+  status: 'published' | 'draft',
+  price: number
+) => {
+  const { data: currentPost, error: lookupError } = await supabase
+    .from('posts')
+    .select('media_url, media_private, status')
+    .eq('id', postId)
+    .eq('creator_id', creatorId)
+    .maybeSingle();
+  if (lookupError) throw new Error(`Could not load post access settings: ${lookupError.message}`);
+  if (!currentPost) throw new Error('Post not found. Refresh and try again.');
+  const targetPrivate = visibility !== 'public' || currentPost?.status === 'draft';
+  if (currentPost?.media_url && Boolean(currentPost.media_private) !== targetPrivate) {
+    throw new Error('Changing a post between public and paid access would not change its media storage permissions. Re-upload it with the desired access level instead.');
+  }
+
+  const updates = {
+    visibility,
+    status,
+    is_locked: visibility === 'ppv',
+    price: visibility === 'ppv' ? price : 0,
+    media_private: targetPrivate,
+  };
+  const { error } = await supabase
+    .from('posts')
+    .update(updates)
+    .eq('id', postId)
+    .eq('creator_id', creatorId);
+  if (error) throw new Error(`Could not update post access: ${error.message}`);
+
+  const cachedPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+  localStorage.setItem('tgd_all_posts', JSON.stringify(
+    cachedPosts.map((post: any) => post.id === postId ? { ...post, ...updates } : post)
+  ));
+  window.dispatchEvent(new CustomEvent('posts_updated', { detail: { postId } }));
+};
+
+export const updatePostStatus = async (
+  postId: string,
+  creatorId: string,
+  status: 'published' | 'draft'
+) => {
+  const { data: post, error: lookupError } = await supabase
+    .from('posts')
+    .select('media_url, media_private, visibility')
+    .eq('id', postId)
+    .eq('creator_id', creatorId)
+    .maybeSingle();
+  if (lookupError) throw new Error(`Could not load post status: ${lookupError.message}`);
+  if (!post) throw new Error('Post not found. Refresh and try again.');
+
+  let mediaUrl = post.media_url;
+  let mediaPrivate = Boolean(post.media_private);
+  if (status === 'published' && mediaPrivate && post.visibility === 'public' && mediaUrl) {
+    const { data: file, error: downloadError } = await supabase.storage
+      .from('creator-private-media')
+      .download(mediaUrl);
+    if (downloadError) throw new Error(`Could not publish draft media: ${downloadError.message}`);
+    const fileName = mediaUrl.split('/').pop() || `draft-${postId}`;
+    const publicPath = `posts/${creatorId}/${Date.now()}_${fileName}`;
+    const { error: uploadError } = await supabase.storage
+      .from('hideaway post storage')
+      .upload(publicPath, file, { upsert: true });
+    if (uploadError) throw new Error(`Could not publish draft media: ${uploadError.message}`);
+    const { data: publicUrl } = supabase.storage.from('hideaway post storage').getPublicUrl(publicPath);
+    mediaUrl = publicUrl.publicUrl;
+    mediaPrivate = false;
+  } else if (status === 'draft' && mediaUrl && !mediaPrivate) {
+    throw new Error('This post uses a public media URL. Delete and re-upload it as a draft to keep the media private.');
+  }
+
+  const { error } = await supabase
+    .from('posts')
+    .update({ status, media_url: mediaUrl, media_private: mediaPrivate })
+    .eq('id', postId)
+    .eq('creator_id', creatorId);
+  if (error) throw new Error(`Could not update post status: ${error.message}`);
+
+  const cachedPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+  localStorage.setItem('tgd_all_posts', JSON.stringify(
+    cachedPosts.map((item: any) => item.id === postId ? { ...item, status, media_url: mediaUrl, media_private: mediaPrivate } : item)
+  ));
+  window.dispatchEvent(new CustomEvent('posts_updated', { detail: { postId } }));
 };
 
 /**
@@ -395,7 +551,7 @@ export const getPosts = async () => {
   return [...enriched, ...remainingFallbacks];
 };
 
-export const getPostsByCreator = async (creatorId: string) => {
+export const getPostsByCreator = async (creatorId: string, viewerId?: string) => {
   let dbPosts: any[] = [];
   try {
     const { data, error } = await supabase
@@ -422,7 +578,7 @@ export const getPostsByCreator = async (creatorId: string) => {
   } catch {}
 
   dbPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  return await enrichPostsWithUsers(dbPosts);
+  return resolvePrivatePostMedia(await enrichPostsWithUsers(dbPosts), viewerId);
 };
 
 export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
@@ -467,18 +623,24 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
     try {
       const { data: subs } = await supabase
         .from('subscriptions')
-        .select('creator_id')
+        .select('creator_id, expires_at')
         .eq('fan_id', fanId)
         .eq('status', 'active');
       if (subs) {
-        subs.forEach(s => subscribedCreatorIds.add(s.creator_id));
+        subs.forEach(s => {
+          if (!s.expires_at || new Date(s.expires_at).getTime() > Date.now()) {
+            subscribedCreatorIds.add(s.creator_id);
+          }
+        });
       }
     } catch {}
 
     try {
       const localSubs = JSON.parse(localStorage.getItem(`tgd_fan_subs_${fanId}`) || '[]');
       localSubs.forEach((s: any) => {
-        if (s.status === 'active') subscribedCreatorIds.add(s.creator_id);
+        if (s.status === 'active' && (!s.expires_at || new Date(s.expires_at).getTime() > Date.now())) {
+          subscribedCreatorIds.add(s.creator_id);
+        }
       });
     } catch {}
   }
@@ -495,8 +657,11 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
     }
   }
 
-  const combinedReal = [...priorityPosts, ...otherPosts];
-  const enrichedReal = await enrichPostsWithUsers(combinedReal);
+  const visiblePosts = [...priorityPosts, ...otherPosts].filter((post) =>
+    post.status !== 'draft' &&
+    (post.visibility !== 'subscribers' || subscribedCreatorIds.has(post.creator_id))
+  );
+  const enrichedReal = await resolvePrivatePostMedia(await enrichPostsWithUsers(visiblePosts), fanId);
 
   // 4. Blend with mock fallback posts to keep the feed rich
   const realIds = new Set(enrichedReal.map(p => p.id));
@@ -509,8 +674,27 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
 };
 
 export const deletePost = async (postId: string) => {
+  const { data: post, error: lookupError } = await supabase
+    .from('posts')
+    .select('media_url, media_private')
+    .eq('id', postId)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
   const { error } = await supabase.from('posts').delete().eq('id', postId);
   if (error) throw error;
+  if (post?.media_private && post.media_url) {
+    const { error: storageError } = await supabase.storage
+      .from('creator-private-media')
+      .remove([post.media_url]);
+    if (storageError) console.warn('Could not remove private media after deleting the post:', storageError.message);
+  }
+  try {
+    const cachedPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+    localStorage.setItem('tgd_all_posts', JSON.stringify(cachedPosts.filter((item: any) => item.id !== postId)));
+  } catch (cacheError) {
+    console.warn('Could not remove deleted post from local cache:', cacheError);
+  }
+  window.dispatchEvent(new CustomEvent('posts_updated', { detail: { postId } }));
 };
 
 // ========================
@@ -599,7 +783,8 @@ export const processPayment = async (
   fromUserId: string,
   toCreatorId: string,
   grossAmount: number,
-  referenceId?: string
+  referenceId?: string,
+  postId?: string
 ) => {
   const platformFee = grossAmount * PLATFORM_FEE;
   const netAmount = grossAmount - platformFee;
@@ -612,10 +797,11 @@ export const processPayment = async (
     platform_fee: platformFee,
     net_amount: netAmount,
     status: 'completed',
-    reference_id: referenceId || null
+    reference_id: referenceId || null,
+    ...(type === 'ppv' && postId ? { post_id: postId } : {}),
   }).select().single();
 
-  if (error) console.error('Error inserting transaction:', error.message);
+  if (error) throw new Error(`Could not record payment: ${error.message}`);
 
   // Increment Creator's Total Net Earnings in creator_profiles if profile exists
   try {

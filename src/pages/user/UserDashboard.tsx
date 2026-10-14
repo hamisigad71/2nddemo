@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2 } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock } from 'lucide-react';
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
@@ -48,6 +48,8 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
   const avatarUrl = creator?.avatar || localProfile?.avatar || localProfile?.avatar_url || escort?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
   const creatorHandle = escort ? `@${escort.name.replace(/\s+/g, '').toLowerCase()}` : `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`;
   const profileRoute = `/creator/${post.creator_id || escort?.id || 'escort-1'}`;
+  const isPpvPost = post.visibility === 'ppv' || post.is_locked;
+  const shouldLockMedia = !post.media_access_granted && (isPpvPost || post.visibility === 'subscribers');
   const formatPostTime = (dateStr?: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -144,7 +146,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              {!post.is_locked && (
+              {!post.is_locked && !(post.visibility === 'subscribers' && post.media_access_granted) && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -172,15 +174,21 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
         </div>
 
         {/* Media */}
-        {post.media_url && (
+        {(post.media_url || shouldLockMedia) && (
           <div className="relative bg-black overflow-hidden group">
-            <FeedImage
-              src={post.media_url}
-              alt="post"
-              priority={priority}
-              isLocked={post.is_locked}
-            />
-            {post.is_locked && (
+            {post.media_url ? (
+              <FeedImage
+                src={post.media_url}
+                alt="post"
+                priority={priority}
+                isLocked={shouldLockMedia}
+              />
+            ) : (
+              <div className="w-full min-h-[320px] sm:min-h-[400px] bg-zinc-900 flex items-center justify-center">
+                <Lock className="w-8 h-8 text-zinc-600" />
+              </div>
+            )}
+            {shouldLockMedia && (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-4 text-center bg-black/30 backdrop-blur-[2px]">
                 <div className="backdrop-blur-md bg-black/80 border border-white/15 rounded-2xl px-6 py-5 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col items-center max-w-[280px] w-full">
                   <div className="w-12 h-12 rounded-2xl bg-black/90 border border-red-500/50 flex items-center justify-center mb-3 shadow-lg text-red-500">
@@ -188,17 +196,17 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
                   </div>
 
                   <p className="text-white font-black text-sm tracking-tight mb-0.5">
-                    Subscribe to Unlock
+                    {isPpvPost ? 'Pay-Per-View Post' : 'Subscribers Only'}
                   </p>
                   <p className="text-zinc-400 text-[11px] mb-4">
-                    VIP Sneak Peek · Subscriber Exclusive
+                    {isPpvPost ? `Unlock for KES ${post.price || 0} from the creator profile.` : 'Included with an active subscription.'}
                   </p>
 
                   <button 
-                    onClick={() => setIsSubscribeOpen(true)}
+                    onClick={() => isPpvPost ? navigate(profileRoute) : setIsSubscribeOpen(true)}
                     className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs tracking-wider uppercase py-2.5 px-6 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-600/30 cursor-pointer"
                   >
-                    Subscribe
+                    {isPpvPost ? 'View Unlock Options' : 'Subscribe'}
                   </button>
                 </div>
               </div>
