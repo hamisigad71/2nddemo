@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const PAYHERO_API_KEY = process.env.PAYHERO_API_KEY || '';
+const DEFAULT_PAYHERO_KEY = 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==';
+
+const PAYHERO_API_KEY = process.env.PAYHERO_API_KEY || process.env.VITE_PAYHERO_API_KEY || DEFAULT_PAYHERO_KEY;
 
 const normalizePayHeroAuth = (key: string): string => {
   const trimmed = key.trim();

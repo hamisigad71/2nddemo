@@ -1,7 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const PAYHERO_API_KEY = process.env.PAYHERO_API_KEY || '';
-const PAYHERO_CHANNEL_ID = process.env.PAYHERO_CHANNEL_ID || '';
+const DEFAULT_PAYHERO_KEY = 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==';
+const DEFAULT_PAYHERO_CHANNEL = '13942';
+
+const PAYHERO_API_KEY = process.env.PAYHERO_API_KEY || process.env.VITE_PAYHERO_API_KEY || DEFAULT_PAYHERO_KEY;
+const PAYHERO_CHANNEL_ID = process.env.PAYHERO_CHANNEL_ID || process.env.VITE_PAYHERO_CHANNEL_ID || DEFAULT_PAYHERO_CHANNEL;
 const PAYHERO_CALLBACK_URL = process.env.PAYHERO_CALLBACK_URL || '';
 const VERCEL_URL = process.env.VERCEL_URL || '';
 
