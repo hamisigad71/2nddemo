@@ -51,3 +51,4 @@ CREATE POLICY "Creators can view and insert applications" ON ad_applications
 
 -- Realtime replication
 ALTER PUBLICATION supabase_realtime ADD TABLE platform_ads;
+

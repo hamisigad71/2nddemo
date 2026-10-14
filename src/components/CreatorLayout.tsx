@@ -177,10 +177,10 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
           </div>
         </nav>
         
-        <div className="pt-4 mt-auto shrink-0 mb-safe gap-2 flex flex-col border-t border-border/50 relative z-10 pt-5">
+        <div className="pt-4 mt-auto shrink-0 mb-safe gap-2 flex flex-col border-t border-border/50 relative z-10">
            <div className="p-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/50 rounded-2xl flex items-center justify-between transition-colors">
              <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 flex-1 min-w-0 group overflow-hidden pl-1">
-               <img src={creatorAvatar || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"} alt="avatar" referrerPolicy="no-referrer" className="w-[38px] h-[38px] rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
+               <img src={creatorAvatar || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"} alt="avatar" referrerPolicy="no-referrer" className="w-9.5 h-9.5 rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
                <div className="flex-1 min-w-0 pr-1">
                   <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{creatorName || user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator"}</div>
                   <div className="text-[11px] text-muted-foreground truncate">Edit Profile</div>
@@ -194,11 +194,11 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                  className="p-2 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-colors shrink-0"
                  title="View Public Profile"
                >
-                 <Eye className="w-[18px] h-[18px]" />
+                 <Eye className="w-4.5 h-4.5" />
                </Link>
              )}
              <button onClick={handleLogout} className="p-2 text-muted-foreground hover:bg-red-500/20 hover:text-red-500 rounded-xl transition-colors shrink-0" title="Logout">
-               <LogOut className="w-[18px] h-[18px]" />
+               <LogOut className="w-4.5 h-4.5" />
              </button>
            </div>
            

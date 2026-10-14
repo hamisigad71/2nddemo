@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2 } from 'lucide-react';
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
@@ -233,7 +233,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
               onClick={() => setIsTipOpen(true)}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white border border-white/15 text-xs font-black tracking-wider uppercase transition-all hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 cursor-pointer"
             >
-              <DollarSign className="w-4 h-4 text-emerald-400" />
+              <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-black">$</span>
               <span>SEND TIP</span>
             </button>
           </div>

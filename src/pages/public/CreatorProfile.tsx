@@ -7,7 +7,7 @@ import {
   CheckCircle2,
   MessageCircle,
   Heart,
-  Sparkles,
+  DollarSign,
   Loader2,
   Play,
   ChevronDown,
@@ -443,7 +443,7 @@ export default function CreatorProfile() {
               onClick={() => setIsTipOpen(true)}
               className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" /> Send Tip
+              <DollarSign className="w-4 h-4 text-amber-400" /> Send Tip
             </button>
             <button
               type="button"
