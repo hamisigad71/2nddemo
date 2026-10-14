@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, CheckCircle, CheckCircle2, MapPin, Lock } from 'lucide-react';
+import { Search, Filter, CheckCircle2, MapPin, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 

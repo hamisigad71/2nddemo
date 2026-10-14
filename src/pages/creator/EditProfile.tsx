@@ -1,5 +1,5 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check, Plus, Tag } from 'lucide-react';
+import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -17,7 +17,6 @@ const EditProfile = () => {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
-  const [newTagInput, setNewTagInput] = useState('');
   const [profileData, setProfileData] = useState({
     displayName: '',
     username: '',

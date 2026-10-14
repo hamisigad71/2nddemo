@@ -903,11 +903,13 @@ export const checkUserSubscription = async (fanId: string, creatorId: string) =>
     // If the expires_at timestamp has passed, mark expired and return null so all content locks
     if (sub.expires_at && new Date(sub.expires_at) < new Date()) {
       if (sub.id) {
-        supabase
-          .from('subscriptions')
-          .update({ status: 'expired' })
-          .eq('id', sub.id)
-          .catch(() => {});
+        try {
+          supabase
+            .from('subscriptions')
+            .update({ status: 'expired' })
+            .eq('id', sub.id)
+            .then(() => {}, () => {});
+        } catch {}
       }
       try {
         const local = localStorage.getItem(`tgd_sub_${fanId}_${creatorId}`);

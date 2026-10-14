@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
-import { Tag, Copy, Plus, Activity, Flame, Check, ExternalLink, Sparkles, Settings } from 'lucide-react';
+import { Tag, Copy, Activity, Flame, Check, ExternalLink, Sparkles, Settings } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from '../../context/ToastContext';
 
