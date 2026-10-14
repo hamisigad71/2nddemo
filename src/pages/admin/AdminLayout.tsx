@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, DollarSign,
   BarChart3, Settings, Menu, LogOut, Bell, ChevronRight,
-  Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart
+  Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart, Megaphone
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { label: 'Overview',        icon: LayoutDashboard, path: '/admin' },
+  { label: 'Ads & Campaigns', icon: Megaphone,       path: '/admin/ads', isNew: true },
   { label: 'Creators',        icon: UserCheck,       path: '/admin/creators' },
   { label: 'Users / Fans',    icon: Users,           path: '/admin/users' },
   { label: 'Transactions',    icon: DollarSign,      path: '/admin/transactions' },

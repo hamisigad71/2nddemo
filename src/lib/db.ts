@@ -766,6 +766,12 @@ export const subscribeToCreator = async (
     console.warn('Error sending subscription notification:', err);
   }
 
+  // Trigger automated welcome message in direct chat
+  try {
+    const { data: creatorUser } = await supabase.from('users').select('name').eq('uid', creatorId).maybeSingle();
+    await createAutomatedWelcomeMessage(creatorId, fanId, creatorUser?.name);
+  } catch {}
+
   return {
     id: subId,
     fan_id: fanId,
@@ -1452,4 +1458,850 @@ export const getAdminTransactions = async () => {
     console.error("Error fetching Admin transactions:", e);
     return [];
   }
+};
+
+// ========================
+// 12. LIVE CHAT & MESSAGING
+// ========================
+
+export interface ChatMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  creator_id: string;
+  sender_role: 'subscriber' | 'creator';
+  content: string;
+  media_url?: string;
+  is_ppv?: boolean;
+  ppv_price?: number;
+  ppv_unlocked?: boolean;
+  read?: boolean;
+  created_at: string;
+}
+
+export interface ChatParticipant {
+  id: string;
+  name: string;
+  avatar: string;
+  handle?: string;
+  role: 'creator' | 'subscriber';
+  isOnline?: boolean;
+  isSubscribed?: boolean;
+  subscriptionExpiresAt?: string;
+  subscriptionTier?: string;
+  monthly_price?: number;
+  lastMessage?: string;
+  lastMessageTime?: string;
+  unreadCount?: number;
+}
+
+/**
+ * Sends a direct message with strict anti-circumvention:
+ * Strips all literal digits [0-9] from the content.
+ */
+export const sendChatMessage = async (params: {
+  sender_id: string;
+  receiver_id: string;
+  creator_id: string;
+  sender_role: 'subscriber' | 'creator';
+  content: string;
+  media_url?: string;
+  is_ppv?: boolean;
+  ppv_price?: number;
+  ppv_unlocked?: boolean;
+}): Promise<ChatMessage> => {
+  // Strip all digits to prevent sharing of phone numbers
+  const sanitizedContent = (params.content || '').replace(/[0-9]/g, '').trim();
+
+  const fanId = params.sender_role === 'subscriber' ? params.sender_id : params.receiver_id;
+  const newMsg: ChatMessage = {
+    id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    sender_id: params.sender_id,
+    receiver_id: params.receiver_id,
+    creator_id: params.creator_id,
+    sender_role: params.sender_role,
+    content: sanitizedContent,
+    media_url: params.media_url,
+    is_ppv: !!params.is_ppv,
+    ppv_price: params.ppv_price || 0,
+    ppv_unlocked: !!params.ppv_unlocked,
+    read: false,
+    created_at: new Date().toISOString(),
+  };
+
+  // 1. Persist to Supabase if available
+  try {
+    const { data, error } = await supabase.from('messages').insert({
+      sender_id: newMsg.sender_id,
+      receiver_id: newMsg.receiver_id,
+      creator_id: newMsg.creator_id,
+      sender_role: newMsg.sender_role,
+      content: newMsg.content,
+      media_url: newMsg.media_url,
+      is_ppv: newMsg.is_ppv,
+      ppv_price: newMsg.ppv_price,
+      ppv_unlocked: newMsg.ppv_unlocked,
+      read: newMsg.read,
+    }).select().maybeSingle();
+
+    if (!error && data?.id) {
+      newMsg.id = data.id;
+    }
+  } catch (err) {
+    // Non-fatal, local fallback keeps real-time chatting functional
+  }
+
+  // 2. Persist to LocalStorage for reliable local fallback
+  try {
+    const storageKey = `tgd_chat_${params.creator_id}_${fanId}`;
+    const raw = localStorage.getItem(storageKey);
+    const list: ChatMessage[] = raw ? JSON.parse(raw) : [];
+    list.push(newMsg);
+    localStorage.setItem(storageKey, JSON.stringify(list));
+  } catch {}
+
+  // 3. Dispatch local event for real-time reactive UI update across components
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('tgd_new_message', { detail: newMsg }));
+  }
+
+  return newMsg;
+};
+
+/**
+ * Loads messages between a creator and a fan.
+ */
+export const getChatMessages = async (creatorId: string, fanId: string): Promise<ChatMessage[]> => {
+  let messages: ChatMessage[] = [];
+
+  // 1. Try Supabase
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .or(`sender_id.eq.${fanId},receiver_id.eq.${fanId}`)
+      .order('created_at', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      messages = data.map((m: any) => ({
+        id: m.id,
+        sender_id: m.sender_id,
+        receiver_id: m.receiver_id,
+        creator_id: m.creator_id,
+        sender_role: m.sender_role || (m.sender_id === creatorId ? 'creator' : 'subscriber'),
+        content: m.content || '',
+        media_url: m.media_url,
+        is_ppv: !!m.is_ppv,
+        ppv_price: m.ppv_price,
+        ppv_unlocked: !!m.ppv_unlocked,
+        read: !!m.read,
+        created_at: m.created_at,
+      }));
+    }
+  } catch {}
+
+  // 2. Merge with LocalStorage fallback
+  try {
+    const storageKey = `tgd_chat_${creatorId}_${fanId}`;
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      const localMsgs: ChatMessage[] = JSON.parse(raw);
+      const existingIds = new Set(messages.map((m) => m.id));
+      for (const lm of localMsgs) {
+        if (!existingIds.has(lm.id)) {
+          messages.push(lm);
+          existingIds.add(lm.id);
+        }
+      }
+      messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    }
+  } catch {}
+
+  return messages;
+};
+
+/**
+ * Creates an automated personalized welcome message from the creator
+ * into the chat thread with a new subscriber.
+ */
+export const createAutomatedWelcomeMessage = async (
+  creatorId: string,
+  fanId: string,
+  creatorName?: string
+) => {
+  const welcomeKey = `tgd_welcomed_${creatorId}_${fanId}`;
+  if (typeof window !== 'undefined' && localStorage.getItem(welcomeKey)) {
+    return; // Already welcomed
+  }
+
+  const name = creatorName || 'Creator';
+  await sendChatMessage({
+    sender_id: creatorId,
+    receiver_id: fanId,
+    creator_id: creatorId,
+    sender_role: 'creator',
+    content: `Hey! 🥰 Welcome to ${name}'s direct chat! Feel free to text me here anytime!`,
+  });
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(welcomeKey, 'true');
+  }
+};
+
+/**
+ * Unlocks a locked PPV message in the chat
+ */
+export const unlockChatMessagePPV = async (messageId: string, creatorId: string, fanId: string) => {
+  try {
+    await supabase.from('messages').update({ ppv_unlocked: true }).eq('id', messageId);
+  } catch {}
+
+  try {
+    const storageKey = `tgd_chat_${creatorId}_${fanId}`;
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      const list: ChatMessage[] = JSON.parse(raw);
+      const updated = list.map((m) => (m.id === messageId ? { ...m, ppv_unlocked: true } : m));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+    }
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('tgd_message_unlocked', { detail: { messageId } }));
+  }
+};
+
+/**
+ * Retrieves the list of creator conversations for a fan/user.
+ */
+export const getUserChatConversations = async (userId: string): Promise<ChatParticipant[]> => {
+  const conversationsMap = new Map<string, ChatParticipant>();
+
+  // 1. Check active subscriptions in Supabase
+  try {
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('creator_id, tier_name, status, expires_at')
+      .eq('fan_id', userId)
+      .eq('status', 'active');
+
+    if (subs) {
+      for (const s of subs) {
+        if (!conversationsMap.has(s.creator_id)) {
+          const profile = await getCreatorProfile(s.creator_id);
+          const pAny = profile as any;
+          conversationsMap.set(s.creator_id, {
+            id: s.creator_id,
+            name: profile?.name || 'Creator',
+            avatar: profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
+            role: 'creator',
+            isOnline: true,
+            isSubscribed: true,
+            subscriptionExpiresAt: s.expires_at,
+            subscriptionTier: s.tier_name || 'VIP Tier',
+            monthly_price: pAny?.monthly_price || 1000,
+          });
+        }
+      }
+    }
+  } catch {}
+
+  // 2. Check local subscriptions & local chats
+  if (typeof window !== 'undefined') {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`tgd_sub_${userId}_`)) {
+          const creatorId = key.replace(`tgd_sub_${userId}_`, '');
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.status === 'active' && !conversationsMap.has(creatorId)) {
+              const profile = await getCreatorProfile(creatorId);
+              const pAny = profile as any;
+              conversationsMap.set(creatorId, {
+                id: creatorId,
+                name: profile?.name || 'Creator',
+                avatar: profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+                handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
+                role: 'creator',
+                isOnline: true,
+                isSubscribed: true,
+                subscriptionExpiresAt: parsed.expires_at,
+                subscriptionTier: parsed.tier_name || 'VIP Tier',
+                monthly_price: pAny?.monthly_price || 1000,
+              });
+            }
+          }
+        } else if (key && key.startsWith('tgd_chat_')) {
+          const parts = key.replace('tgd_chat_', '').split('_');
+          if (parts.length >= 2) {
+            const creatorId = parts[0];
+            const fanId = parts[1];
+            if (fanId === userId && !conversationsMap.has(creatorId)) {
+              const profile = await getCreatorProfile(creatorId);
+              const pAny = profile as any;
+              const sub = await checkUserSubscription(userId, creatorId);
+              conversationsMap.set(creatorId, {
+                id: creatorId,
+                name: profile?.name || 'Creator',
+                avatar: profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+                handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
+                role: 'creator',
+                isOnline: true,
+                isSubscribed: !!sub,
+                subscriptionExpiresAt: sub?.expires_at,
+                subscriptionTier: sub?.tier_name,
+                monthly_price: pAny?.monthly_price || 1000,
+              });
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 3. For each conversation, fetch the last message snippet
+  const list = Array.from(conversationsMap.values());
+  for (const c of list) {
+    const msgs = await getChatMessages(c.id, userId);
+    if (msgs.length > 0) {
+      const last = msgs[msgs.length - 1];
+      c.lastMessage = last.is_ppv ? '🔒 Locked Exclusive PPV' : last.content;
+      c.lastMessageTime = last.created_at;
+    } else {
+      c.lastMessage = c.isSubscribed ? 'Connected! Send your first message.' : 'Subscribe to start 1-on-1 chatting';
+    }
+  }
+
+  // 4. Default popular creators if the list is empty (so fan sees creators to subscribe & chat with)
+  if (list.length === 0) {
+    const defaults = [
+      { id: 'creator-amina', name: 'Amina K.', avatar: 'https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg', handle: '@aminak', price: 500 },
+      { id: 'creator-sarah', name: 'Sarah M.', avatar: 'https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg', handle: '@sarahm', price: 800 },
+      { id: 'creator-chef', name: 'Chef Kamau', avatar: 'https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg', handle: '@chefkamau', price: 1000 },
+    ];
+    for (const d of defaults) {
+      const sub = await checkUserSubscription(userId, d.id);
+      list.push({
+        id: d.id,
+        name: d.name,
+        avatar: d.avatar,
+        handle: d.handle,
+        role: 'creator',
+        isOnline: true,
+        isSubscribed: !!sub,
+        monthly_price: d.price,
+        lastMessage: sub ? 'Connected! Send a message' : 'Subscribe to start chatting',
+      });
+    }
+  }
+
+  return list;
+};
+
+/**
+ * Retrieves the list of fan/subscriber conversations for a creator.
+ */
+export const getCreatorChatConversations = async (creatorId: string): Promise<ChatParticipant[]> => {
+  const fansMap = new Map<string, ChatParticipant>();
+
+  // 1. Check subscriptions from Supabase
+  try {
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('fan_id, tier_name, status, created_at, expires_at')
+      .eq('creator_id', creatorId)
+      .eq('status', 'active');
+
+    if (subs) {
+      for (const s of subs) {
+        if (!fansMap.has(s.fan_id)) {
+          const userProfile = await getUserProfile(s.fan_id);
+          fansMap.set(s.fan_id, {
+            id: s.fan_id,
+            name: userProfile?.name || 'Fan',
+            avatar: userProfile?.avatar || `https://i.pravatar.cc/150?u=${s.fan_id}`,
+            role: 'subscriber',
+            isOnline: true,
+            isSubscribed: true,
+            subscriptionExpiresAt: s.expires_at,
+            subscriptionTier: s.tier_name || 'VIP Tier',
+          });
+        }
+      }
+    }
+  } catch {}
+
+  // 2. Check local subscribers and local chats
+  if (typeof window !== 'undefined') {
+    try {
+      const rawFans = localStorage.getItem(`tgd_fans_${creatorId}`);
+      if (rawFans) {
+        const fansList = JSON.parse(rawFans);
+        for (const f of fansList) {
+          if (!fansMap.has(f.id)) {
+            fansMap.set(f.id, {
+              id: f.id,
+              name: f.name || 'Fan',
+              avatar: f.avatar || `https://i.pravatar.cc/150?u=${f.id}`,
+              role: 'subscriber',
+              isOnline: true,
+              isSubscribed: true,
+              subscriptionTier: f.tier || 'VIP Tier',
+            });
+          }
+        }
+      }
+
+      // Check localStorage for chat keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`tgd_chat_${creatorId}_`)) {
+          const fanId = key.replace(`tgd_chat_${creatorId}_`, '');
+          if (!fansMap.has(fanId)) {
+            const userProfile = await getUserProfile(fanId);
+            const sub = await checkUserSubscription(fanId, creatorId);
+            fansMap.set(fanId, {
+              id: fanId,
+              name: userProfile?.name || 'Subscriber',
+              avatar: userProfile?.avatar || `https://i.pravatar.cc/150?u=${fanId}`,
+              role: 'subscriber',
+              isOnline: true,
+              isSubscribed: !!sub,
+              subscriptionTier: sub?.tier_name || 'Active Subscriber',
+            });
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Attach last message preview
+  const list = Array.from(fansMap.values());
+  for (const fan of list) {
+    const msgs = await getChatMessages(creatorId, fan.id);
+    if (msgs.length > 0) {
+      const last = msgs[msgs.length - 1];
+      fan.lastMessage = last.is_ppv ? 'Sent locked PPV media' : last.content;
+      fan.lastMessageTime = last.created_at;
+    } else {
+      fan.lastMessage = 'New subscriber joined your channel!';
+    }
+  }
+
+  // Default fans if creator is new (so inbox isn't completely empty before first live fan)
+  if (list.length === 0) {
+    list.push(
+      {
+        id: 'fan-alex-101',
+        name: 'Alex M.',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        role: 'subscriber',
+        isOnline: true,
+        isSubscribed: true,
+        subscriptionTier: 'VIP Tier',
+        lastMessage: 'Loved your latest post! Any custom videos coming?',
+      },
+      {
+        id: 'fan-kevin-102',
+        name: 'Kevin O.',
+        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
+        role: 'subscriber',
+        isOnline: false,
+        isSubscribed: true,
+        subscriptionTier: 'VIP Tier',
+        lastMessage: 'Thanks for the quick reply! 🔥',
+      }
+    );
+  }
+
+  return list;
+};
+
+// ========================
+// 12. PLATFORM ADS & CAMPAIGNS (ADMIN, USER & CREATOR)
+// ========================
+
+export interface PlatformAd {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  target_audience: 'all' | 'users' | 'creators';
+  category: 'luxury' | 'hospitality' | 'nightlife' | 'sponsorship' | 'brand_deal' | 'creator_perk' | 'lifestyle';
+  sponsor_name: string;
+  sponsor_logo?: string;
+  badge?: string;
+  perk_value?: string;
+  cta_text: string;
+  cta_url: string;
+  requirements?: string[];
+  status: 'active' | 'paused' | 'archived';
+  impressions: number;
+  clicks: number;
+  created_at: string;
+  expires_at?: string;
+  created_by?: string;
+}
+
+export interface AdApplication {
+  id: string;
+  ad_id: string;
+  creator_id: string;
+  creator_name: string;
+  creator_handle: string;
+  pitch: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+export const DEFAULT_PLATFORM_ADS: PlatformAd[] = [
+  {
+    id: 'ad-user-1',
+    title: 'VIP Nairobi Penthouse Lounge & Cigar Club',
+    description: 'Exclusive weekend tasting access and 20% privilege dining discount for Mali VIP members. Present your digital badge upon arrival.',
+    image_url: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80',
+    target_audience: 'users',
+    category: 'nightlife',
+    sponsor_name: 'The Onyx Club & Lounge',
+    badge: 'VIP Exclusive',
+    perk_value: '20% Privilege Discount',
+    cta_text: 'Claim Reservation Code',
+    cta_url: 'https://example.com/onyx-lounge',
+    status: 'active',
+    impressions: 485,
+    clicks: 74,
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(),
+  },
+  {
+    id: 'ad-user-2',
+    title: 'Diani Beach Private Luxury Villa Retreat',
+    description: 'Book 3 nights and receive complimentary helicopter transfer plus personal chef service. Exclusive platform partnership for registered patrons.',
+    image_url: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
+    target_audience: 'users',
+    category: 'luxury',
+    sponsor_name: 'Sultan Palace Escapes',
+    badge: 'Limited Privilege',
+    perk_value: 'Free Heli Transfer',
+    cta_text: 'Explore Private Villa',
+    cta_url: 'https://example.com/diani-villa',
+    status: 'active',
+    impressions: 612,
+    clicks: 118,
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45).toISOString(),
+  },
+  {
+    id: 'ad-all-3',
+    title: 'Moët & Chandon Imperial Reserve Gifting',
+    description: 'Order customized luxury champagne gift boxes delivered discreetly anywhere in Nairobi with handwritten wax-sealed letters.',
+    image_url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80',
+    target_audience: 'all',
+    category: 'lifestyle',
+    sponsor_name: 'Maison Luxe Spirits',
+    badge: 'Partner Special',
+    perk_value: 'Free Luxury Box & Courier',
+    cta_text: 'Order Discreet Gift',
+    cta_url: 'https://example.com/luxe-spirits',
+    status: 'active',
+    impressions: 340,
+    clicks: 52,
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 60).toISOString(),
+  },
+  {
+    id: 'ad-creator-1',
+    title: 'High-Fashion Lingerie & Silk Seasonal Campaign',
+    description: 'Selected creators receive complimentary seasonal luxury silk sets valued at KES 45,000 plus KES 35,000 upfront fee for 1 verified photo feature.',
+    image_url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
+    target_audience: 'creators',
+    category: 'brand_deal',
+    sponsor_name: 'Amore Silks Nairobi',
+    badge: 'Paid Sponsorship',
+    perk_value: 'KES 35,000 + Wardrobe',
+    requirements: ['1 High-res Feed Post', '2 24h Story Highlights', 'Tag @AmoreSilks'],
+    cta_text: 'Apply for Brand Deal',
+    cta_url: '#apply',
+    status: 'active',
+    impressions: 520,
+    clicks: 138,
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 20).toISOString(),
+  },
+  {
+    id: 'ad-creator-2',
+    title: 'Complimentary 4K Studio & Lighting Residency',
+    description: 'Free 4-hour bookings at Nairobi Westlands Creator Loft with Sony FX3 cinematic cameras, cinema lenses, pro strobe lighting, and makeup suite.',
+    image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+    target_audience: 'creators',
+    category: 'creator_perk',
+    sponsor_name: 'Westlands Media Studios',
+    badge: 'Creator Studio Perk',
+    perk_value: '100% Free Booking',
+    requirements: ['Verified Creator status on Mali', 'Advance 48h calendar booking'],
+    cta_text: 'Reserve Studio Slot',
+    cta_url: '#book-studio',
+    status: 'active',
+    impressions: 410,
+    clicks: 94,
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90).toISOString(),
+  },
+  {
+    id: 'ad-creator-3',
+    title: 'Luxury Yacht Content Shoot Weekend (Mombasa)',
+    description: 'All-expenses-paid 2-day catamaran cruise shoot along the Swahili coastline. Selected creators receive KES 75,000 honorarium and full royalty rights.',
+    image_url: 'https://images.unsplash.com/photo-1569263979104-865ab7cd8d17?auto=format&fit=crop&w=1200&q=80',
+    target_audience: 'creators',
+    category: 'sponsorship',
+    sponsor_name: 'Coastline Catamarans',
+    badge: 'High-Tier Deal',
+    perk_value: 'KES 75,000 Honorarium',
+    requirements: ['Active creator channel with VIP tier', 'Professional demeanor & portfolio link'],
+    cta_text: 'Submit Application',
+    cta_url: '#apply-yacht',
+    status: 'active',
+    impressions: 742,
+    clicks: 189,
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
+  }
+];
+
+const ADS_STORAGE_KEY = 'tgd_platform_ads';
+const AD_APPLICATIONS_KEY = 'tgd_ad_applications';
+
+export const getStoredAds = (): PlatformAd[] => {
+  if (typeof window === 'undefined') return DEFAULT_PLATFORM_ADS;
+  try {
+    const raw = localStorage.getItem(ADS_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(ADS_STORAGE_KEY, JSON.stringify(DEFAULT_PLATFORM_ADS));
+      return DEFAULT_PLATFORM_ADS;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_PLATFORM_ADS;
+  } catch {
+    return DEFAULT_PLATFORM_ADS;
+  }
+};
+
+export const saveStoredAds = (ads: PlatformAd[]): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ADS_STORAGE_KEY, JSON.stringify(ads));
+    window.dispatchEvent(new CustomEvent('tgd_ads_updated', { detail: { count: ads.length } }));
+  } catch (err) {
+    console.error('Failed to save ads locally:', err);
+  }
+};
+
+/**
+ * Fetch platform ads from Supabase with fallback to local store.
+ */
+export const getPlatformAds = async (
+  audience?: 'all' | 'users' | 'creators',
+  includeInactive = false
+): Promise<PlatformAd[]> => {
+  try {
+    let query = supabase.from('platform_ads').select('*').order('created_at', { ascending: false });
+    if (!includeInactive) {
+      query = query.eq('status', 'active');
+    }
+    const { data, error } = await query;
+    if (!error && data && data.length > 0) {
+      const merged = data as PlatformAd[];
+      if (audience && audience !== 'all') {
+        return merged.filter(ad => ad.target_audience === 'all' || ad.target_audience === audience);
+      }
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Supabase platform_ads query failed, using stored local ads:', err);
+  }
+
+  // Fallback to local store
+  const local = getStoredAds();
+  const filtered = includeInactive ? local : local.filter(a => a.status === 'active');
+  if (audience && audience !== 'all') {
+    return filtered.filter(ad => ad.target_audience === 'all' || ad.target_audience === audience);
+  }
+  return filtered;
+};
+
+/**
+ * Create a new platform ad by Admin
+ */
+export const createPlatformAd = async (
+  ad: Omit<PlatformAd, 'id' | 'impressions' | 'clicks' | 'created_at'>
+): Promise<PlatformAd> => {
+  const newAd: PlatformAd = {
+    ...ad,
+    id: `ad-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    impressions: 0,
+    clicks: 0,
+    created_at: new Date().toISOString(),
+  };
+
+  try {
+    await supabase.from('platform_ads').insert([newAd]);
+  } catch (err) {
+    console.warn('Supabase create ad failed, writing to local cache:', err);
+  }
+
+  const current = getStoredAds();
+  const updated = [newAd, ...current];
+  saveStoredAds(updated);
+  return newAd;
+};
+
+/**
+ * Update an existing ad (toggle status, edit text, etc.)
+ */
+export const updatePlatformAd = async (
+  id: string,
+  updates: Partial<PlatformAd>
+): Promise<PlatformAd | null> => {
+  try {
+    await supabase.from('platform_ads').update(updates).eq('id', id);
+  } catch (err) {
+    console.warn('Supabase update ad failed:', err);
+  }
+
+  const current = getStoredAds();
+  const index = current.findIndex(a => a.id === id);
+  if (index === -1) return null;
+
+  const updatedItem = { ...current[index], ...updates };
+  current[index] = updatedItem;
+  saveStoredAds([...current]);
+  return updatedItem;
+};
+
+/**
+ * Delete a platform ad
+ */
+export const deletePlatformAd = async (id: string): Promise<boolean> => {
+  try {
+    await supabase.from('platform_ads').delete().eq('id', id);
+  } catch (err) {
+    console.warn('Supabase delete ad failed:', err);
+  }
+
+  const current = getStoredAds();
+  const filtered = current.filter(a => a.id !== id);
+  saveStoredAds(filtered);
+  return true;
+};
+
+/**
+ * Track an impression for an ad
+ */
+export const trackAdImpression = async (id: string): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  const sessionKey = `tgd_ad_imp_${id}`;
+  if (sessionStorage.getItem(sessionKey)) return;
+  sessionStorage.setItem(sessionKey, '1');
+
+  try {
+    await supabase.rpc('increment_ad_impressions', { ad_id: id });
+  } catch {
+    // fallback increment in local cache
+  }
+
+  const current = getStoredAds();
+  const item = current.find(a => a.id === id);
+  if (item) {
+    item.impressions = (item.impressions || 0) + 1;
+    saveStoredAds([...current]);
+  }
+};
+
+/**
+ * Track a click on an ad
+ */
+export const trackAdClick = async (id: string): Promise<void> => {
+  try {
+    await supabase.rpc('increment_ad_clicks', { ad_id: id });
+  } catch {
+    // fallback increment in local cache
+  }
+
+  const current = getStoredAds();
+  const item = current.find(a => a.id === id);
+  if (item) {
+    item.clicks = (item.clicks || 0) + 1;
+    saveStoredAds([...current]);
+  }
+};
+
+/**
+ * Submit an application from a creator for a brand deal
+ */
+export const applyForCreatorBrandDeal = async (
+  adId: string,
+  creatorId: string,
+  creatorName: string,
+  creatorHandle: string,
+  pitch: string
+): Promise<AdApplication> => {
+  const application: AdApplication = {
+    id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    ad_id: adId,
+    creator_id: creatorId,
+    creator_name: creatorName,
+    creator_handle: creatorHandle,
+    pitch,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  };
+
+  try {
+    await supabase.from('ad_applications').insert([application]);
+  } catch (err) {
+    console.warn('Supabase ad application insert failed:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(AD_APPLICATIONS_KEY);
+      const list: AdApplication[] = raw ? JSON.parse(raw) : [];
+      list.unshift(application);
+      localStorage.setItem(AD_APPLICATIONS_KEY, JSON.stringify(list));
+      window.dispatchEvent(new CustomEvent('tgd_applications_updated', { detail: application }));
+    } catch {}
+  }
+
+  return application;
+};
+
+/**
+ * Get applications submitted by a creator
+ */
+export const getCreatorBrandDealApplications = async (
+  creatorId: string
+): Promise<AdApplication[]> => {
+  try {
+    const { data } = await supabase
+      .from('ad_applications')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .order('created_at', { ascending: false });
+    if (data && data.length > 0) return data as AdApplication[];
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(AD_APPLICATIONS_KEY);
+      if (raw) {
+        const list: AdApplication[] = JSON.parse(raw);
+        return list.filter(a => a.creator_id === creatorId);
+      }
+    } catch {}
+  }
+  return [];
 };

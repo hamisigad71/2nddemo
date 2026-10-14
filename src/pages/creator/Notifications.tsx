@@ -1,6 +1,17 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { DollarSign, MessageCircle, Heart, UserPlus, Bell, CheckCheck, Sparkles, ChevronRight, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { 
+  DollarSign, 
+  MessageCircle, 
+  Heart, 
+  UserPlus, 
+  Bell, 
+  CheckCheck, 
+  Film, 
+  ChevronRight, 
+  Loader2,
+  Inbox
+} from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, type NotificationItem } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
@@ -15,6 +26,7 @@ function formatTimeAgo(dateStr: string) {
     const diffHr = Math.floor(diffMin / 60);
     if (diffHr < 24) return `${diffHr}h ago`;
     const diffDays = Math.floor(diffHr / 24);
+    if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   } catch {
@@ -22,48 +34,54 @@ function formatTimeAgo(dateStr: string) {
   }
 }
 
-function getNotificationMeta(type: string) {
+function getNotificationMeta(type?: string) {
   switch (type) {
     case 'subscription':
       return {
         icon: UserPlus,
-        color: 'text-red-500',
-        bg: 'bg-red-500/10 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]',
+        color: 'text-rose-400',
+        bg: 'bg-rose-500/10 border-rose-500/20',
+        badgeBg: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
         category: 'Subscribers'
       };
     case 'tip':
       return {
         icon: DollarSign,
         color: 'text-emerald-400',
-        bg: 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]',
+        bg: 'bg-emerald-500/10 border-emerald-500/20',
+        badgeBg: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
         category: 'Tips'
       };
     case 'ppv':
       return {
-        icon: Sparkles,
+        icon: Film,
         color: 'text-purple-400',
-        bg: 'bg-purple-500/10 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]',
+        bg: 'bg-purple-500/10 border-purple-500/20',
+        badgeBg: 'bg-purple-500/10 text-purple-300 border-purple-500/20',
         category: 'PPV'
       };
     case 'comment':
       return {
         icon: MessageCircle,
         color: 'text-blue-400',
-        bg: 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]',
+        bg: 'bg-blue-500/10 border-blue-500/20',
+        badgeBg: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
         category: 'Comments'
       };
     case 'like':
       return {
         icon: Heart,
-        color: 'text-rose-500',
-        bg: 'bg-rose-500/10 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]',
+        color: 'text-rose-400',
+        bg: 'bg-rose-500/10 border-rose-500/20',
+        badgeBg: 'bg-rose-500/10 text-rose-300 border-rose-500/20',
         category: 'Likes'
       };
     default:
       return {
         icon: Bell,
         color: 'text-amber-400',
-        bg: 'bg-amber-500/10 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
+        bg: 'bg-amber-500/10 border-amber-500/20',
+        badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
         category: 'All'
       };
   }
@@ -82,7 +100,7 @@ const Notifications = () => {
     }
     try {
       const data = await getUserNotifications(user.id);
-      setNotifications(data);
+      setNotifications(data || []);
     } catch (err) {
       console.error('Error fetching notifications:', err);
     } finally {
@@ -123,133 +141,179 @@ const Notifications = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = useMemo(() => {
+    return notifications.filter(n => !n.is_read).length;
+  }, [notifications]);
 
-  const filteredNotifications = notifications.filter(item => {
-    if (activeFilter === 'All') return true;
-    const meta = getNotificationMeta(item.type);
-    return meta.category.toLowerCase() === activeFilter.toLowerCase();
-  });
+  // Tab counts
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      All: notifications.length,
+      Subscribers: 0,
+      Tips: 0,
+      PPV: 0,
+      Comments: 0,
+      Likes: 0,
+    };
+    notifications.forEach(item => {
+      const meta = getNotificationMeta(item.type);
+      if (counts[meta.category] !== undefined) {
+        counts[meta.category]++;
+      }
+    });
+    return counts;
+  }, [notifications]);
+
+  const filteredNotifications = useMemo(() => {
+    if (activeFilter === 'All') return notifications;
+    return notifications.filter(item => {
+      const meta = getNotificationMeta(item.type);
+      return meta.category.toLowerCase() === activeFilter.toLowerCase();
+    });
+  }, [notifications, activeFilter]);
 
   return (
     <CreatorLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-7 pb-12">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
+          <div className="space-y-1.5">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black tracking-tight text-white">Notifications</h1>
+              <div className="w-10 h-10 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white shadow-inner">
+                <Bell className="w-5 h-5 text-rose-500" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+                Notifications
+              </h1>
               {unreadCount > 0 ? (
-                <span className="bg-red-600/20 text-red-500 text-xs font-black px-2.5 py-1 rounded-full border border-red-500/30 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> {unreadCount} Unread
+                <span className="bg-rose-500/10 text-rose-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-rose-500/20 tabular-nums">
+                  {unreadCount} unread
                 </span>
               ) : (
-                <span className="bg-zinc-800/60 text-zinc-400 text-xs font-bold px-2.5 py-1 rounded-full border border-zinc-700/40">
+                <span className="bg-white/[0.04] text-zinc-400 text-xs font-medium px-2.5 py-0.5 rounded-full border border-white/[0.08]">
                   All caught up
                 </span>
               )}
             </div>
-            <p className="text-zinc-400 text-sm font-medium mt-1">
-              Stay up to date with real-time fan subscriptions, tips, and unlocks.
+            <p className="text-zinc-400 text-xs sm:text-sm font-normal max-w-xl leading-relaxed">
+              Stay up to date with real-time fan subscriptions, tips, comments, and PPV unlocks.
             </p>
           </div>
+
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="self-start sm:self-auto flex items-center gap-2 bg-[#0d0e12] hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold border border-zinc-800 transition-all shadow-sm cursor-pointer"
+              className="self-start sm:self-auto flex items-center gap-2 text-xs font-semibold text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95"
             >
-              <CheckCheck className="w-4 h-4 text-red-500" />
-              Mark all as read
+              <CheckCheck className="w-3.5 h-3.5 text-rose-500" />
+              <span>Mark all as read</span>
             </button>
           )}
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex items-center gap-1.5 p-1 bg-zinc-950/80 rounded-2xl border border-white/[0.08] backdrop-blur-md overflow-x-auto scrollbar-hide">
           {['All', 'Subscribers', 'Tips', 'PPV', 'Comments', 'Likes'].map((tab) => {
             const isActive = activeFilter === tab;
+            const count = tabCounts[tab] || 0;
             return (
               <button 
                 key={tab} 
                 onClick={() => setActiveFilter(tab)}
-                className={`px-5 py-2.5 rounded-full text-xs font-black tracking-wider uppercase whitespace-nowrap transition-all duration-200 border cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-2 ${
                   isActive 
-                    ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30' 
-                    : 'bg-[#0d0e12] text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    ? 'bg-white text-zinc-950 font-bold shadow-sm' 
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
                 }`}
               >
-                {tab}
+                <span>{tab}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold tabular-nums ${
+                    isActive ? 'bg-zinc-950/15 text-zinc-950' : 'bg-white/[0.06] text-zinc-400'
+                  }`}
+                >
+                  {count}
+                </span>
               </button>
             );
           })}
         </div>
 
-        {/* Notifications List */}
-        <div className="bg-[#0d0e12] border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl">
+        {/* Notifications Stream */}
+        <div className="space-y-3">
           {loading ? (
-            <div className="p-16 flex flex-col items-center justify-center text-zinc-500 gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-red-500" />
-              <p className="text-sm font-semibold">Loading notifications...</p>
+            <div className="p-16 flex flex-col items-center justify-center text-zinc-500 gap-3 bg-zinc-950/40 rounded-3xl border border-white/[0.06]">
+              <Loader2 className="w-6 h-6 animate-spin text-rose-500" />
+              <p className="text-xs font-medium text-zinc-400">Loading notifications...</p>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500">
-              <Bell className="w-12 h-12 mx-auto mb-3 text-zinc-700 opacity-50" />
-              <p className="font-bold text-sm">No notifications found in this category.</p>
-              <p className="text-xs text-zinc-600 mt-1">When fans interact with your profile, updates will appear here.</p>
+            <div className="p-16 text-center text-zinc-500 bg-zinc-950/30 rounded-3xl border border-white/[0.06] flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center mb-3 text-zinc-500">
+                <Inbox className="w-5 h-5" />
+              </div>
+              <p className="font-semibold text-sm text-zinc-300">No notifications in this category</p>
+              <p className="text-xs text-zinc-500 mt-1 max-w-xs">
+                When fans interact with your profile or tip you, updates will appear here.
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-zinc-800/60">
-              {filteredNotifications.map((item) => {
-                const meta = getNotificationMeta(item.type);
-                const IconComponent = meta.icon;
-                const isUnread = !item.is_read;
+            filteredNotifications.map((item) => {
+              const meta = getNotificationMeta(item.type);
+              const IconComponent = meta.icon;
+              const isUnread = !item.is_read;
 
-                return (
-                  <div 
-                    key={item.id} 
-                    onClick={() => handleClickItem(item)}
-                    className={`p-5 sm:p-6 flex items-start gap-4 transition-all duration-200 hover:bg-zinc-800/40 cursor-pointer group relative ${
-                      isUnread ? 'bg-red-950/15' : ''
-                    }`}
-                  >
-                    {/* Unread Accent Pill */}
-                    {isUnread && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600"></div>
-                    )}
-
-                    {/* Icon */}
-                    <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center border shadow-inner ${meta.bg} ${meta.color}`}>
-                      <IconComponent className="w-6 h-6" />
+              return (
+                <div 
+                  key={item.id} 
+                  onClick={() => handleClickItem(item)}
+                  className={`group relative p-4 sm:p-5 rounded-2xl transition-all duration-200 flex items-start gap-4 border cursor-pointer ${
+                    isUnread 
+                      ? 'bg-zinc-900/70 border-white/[0.1] hover:bg-zinc-900/90 shadow-lg shadow-black/30' 
+                      : 'bg-zinc-950/40 border-white/[0.04] hover:bg-zinc-900/40 opacity-80 hover:opacity-100'
+                  }`}
+                >
+                  {/* Subtle Unread Dot */}
+                  {isUnread && (
+                    <div className="absolute top-4 right-4 sm:top-5 sm:right-5 flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                      </span>
                     </div>
+                  )}
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2 truncate">
-                          <h3 className="font-black text-white text-base truncate group-hover:text-red-400 transition-colors">
-                            {item.title}
-                          </h3>
-                          {isUnread && (
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                          )}
-                        </div>
-                        <span className="text-xs font-bold text-zinc-500 whitespace-nowrap bg-[#0d0e12] px-2.5 py-1 rounded-lg border border-zinc-800">
-                          {formatTimeAgo(item.created_at)}
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300 transition-colors leading-relaxed">
-                        {item.message}
-                      </p>
-                    </div>
-
-                    {/* Arrow Icon on Hover */}
-                    <div className="shrink-0 text-zinc-600 group-hover:text-red-500 transition-colors self-center">
-                      <ChevronRight className="w-5 h-5" />
-                    </div>
+                  {/* Icon Container */}
+                  <div className={`shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center border shadow-inner transition-colors ${meta.bg} ${meta.color}`}>
+                    <IconComponent className="w-5 h-5" />
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pr-6 sm:pr-8 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-md border ${meta.badgeBg}`}>
+                        {meta.category}
+                      </span>
+                      <h3 className={`font-bold text-sm sm:text-base tracking-tight transition-colors ${
+                        isUnread ? 'text-white' : 'text-zinc-200'
+                      }`}>
+                        {item.title}
+                      </h3>
+                      <span className="text-xs text-zinc-500 font-normal tabular-nums ml-auto sm:ml-0">
+                        · {formatTimeAgo(item.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm font-normal text-zinc-400 group-hover:text-zinc-300 transition-colors leading-relaxed">
+                      {item.message}
+                    </p>
+                  </div>
+
+                  {/* Arrow Icon on Hover */}
+                  <div className="shrink-0 text-zinc-600 group-hover:text-zinc-300 group-hover:translate-x-0.5 transition-all self-center">
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>

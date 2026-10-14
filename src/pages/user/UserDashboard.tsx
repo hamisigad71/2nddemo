@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2 } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, DollarSign, CheckCircle2 } from 'lucide-react';
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
@@ -46,7 +46,6 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
   
   const creatorName = creator?.name || localProfile?.name || localProfile?.display_name || escort?.name || 'Creator';
   const avatarUrl = creator?.avatar || localProfile?.avatar || localProfile?.avatar_url || escort?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
-  const coverUrl = escort?.cover_image || localProfile?.cover_image || post.media_url || avatarUrl;
   const creatorHandle = escort ? `@${escort.name.replace(/\s+/g, '').toLowerCase()}` : `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`;
   const profileRoute = `/creator/${post.creator_id || escort?.id || 'escort-1'}`;
   const formatPostTime = (dateStr?: string) => {
@@ -119,36 +118,57 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
     <>
       <article className="bg-zinc-950 border border-white/[0.06] overflow-hidden shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300 hover:border-white/10 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
 
-        {/* Top Header */}
-        <div className="px-4 sm:px-5 py-3.5 flex items-center justify-between bg-zinc-950/90 border-b border-white/5">
-          <div
-            onClick={() => navigate(profileRoute)}
-            className="flex items-center gap-3 cursor-pointer group/header"
-          >
-            <div className="relative">
-              <img
-                src={avatarUrl}
-                alt={creatorName}
-                referrerPolicy="no-referrer"
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-red-500/50 ring-offset-2 ring-offset-zinc-950 group-hover/header:ring-red-500 transition-all"
-              />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-black" />
-            </div>
-            <div>
-              <div className="font-bold text-[14px] text-white leading-tight tracking-tight flex items-center gap-1 group-hover/header:text-red-400 transition-colors">
-                <span>{creatorName}</span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500" />
+        {/* Single creator header */}
+        <div
+          onClick={() => navigate(profileRoute)}
+          className="relative h-20 sm:h-24 w-full overflow-hidden cursor-pointer group/creator border-b border-white/10 bg-zinc-950 select-none"
+        >
+          <div className="relative z-10 h-full flex items-center justify-between gap-3 px-4 sm:px-5">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative shrink-0">
+                <img
+                  src={avatarUrl}
+                  alt={creatorName}
+                  referrerPolicy="no-referrer"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-zinc-600/80 shadow-2xl transition-all group-hover/creator:ring-zinc-400"
+                />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black" />
               </div>
-              <div className="text-[11px] text-zinc-400 mt-0.5">{timeAgo}</div>
+              <div className="min-w-0">
+                <div className="font-black text-sm sm:text-base text-white flex items-center gap-1 drop-shadow">
+                  <span className="truncate">{creatorName}</span>
+                  <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" />
+                </div>
+                <p className="text-[11px] sm:text-xs text-zinc-300 font-medium truncate">{creatorHandle}</p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">{timeAgo}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {!post.is_locked && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSubscribeOpen(true);
+                  }}
+                  className="inline-flex items-center text-[10px] sm:text-[11px] font-black text-white bg-red-600 hover:bg-red-500 border border-red-500/80 px-2.5 sm:px-3 py-1.5 rounded-full shadow-[0_2px_10px_rgba(220,38,38,0.4)] transition-all active:scale-95 cursor-pointer"
+                >
+                  Subscribe
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(profileRoute);
+                }}
+                className="p-1.5 text-zinc-300 hover:text-white transition-colors"
+                title="View profile"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
             </div>
           </div>
-          <button
-            onClick={() => navigate(profileRoute)}
-            className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors cursor-pointer"
-            title="Options"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Media */}
@@ -186,66 +206,9 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
           </div>
         )}
 
-        {/* ── Enticing Creator Mini-Profile Banner Card (OnlyFans Style) ── */}
-        <div
-          onClick={() => navigate(profileRoute)}
-          className="relative h-20 sm:h-24 w-full overflow-hidden cursor-pointer group/creator border-y border-white/10 select-none"
-        >
-          {/* Creator cover photo background */}
-          <img
-            src={coverUrl}
-            alt="Creator cover"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/creator:scale-105"
-          />
-          {/* Dark gradient overlay so avatar & text contrast beautifully */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-black/40 backdrop-blur-[0.5px]" />
-
-          {/* Banner items */}
-          <div className="relative z-10 h-full flex items-center justify-between px-4 sm:px-5">
-            <div className="flex items-center gap-3.5">
-              {/* Large circular avatar with online status badge */}
-              <div className="relative shrink-0">
-                <img
-                  src={avatarUrl}
-                  alt={creatorName}
-                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover ring-2 ring-white/30 shadow-2xl transition-all duration-300 group-hover/creator:ring-red-500 group-hover/creator:scale-105"
-                />
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
-              </div>
-
-              <div>
-                <div className="font-black text-base sm:text-lg text-white flex items-center gap-1.5 drop-shadow group-hover/creator:text-red-400 transition-colors">
-                  <span>{creatorName}</span>
-                  <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" />
-                </div>
-                <p className="text-xs sm:text-sm text-zinc-300 font-medium drop-shadow-sm">
-                  {creatorHandle}
-                </p>
-              </div>
-            </div>
-
-            {/* Right side: View profile pill button */}
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-white bg-black/60 border border-white/20 hover:border-red-500/60 px-3.5 py-1.5 rounded-full backdrop-blur-md shadow-md transition-all group-hover/creator:bg-red-600 group-hover/creator:border-red-600">
-                View Profile →
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(profileRoute);
-                }}
-                className="p-1.5 text-zinc-400 hover:text-white transition-colors"
-                title="Profile Options"
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* ── Actions Bar Matching OnlyFans Screenshot ── */}
         <div className="px-4 sm:px-5 py-3 flex items-center justify-between bg-zinc-950 border-b border-white/5">
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             {/* Heart / Like */}
             <button
               onClick={handleToggleLike}
@@ -268,22 +231,14 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
             {/* $ SEND TIP pill button */}
             <button
               onClick={() => setIsTipOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white border border-white/15 text-xs font-black tracking-wider uppercase transition-all hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white border border-white/15 text-xs font-black tracking-wider uppercase transition-all hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 cursor-pointer"
             >
-              <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-black">$</span>
+              <DollarSign className="w-4 h-4 text-emerald-400" />
               <span>SEND TIP</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
-            {!post.is_locked && (
-              <button
-                onClick={() => setIsSubscribeOpen(true)}
-                className="hidden sm:flex bg-red-600 hover:bg-red-500 text-white transition-all rounded-full px-4 py-1.5 font-black text-xs shadow-[0_2px_12px_rgba(220,38,38,0.35)] active:scale-95 tracking-wide items-center gap-1 cursor-pointer"
-              >
-                Subscribe
-              </button>
-            )}
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setIsSaved(!isSaved)}
               className={`p-1.5 rounded-full transition-all active:scale-90 cursor-pointer ${isSaved ? 'text-red-500' : 'text-zinc-400 hover:text-white'}`}

@@ -27,6 +27,9 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import AdminEscorts from "./pages/admin/AdminEscorts";
 import AdminHardcodedEscorts from "./pages/admin/AdminHardcodedEscorts";
+import AdminAds from "./pages/admin/AdminAds";
+import UserAds from "./pages/user/UserAds";
+import CreatorAds from "./pages/creator/CreatorAds";
 import Messages from "./pages/creator/Messages";
 import MediaVault from "./pages/creator/MediaVault";
 import EarningsWallet from "./pages/creator/EarningsWallet";
@@ -130,7 +133,11 @@ const AppRoutes = () => {
               <Route path="/user/wallet" element={<UserWallet />} />
               <Route path="/user/payments" element={<PaymentMethods />} />
               <Route path="/user/settings" element={<UserSettings />} />
+              <Route path="/creator/ads" element={<CreatorAds />} />
+              <Route path="/ads" element={<CreatorAds />} />
+              <Route path="/user/ads" element={<UserAds />} />
               <Route path="/admin" element={<AdminOverview />} />
+              <Route path="/admin/ads" element={<AdminAds />} />
               <Route path="/admin/creators" element={<AdminCreators />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/transactions" element={<AdminTransactions />} />

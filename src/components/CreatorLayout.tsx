@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
@@ -15,6 +15,7 @@ const navItems = [
   { name: 'Creator Playbook', path: '/guide', icon: BookOpen },
   { name: 'Analytics', path: '/analytics', icon: LineChart },
   { name: 'Messages', path: '/messages', icon: MessageCircle },
+  { name: 'Brand Deals & Ads', path: '/creator/ads', icon: Handshake },
   { name: 'Automations', path: '/automations', icon: Bot },
   { name: 'Vault', path: '/vault', icon: FolderHeart },
   { name: 'Scheduling', path: '/scheduling', icon: Calendar },

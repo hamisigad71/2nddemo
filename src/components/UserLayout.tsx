@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftClose, PanelLeftOpen, Megaphone } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -11,6 +11,7 @@ interface UserLayoutProps {
 
 const navItems = [
   { name: 'Feed', path: '/user', icon: Home, badge: 'Live' },
+  { name: 'VIP Perks & Deals', path: '/user/ads', icon: Megaphone, badge: 'New' },
   { name: 'Notifications', path: '/user/notifications', icon: Bell, badge: '3' },
   { name: 'Messages', path: '/user/messages', icon: MessageCircle },
   { name: 'Purchases', path: '/user/vault', icon: FolderHeart },
@@ -182,7 +183,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                   src={userAvatar} 
                   alt="avatar" 
                   referrerPolicy="no-referrer" 
-                  className="w-9 h-9 rounded-xl object-cover border border-white/20 shadow-md group-hover:border-primary/50 transition-colors" 
+                  className="w-9 h-9 rounded-full object-cover border border-white/20 shadow-md group-hover:border-primary/50 transition-colors" 
                 />
                 <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#0D0E12]" />
               </div>

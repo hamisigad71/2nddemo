@@ -61,6 +61,7 @@ export default function CreatorProfile() {
   const [subscribePrice, setSubscribePrice] = useState(1000);
   const [subscribeDuration, setSubscribeDuration] = useState(30);
   const [subscribeTierName, setSubscribeTierName] = useState("VIP Monthly");
+  const [redirectToChatAfterSub, setRedirectToChatAfterSub] = useState(false);
 
   // PPV Unlock
   const [selectedPPVItem, setSelectedPPVItem] = useState<PPVMediaItem | null>(
@@ -191,6 +192,32 @@ export default function CreatorProfile() {
   };
 
   const creatorPrice = creator.price_hr || 1000;
+
+  const handleMessageClick = () => {
+    if (!creator) return;
+
+    if (isSubscribed) {
+      navigate(`/user/messages?creator=${id}`);
+      return;
+    }
+
+    if (!user) {
+      toast.error(`Please sign in to subscribe and chat with ${creator.name}`);
+      navigate(`/login?redirect=/creator/${id}`);
+      return;
+    }
+
+    // Must subscribe before accessing chat (minimum KES 500)
+    const requiredPrice = Math.max(500, creatorPrice || 500);
+    setSubscribePrice(requiredPrice);
+    setSubscribeDuration(30);
+    setSubscribeTierName("VIP Chat & Channel Access");
+    setRedirectToChatAfterSub(true);
+    setIsSubscribeOpen(true);
+    toast.info(
+      `Subscribe to ${creator.name}'s channel (KES ${requiredPrice.toLocaleString()}) to unlock direct 1-on-1 private messaging.`,
+    );
+  };
 
   // Generate enriched media list matching Screenshot 2 (Videos & Photos with durations & PPV pricing)
   const defaultGallery =
@@ -362,7 +389,7 @@ export default function CreatorProfile() {
               <img
                 src={creator.avatar}
                 alt={creator.name}
-                className="w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 border-[#0A0A0C] object-cover bg-zinc-900 shadow-2xl ring-2 ring-red-500/40"
+                className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-[#0A0A0C] object-cover bg-zinc-900 shadow-2xl ring-2 ring-red-500/40"
               />
               <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0A0A0C] shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
             </div>
@@ -418,12 +445,27 @@ export default function CreatorProfile() {
             >
               <Sparkles className="w-4 h-4 text-amber-400" /> Send Tip
             </button>
-            <Link
-              to="/user/messages"
-              className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider"
+            <button
+              type="button"
+              onClick={handleMessageClick}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 border font-bold px-4 py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-95 ${
+                isSubscribed
+                  ? "bg-zinc-900 hover:bg-zinc-800 border-white/10 text-white"
+                  : "bg-zinc-900 hover:bg-zinc-800 border-red-500/40 hover:border-red-500 text-white shadow-sm"
+              }`}
             >
-              <MessageCircle className="w-4 h-4 text-zinc-400" /> Message
-            </Link>
+              {isSubscribed ? (
+                <>
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
+                  <span>Message</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-red-500" />
+                  <span>Message </span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -1010,6 +1052,10 @@ export default function CreatorProfile() {
             toast.success(
               `Welcome to ${creator.name}'s VIP Club! All content is now unlocked for ${sub.durationDays} days.`,
             );
+            if (redirectToChatAfterSub) {
+              setRedirectToChatAfterSub(false);
+              navigate(`/user/messages?creator=${id}`);
+            }
           }}
         />
 
