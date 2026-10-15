@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftOpen, Megaphone } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftOpen, Megaphone, Download } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getUserNotifications } from '../lib/db';
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -21,7 +22,7 @@ const navGroups = [
   {
     name: 'Your activity',
     items: [
-      { name: 'Notifications', path: '/user/notifications', icon: Bell, badge: '3' },
+      { name: 'Notifications', path: '/user/notifications', icon: Bell },
       { name: 'Messages', path: '/user/messages', icon: MessageCircle },
     ],
   },
@@ -45,7 +46,30 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      if (user?.id) {
+        try {
+          const notifs = await getUserNotifications(user.id);
+          const count = notifs.filter(n => !n.is_read).length;
+          setUnreadNotifications(count);
+        } catch {}
+      }
+    };
+
+    fetchUnread();
+
+    const handleUpdate = () => {
+      fetchUnread();
+    };
+
+    window.addEventListener('notifications_updated', handleUpdate);
+    return () => window.removeEventListener('notifications_updated', handleUpdate);
+  }, [user]);
 
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
@@ -129,15 +153,26 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         </div>
 
         {/* Global Search Box */}
-        <div className="relative mb-6 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70 group-focus-within:text-primary transition-colors" />
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchQuery.trim()) {
+              navigate(`/discover?search=${encodeURIComponent(searchQuery.trim())}`);
+            }
+          }}
+          className="relative mb-6 group"
+        >
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70 group-focus-within:text-primary transition-colors pointer-events-none" />
           <input 
             type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search creators..." 
             aria-label="Search creators"
-            className="w-full pl-9 pr-3 py-2.5 bg-[#19171B] border border-white/[0.09] rounded-lg text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-colors"
+            style={{ paddingLeft: '2.5rem' }}
+            className="w-full pl-10 pr-4 py-2.5 bg-[#19171B] border border-white/[0.09] rounded-xl text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-colors"
           />
-        </div>
+        </form>
 
         <nav aria-label="Member navigation" className="flex-1 space-y-5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1">
           {navGroups.map((group) => (
@@ -164,18 +199,24 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
                         <span className="truncate">{item.name}</span>
                       </span>
 
-                      {item.badge && (
-                        <span className={`ml-2 shrink-0 ${
-                          item.badge === '3'
-                            ? 'min-w-5 h-5 px-1 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-semibold'
-                            : item.badge === 'Upgrade'
-                              ? 'text-[9px] font-semibold text-primary/80'
-                              : 'text-[9px] font-medium text-emerald-400'
-                        }`}>
-                          {item.badge === 'Live' && <span className="inline-block w-1.5 h-1.5 mr-1 rounded-full bg-emerald-400 align-middle" />}
-                          {item.badge}
-                        </span>
-                      )}
+                      {(() => {
+                        const badge = item.name === 'Notifications' 
+                          ? (unreadNotifications > 0 ? (unreadNotifications > 99 ? '99+' : unreadNotifications.toString()) : undefined)
+                          : item.badge;
+                        if (!badge) return null;
+                        return (
+                          <span className={`ml-2 shrink-0 ${
+                            item.name === 'Notifications'
+                              ? 'min-w-5 h-5 px-1.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-[10px] font-bold'
+                              : badge === 'Upgrade'
+                                ? 'text-[9px] font-semibold text-primary/80'
+                                : 'text-[9px] font-medium text-emerald-400'
+                          }`}>
+                            {badge === 'Live' && <span className="inline-block w-1.5 h-1.5 mr-1 rounded-full bg-emerald-400 align-middle" />}
+                            {badge}
+                          </span>
+                        );
+                      })()}
                     </Link>
                   );
                 })}
@@ -187,6 +228,22 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         {/* User Card & Settings */}
         <div className="pt-3 border-t border-white/[0.09] mt-3 shrink-0 space-y-2">
           
+          {/* Install Mobile App Shortcut */}
+          <button 
+            type="button"
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              window.dispatchEvent(new CustomEvent('open_pwa_install_prompt'));
+            }} 
+            className="flex items-center justify-between px-3 py-2 rounded-xl transition-all text-xs font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 w-full active:scale-95 group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Download className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
+              <span>Install Mobile App</span>
+            </div>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-200 font-bold">1-Tap</span>
+          </button>
+
           {/* User Profile Pill */}
           <div className="p-2 rounded-xl bg-white/[0.035] border border-white/[0.08] flex items-center justify-between group hover:bg-white/[0.06] transition-colors">
             <Link to="/user/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 min-w-0 flex-1">

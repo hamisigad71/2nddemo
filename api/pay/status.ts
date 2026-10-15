@@ -1,10 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const DEFAULT_PAYHERO_KEY = 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==';
+const PAYMENT_API_KEY = process.env.PAYMENT_API_KEY || process.env.PAYHERO_API_KEY || '';
+const PAYMENT_GATEWAY_URL = (process.env.PAYMENT_GATEWAY_URL || 'https://backend.payhero.co.ke/api/v2').replace(/\/+$/, '');
 
-const PAYHERO_API_KEY = process.env.PAYHERO_API_KEY || process.env.VITE_PAYHERO_API_KEY || DEFAULT_PAYHERO_KEY;
-
-const normalizePayHeroAuth = (key: string): string => {
+const normalizeAuth = (key: string): string => {
   const trimmed = key.trim();
   if (!trimmed) return '';
   return trimmed.startsWith('Basic ') ? trimmed : `Basic ${trimmed}`;
@@ -30,16 +29,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ success: false, error: 'ref query parameter is required' });
   }
 
-  if (!PAYHERO_API_KEY) {
-    return res.status(500).json({ success: false, error: 'PayHero API key is missing. Set PAYHERO_API_KEY in your server environment.' });
+  if (!PAYMENT_API_KEY) {
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Payment service configuration missing. Set PAYMENT_API_KEY in your server environment.' 
+    });
   }
 
   try {
     const response = await fetch(
-      `https://backend.payhero.co.ke/api/v2/transaction-status?reference=${encodeURIComponent(ref)}`,
+      `${PAYMENT_GATEWAY_URL}/transaction-status?reference=${encodeURIComponent(ref)}`,
       {
         headers: {
-          Authorization: normalizePayHeroAuth(PAYHERO_API_KEY),
+          Authorization: normalizeAuth(PAYMENT_API_KEY),
         },
       }
     );
@@ -70,9 +72,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       paid,
       pending: !paid && !failed,
       failed,
-      status, // SUCCESS | QUEUED | PENDING | FAILED | CANCELLED
+      status,
+      raw: data,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message || 'Internal server error' });
+    console.error('Payment status check error:', err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message || 'Error checking payment status',
+    });
   }
 }

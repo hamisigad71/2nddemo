@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Lock, CheckCircle2, Phone, Crown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUserProfile, processPayment } from '../lib/db';
-import { initiatePayHeroSTK, checkPayHeroStatus } from '../lib/payhero';
+import { initiateSTKPush, checkPaymentStatus } from '../lib/payments';
 import { toast } from '../context/ToastContext';
 
 export interface PPVMediaItem {
@@ -73,7 +73,7 @@ export default function PPVUnlockModal({
       setStatusMsg(`Verifying payment... (${count}/12)`);
 
       try {
-        const status = await checkPayHeroStatus(checkoutRequestId);
+        const status = await checkPaymentStatus(checkoutRequestId);
         if (status.paid) {
           clearInterval(pollRef.current!);
           if (!user) {
@@ -129,7 +129,7 @@ export default function PPVUnlockModal({
     setPollCount(0);
 
     try {
-      const res = await initiatePayHeroSTK({
+      const res = await initiateSTKPush({
         amount: mediaItem.price,
         phone_number: phone,
         customer_name: user?.user_metadata?.name || user?.email || 'Customer',

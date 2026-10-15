@@ -83,8 +83,8 @@ export default function SubscribeModal({
       setStatusMsg(`Checking payment... (${count}/12)`);
 
       try {
-        const { checkPayHeroStatus } = await import('../lib/payhero');
-        const status = await checkPayHeroStatus(checkoutRequestId);
+        const { checkPaymentStatus } = await import('../lib/payments');
+        const status = await checkPaymentStatus(checkoutRequestId);
 
         if (status.paid) {
           clearInterval(pollRef.current!);
@@ -104,7 +104,7 @@ export default function SubscribeModal({
           return;
         }
       } catch (err) {
-        console.warn('PayHero polling check error:', err);
+        console.warn('Payment polling check error:', err);
       }
 
       // Give up after 12 polls (~60 seconds)
@@ -132,7 +132,7 @@ export default function SubscribeModal({
     setStep('method');
   };
 
-  // ── PayHero STK Push ──────────────────────────────────────────
+  // ── M-Pesa STK Push ──────────────────────────────────────────
   const handleDarajaSTK = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!price || !user) return;
@@ -142,24 +142,24 @@ export default function SubscribeModal({
     setPollCount(0);
 
     try {
-      const { initiatePayHeroSTK } = await import('../lib/payhero');
-      const payheroResult = await initiatePayHeroSTK({
+      const { initiateSTKPush } = await import('../lib/payments');
+      const paymentResult = await initiateSTKPush({
         amount: price,
         phone_number: phone,
         customer_name: user.user_metadata?.name || user.email || 'Subscriber',
         external_reference: `SUB-${Date.now()}`
       });
 
-      if (payheroResult.success && (payheroResult.reference || payheroResult.CheckoutRequestID)) {
-        setCheckoutRequestId(payheroResult.reference || payheroResult.CheckoutRequestID || 'payhero-ref');
+      if (paymentResult.success && (paymentResult.reference || paymentResult.CheckoutRequestID)) {
+        setCheckoutRequestId(paymentResult.reference || paymentResult.CheckoutRequestID || 'pay-ref');
         setStatusMsg('Enter your M-Pesa PIN on your phone...');
         return;
       }
 
-      setErrorMessage(payheroResult.error || 'Failed to send STK prompt. Please check your phone number and try again.');
+      setErrorMessage(paymentResult.error || 'Failed to send STK prompt. Please check your phone number and try again.');
       setStep('failed');
     } catch (e: any) {
-      console.error('PayHero initiation error:', e);
+      console.error('Payment initiation error:', e);
       setErrorMessage(e?.message || 'Failed to send STK prompt. Try again.');
       setStep('failed');
     }

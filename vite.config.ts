@@ -1,18 +1,19 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 
-function payHeroDevPlugin(): Plugin {
+function paymentDevPlugin(): Plugin {
   return {
-    name: 'payhero-dev-middleware',
+    name: 'payment-dev-middleware',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const rawUrl = req.url || '';
         const url = new URL(rawUrl, 'http://localhost');
 
         const env = loadEnv(server.config.mode, process.cwd(), '');
-        const apiKey = (env.PAYHERO_API_KEY || '').trim();
+        const apiKey = (env.PAYMENT_API_KEY || env.PAYHERO_API_KEY || '').trim();
         const authHeader = apiKey ? (apiKey.startsWith('Basic ') ? apiKey : `Basic ${apiKey}`) : '';
-        const channelId = Number(env.PAYHERO_CHANNEL_ID || env.VITE_PAYHERO_CHANNEL_ID);
+        const channelId = Number(env.PAYMENT_CHANNEL_ID || env.PAYHERO_CHANNEL_ID || env.VITE_PAYHERO_CHANNEL_ID);
+        const gatewayUrl = (env.PAYMENT_GATEWAY_URL || env.PAYHERO_GATEWAY_URL || 'https://backend.payhero.co.ke/api/v2').replace(/\/+$/, '');
 
         // 1. POST /api/pay
         if (url.pathname === '/api/pay' && req.method === 'POST') {
@@ -35,7 +36,7 @@ function payHeroDevPlugin(): Plugin {
               if (!authHeader) {
                 res.statusCode = 500;
                 res.setHeader('Content-Type', 'application/json');
-                return res.end(JSON.stringify({ success: false, error: 'PayHero API key missing in .env (PAYHERO_API_KEY)' }));
+                return res.end(JSON.stringify({ success: false, error: 'Payment API key missing in environment' }));
               }
 
               let formattedPhone = String(phone).replace(/\D/g, '');
@@ -48,9 +49,9 @@ function payHeroDevPlugin(): Plugin {
               }
 
               const externalRef = reference || `PAY-${Date.now()}`;
-              const callbackUrl = env.PAYHERO_CALLBACK_URL || 'https://backend.payhero.co.ke/api/v2/webhook-callback/';
+              const callbackUrl = env.PAYMENT_CALLBACK_URL || env.PAYHERO_CALLBACK_URL || `${gatewayUrl}/webhook-callback/`;
 
-              const payResponse = await fetch('https://backend.payhero.co.ke/api/v2/payments', {
+              const payResponse = await fetch(`${gatewayUrl}/payments`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -81,20 +82,25 @@ function payHeroDevPlugin(): Plugin {
                 return res.end(
                   JSON.stringify({
                     success: false,
-                    error: data?.message || data?.error || data?.detail || 'Payment initiation failed',
+                    error: data?.message || data?.error || data?.detail || 'Failed to initiate payment',
+                    reference: externalRef,
                   })
                 );
               }
+
+              const assignedRef = data?.reference || data?.external_reference || externalRef;
+              const checkoutRequestId = data?.CheckoutRequestID || data?.checkout_request_id || assignedRef;
+              const status = (data?.status || 'QUEUED').toUpperCase();
 
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
               return res.end(
                 JSON.stringify({
                   success: true,
-                  reference: data?.reference || data?.external_reference || externalRef,
-                  CheckoutRequestID: data?.CheckoutRequestID,
-                  status: data?.status,
-                  message: 'STK push sent. Customer should enter M-Pesa PIN.',
+                  reference: assignedRef,
+                  CheckoutRequestID: checkoutRequestId,
+                  status,
+                  message: data?.message || 'Payment prompt sent successfully',
                 })
               );
             } catch (err: any) {
@@ -106,7 +112,7 @@ function payHeroDevPlugin(): Plugin {
           return;
         }
 
-        // 2. GET /api/pay/status
+        // 2. GET /api/pay/status?ref=...
         if (url.pathname === '/api/pay/status' && req.method === 'GET') {
           const ref = url.searchParams.get('ref');
           if (!ref) {
@@ -118,12 +124,12 @@ function payHeroDevPlugin(): Plugin {
           if (!authHeader) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
-            return res.end(JSON.stringify({ success: false, error: 'PayHero API key missing in .env (PAYHERO_API_KEY)' }));
+            return res.end(JSON.stringify({ success: false, error: 'Payment API key missing in environment' }));
           }
 
           try {
             const statusResponse = await fetch(
-              `https://backend.payhero.co.ke/api/v2/transaction-status?reference=${encodeURIComponent(ref)}`,
+              `${gatewayUrl}/transaction-status?reference=${encodeURIComponent(ref)}`,
               {
                 headers: { Authorization: authHeader },
               }
@@ -179,37 +185,5 @@ function payHeroDevPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), payHeroDevPlugin()],
-  server: {
-    proxy: {
-      '/pesapal-api': {
-        target: 'https://pay.pesapal.com/v3',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/pesapal-api/, ''),
-      },
-      '/pesapal-sandbox': {
-        target: 'https://cyb3rpay.pesapal.com/pesapalv3',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/pesapal-sandbox/, ''),
-      },
-      '/daraja': {
-        target: 'https://sandbox.safaricom.co.ke',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/daraja/, ''),
-        secure: true,
-      },
-      '/payhero': {
-        target: 'https://backend.payhero.co.ke',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/payhero/, ''),
-        secure: true,
-        configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq) => {
-            // Ensure host header is correct for PayHero
-            proxyReq.setHeader('host', 'backend.payhero.co.ke');
-          });
-        },
-      },
-    },
-  },
+  plugins: [react(), paymentDevPlugin()],
 })

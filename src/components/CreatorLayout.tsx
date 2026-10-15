@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
@@ -201,6 +201,22 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                <LogOut className="w-4.5 h-4.5" />
              </button>
            </div>
+
+           {/* Install Mobile App Shortcut */}
+           <button 
+             type="button"
+             onClick={() => {
+               setIsMobileMenuOpen(false);
+               window.dispatchEvent(new CustomEvent('open_pwa_install_prompt'));
+             }} 
+             className="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 w-full active:scale-95 group mb-2"
+           >
+             <div className="flex items-center gap-2.5">
+               <Download className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+               <span>Install Creator App</span>
+             </div>
+             <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-200 font-bold">1-Tap</span>
+           </button>
            
            <button 
               onClick={toggleTheme} 

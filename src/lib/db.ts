@@ -62,6 +62,11 @@ export const createUserProfile = async (uid: string, data: any) => {
     } catch {
       // non-fatal
     }
+
+    // Trigger notification to subscribers that a new creator signed up
+    notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
+      console.warn('Could not dispatch new creator notification:', err);
+    });
   }
 };
 
@@ -285,6 +290,13 @@ export const createPost = async (
   // 3. Dispatch real-time event so open feeds update immediately
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('posts_updated', { detail: { post: postObj } }));
+  }
+
+  // 4. Notify active subscribers that this creator uploaded new content
+  if (status === 'published') {
+    notifySubscribersOfNewContent(creatorId, creatorName, creatorAvatar, postObj).catch(err => {
+      console.warn('Could not dispatch subscriber post notifications:', err);
+    });
   }
 
   return postObj;
@@ -1433,8 +1445,12 @@ export interface NotificationItem {
   user_id: string;
   title: string;
   message: string;
-  type: 'subscription' | 'tip' | 'ppv' | 'comment' | 'like' | 'system' | 'warning';
+  type: 'subscription' | 'tip' | 'ppv' | 'comment' | 'like' | 'system' | 'warning' | 'creator';
   link?: string;
+  avatar?: string;
+  badge?: string;
+  action_label?: string;
+  action_url?: string;
   is_read: boolean;
   created_at: string;
 }
@@ -1444,8 +1460,12 @@ export const createNotification = async (
   notification: {
     title: string;
     message: string;
-    type?: 'subscription' | 'tip' | 'ppv' | 'comment' | 'like' | 'system' | 'warning';
+    type?: 'subscription' | 'tip' | 'ppv' | 'comment' | 'like' | 'system' | 'warning' | 'creator';
     link?: string;
+    avatar?: string;
+    badge?: string;
+    action_label?: string;
+    action_url?: string;
   }
 ): Promise<NotificationItem> => {
   const newNotif: NotificationItem = {
@@ -1454,7 +1474,11 @@ export const createNotification = async (
     title: notification.title,
     message: notification.message,
     type: notification.type || 'subscription',
-    link: notification.link || '',
+    link: notification.link || notification.action_url || '',
+    avatar: notification.avatar,
+    badge: notification.badge,
+    action_label: notification.action_label,
+    action_url: notification.action_url || notification.link,
     is_read: false,
     created_at: new Date().toISOString()
   };
@@ -1489,6 +1513,178 @@ export const createNotification = async (
   return newNotif;
 };
 
+export const notifySubscribersOfNewContent = async (
+  creatorId: string,
+  creatorName: string,
+  creatorAvatar: string | null | undefined,
+  post: any
+) => {
+  const subscriberIds = new Set<string>();
+
+  // 1. Fetch active subscribers from Supabase
+  try {
+    const { data: subs, error } = await supabase
+      .from('subscriptions')
+      .select('fan_id')
+      .eq('creator_id', creatorId)
+      .eq('status', 'active');
+
+    if (!error && subs) {
+      subs.forEach((s: any) => {
+        if (s.fan_id && s.fan_id !== creatorId) {
+          subscriberIds.add(s.fan_id);
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Error fetching Supabase subscribers for post notification:', err);
+  }
+
+  // 2. Fetch active subscribers from LocalStorage
+  if (typeof window !== 'undefined') {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('tgd_sub_') && key.endsWith(`_${creatorId}`)) {
+          const item = JSON.parse(localStorage.getItem(key) || '{}');
+          if (item?.fan_id && item.status === 'active' && item.fan_id !== creatorId) {
+            subscriberIds.add(item.fan_id);
+          }
+        }
+      }
+
+      // Check creator fans list
+      const rawFans = localStorage.getItem(`tgd_fans_${creatorId}`);
+      if (rawFans) {
+        const fans = JSON.parse(rawFans);
+        if (Array.isArray(fans)) {
+          fans.forEach((f: any) => {
+            if (f.id && f.id !== creatorId) subscriberIds.add(f.id);
+          });
+        }
+      }
+
+      // Check current session fan if they are subscribed to this creator
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('auth-token'))) {
+          const session = JSON.parse(localStorage.getItem(key) || '{}');
+          const uid = session?.user?.id;
+          if (uid && uid !== creatorId) {
+            const userSub = localStorage.getItem(`tgd_sub_${uid}_${creatorId}`);
+            if (userSub) {
+              const parsed = JSON.parse(userSub);
+              if (parsed.status === 'active') subscriberIds.add(uid);
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  if (subscriberIds.size === 0) return;
+
+  const isVideo = post.media_type === 'video';
+  const isPpv = post.is_locked || post.visibility === 'ppv';
+  const contentSnippet = post.content ? post.content.trim() : '';
+  const truncatedSnippet = contentSnippet.length > 70 ? `${contentSnippet.slice(0, 70)}...` : contentSnippet;
+
+  const title = `${creatorName} uploaded new ${isVideo ? 'video' : 'media'}! ${isPpv ? '🔒' : '📸'}`;
+  const message = truncatedSnippet 
+    ? `"${truncatedSnippet}"` 
+    : `Check out the latest ${isPpv ? 'exclusive PPV' : 'media'} update from ${creatorName}!`;
+
+  for (const fanId of subscriberIds) {
+    try {
+      await createNotification(fanId, {
+        title,
+        message,
+        type: 'creator',
+        link: '/user',
+        action_label: 'View Post',
+        action_url: '/user',
+        avatar: creatorAvatar || undefined,
+        badge: isPpv ? 'PPV Drop' : 'New Post'
+      });
+    } catch (err) {
+      console.warn(`Failed to notify subscriber ${fanId}:`, err);
+    }
+  }
+};
+
+export const notifySubscribersOfNewCreator = async (
+  creatorId: string,
+  creatorName: string,
+  creatorAvatar?: string | null
+) => {
+  const fanIds = new Set<string>();
+
+  // 1. Fetch all subscriber users from Supabase
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('uid, role')
+      .neq('uid', creatorId);
+
+    if (!error && users) {
+      users.forEach((u: any) => {
+        if (u.uid && (u.role === 'subscriber' || !u.role)) {
+          fanIds.add(u.uid);
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Error fetching users for new creator notification:', err);
+  }
+
+  // 2. Discover local subscribers/fans from LocalStorage
+  if (typeof window !== 'undefined') {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('tgd_notifications_')) {
+          const uid = key.replace('tgd_notifications_', '');
+          if (uid && uid !== creatorId) {
+            fanIds.add(uid);
+          }
+        }
+      }
+
+      // Also check current logged-in user if different from the new creator
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('auth-token'))) {
+          const session = JSON.parse(localStorage.getItem(key) || '{}');
+          const uid = session?.user?.id;
+          if (uid && uid !== creatorId) {
+            fanIds.add(uid);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const title = `New Creator Joined: ${creatorName}! ✨`;
+  const message = `${creatorName} has just joined The Gents DollHouse. Discover their profile, explore exclusive media, and subscribe!`;
+
+  for (const fanId of fanIds) {
+    try {
+      await createNotification(fanId, {
+        title,
+        message,
+        type: 'creator',
+        link: `/creator/${creatorId}`,
+        action_label: 'View Profile',
+        action_url: `/creator/${creatorId}`,
+        avatar: creatorAvatar || undefined,
+        badge: 'New Creator'
+      });
+    } catch (err) {
+      console.warn(`Failed to notify fan ${fanId} of new creator:`, err);
+    }
+  }
+};
+
 export const sendAdminMessage = async (creatorId: string, message: string) => {
   return createNotification(creatorId, {
     title: 'Admin Moderation',
@@ -1514,6 +1710,10 @@ export const getUserNotifications = async (userId: string): Promise<Notification
         message: d.message,
         type: d.type || 'system',
         link: d.link || '',
+        avatar: d.avatar,
+        badge: d.badge,
+        action_label: d.action_label,
+        action_url: d.action_url,
         is_read: !!d.is_read,
         created_at: d.created_at || new Date().toISOString()
       }));
@@ -2148,7 +2348,7 @@ export const DEFAULT_PLATFORM_ADS: PlatformAd[] = [
   {
     id: 'ad-user-1',
     title: 'VIP Nairobi Penthouse Lounge & Cigar Club',
-    description: 'Exclusive weekend tasting access and 20% privilege dining discount for Mali VIP members. Present your digital badge upon arrival.',
+    description: 'Exclusive weekend tasting access and 20% privilege dining discount for The Gents DollHouse VIP members. Present your digital badge upon arrival.',
     image_url: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80',
     target_audience: 'users',
     category: 'nightlife',
@@ -2228,7 +2428,7 @@ export const DEFAULT_PLATFORM_ADS: PlatformAd[] = [
     sponsor_name: 'Westlands Media Studios',
     badge: 'Creator Studio Perk',
     perk_value: '100% Free Booking',
-    requirements: ['Verified Creator status on Mali', 'Advance 48h calendar booking'],
+    requirements: ['Verified Creator status on The Gents DollHouse', 'Advance 48h calendar booking'],
     cta_text: 'Reserve Studio Slot',
     cta_url: '#book-studio',
     status: 'active',

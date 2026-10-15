@@ -19,12 +19,28 @@
   <meta name="twitter:title" content="The Gents Dollhouse · Creator Platform" />
   <meta name="twitter:description"
     content="The premium subscription platform for African creators. Monetize your audience directly through M-Pesa." />
-  <meta name="twitter:image" content="/logo.svg" />
+  <!-- PWA Manifest & App Capability -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#E11D48" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Gents Dollhouse" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+          console.warn('Service worker registration note:', err);
+        });
+      });
+    }
+  </script>
 </body>
 
 </html>

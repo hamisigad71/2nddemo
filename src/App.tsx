@@ -53,6 +53,8 @@ import PaymentMethods from "./pages/user/PaymentMethods";
 import UserSettings from "./pages/user/UserSettings";
 import EscortsPage from "./pages/user/EscortsPage";
 import UserWallet from "./pages/user/UserWallet";
+import InstallAppPrompt from "./components/InstallAppPrompt";
+import CreatorSupportChat from "./components/CreatorSupportChat";
 
 const AppRoutes = () => {
   /* LOADER TEMPORARILY DISABLED - UNCOMMENT TO RESTORE
@@ -96,6 +98,8 @@ const AppRoutes = () => {
       )}
       */}
       <div className="min-h-screen bg-background text-foreground font-sans">
+        <InstallAppPrompt />
+        <CreatorSupportChat />
         <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/discover" element={<Discover />} />

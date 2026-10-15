@@ -87,7 +87,7 @@ const UserAds: React.FC = () => {
   const generateVoucherCode = (sponsor: string, id: string) => {
     const cleanSponsor = sponsor.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase();
     const suffix = id.slice(-4).toUpperCase();
-    return `MALI-${cleanSponsor}-${suffix}`;
+    return `TGD-${cleanSponsor}-${suffix}`;
   };
 
   return (
@@ -105,7 +105,7 @@ const UserAds: React.FC = () => {
               VIP Perks & Privileges
             </h1>
             <p className="text-sm text-zinc-400 font-medium mt-1.5 max-w-xl leading-relaxed">
-              Exclusive sponsor hospitality, private table reservations, and luxury retreats reserved exclusively for Mali members.
+              Exclusive sponsor hospitality, private table reservations, and luxury retreats reserved exclusively for The Gents DollHouse members.
             </p>
           </div>
 

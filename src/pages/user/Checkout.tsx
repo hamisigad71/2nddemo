@@ -26,8 +26,8 @@ const Checkout = () => {
     
     const checkStatus = async () => {
        try {
-         const { checkPayHeroStatus } = await import('../../lib/payhero');
-         const res = await checkPayHeroStatus(checkoutId);
+         const { checkPaymentStatus } = await import('../../lib/payments');
+         const res = await checkPaymentStatus(checkoutId);
          if (res.paid) {
            setStatus('success');
            return;
@@ -60,9 +60,9 @@ const Checkout = () => {
     const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
 
     try {
-      // 1. Invoke PayHero STK Push
-      const { initiatePayHeroSTK } = await import('../../lib/payhero');
-      const res = await initiatePayHeroSTK({
+      // 1. Invoke M-Pesa STK Push
+      const { initiateSTKPush } = await import('../../lib/payments');
+      const res = await initiateSTKPush({
         amount,
         phone_number: phone,
         customer_name: user.user_metadata?.name || user.email || 'Subscriber',

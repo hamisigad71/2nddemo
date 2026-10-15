@@ -1,21 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const DEFAULT_PAYHERO_KEY = 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==';
-const DEFAULT_PAYHERO_CHANNEL = '13942';
-
-const PAYHERO_API_KEY = process.env.PAYHERO_API_KEY || process.env.VITE_PAYHERO_API_KEY || DEFAULT_PAYHERO_KEY;
-const PAYHERO_CHANNEL_ID = process.env.PAYHERO_CHANNEL_ID || process.env.VITE_PAYHERO_CHANNEL_ID || DEFAULT_PAYHERO_CHANNEL;
-const PAYHERO_CALLBACK_URL = process.env.PAYHERO_CALLBACK_URL || '';
+const PAYMENT_API_KEY = process.env.PAYMENT_API_KEY || process.env.PAYHERO_API_KEY || '';
+const PAYMENT_CHANNEL_ID = process.env.PAYMENT_CHANNEL_ID || process.env.PAYHERO_CHANNEL_ID || '';
+const PAYMENT_GATEWAY_URL = (process.env.PAYMENT_GATEWAY_URL || 'https://backend.payhero.co.ke/api/v2').replace(/\/+$/, '');
+const PAYMENT_CALLBACK_URL = process.env.PAYMENT_CALLBACK_URL || process.env.PAYHERO_CALLBACK_URL || '';
 const VERCEL_URL = process.env.VERCEL_URL || '';
 
-const normalizePayHeroAuth = (key: string): string => {
+const normalizeAuth = (key: string): string => {
   const trimmed = key.trim();
   if (!trimmed) return '';
   return trimmed.startsWith('Basic ') ? trimmed : `Basic ${trimmed}`;
 };
 
-const resolvePayHeroCallbackUrl = (): string => {
-  const configured = PAYHERO_CALLBACK_URL || (VERCEL_URL ? `https://${VERCEL_URL}/api/pay/callback` : '');
+const resolveCallbackUrl = (): string => {
+  const configured = PAYMENT_CALLBACK_URL || (VERCEL_URL ? `https://${VERCEL_URL}/api/pay/callback` : '');
   if (configured) {
     try {
       const url = new URL(configured);
@@ -27,8 +25,7 @@ const resolvePayHeroCallbackUrl = (): string => {
     }
   }
 
-  // Fallback to standard PayHero webhook endpoint when testing or if custom callback is unset
-  return 'https://backend.payhero.co.ke/api/v2/webhook-callback/';
+  return `${PAYMENT_GATEWAY_URL}/webhook-callback/`;
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -50,16 +47,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const numericAmount = Number(amount);
   if (!Number.isSafeInteger(numericAmount) || numericAmount < 1 || !phone) {
-    return res.status(400).json({ success: false, error: 'amount and phone are required' });
+    return res.status(400).json({ success: false, error: 'Valid amount and phone number are required' });
   }
 
-  if (!PAYHERO_API_KEY) {
-    return res.status(500).json({ success: false, error: 'PayHero API key is missing. Set PAYHERO_API_KEY in your server environment.' });
+  if (!PAYMENT_API_KEY) {
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Payment service configuration missing. Set PAYMENT_API_KEY in your server environment.' 
+    });
   }
 
-  const channelId = Number(PAYHERO_CHANNEL_ID);
+  const channelId = Number(PAYMENT_CHANNEL_ID);
   if (!Number.isSafeInteger(channelId) || channelId < 1) {
-    return res.status(500).json({ success: false, error: 'PayHero channel is missing. Set PAYHERO_CHANNEL_ID in your server environment.' });
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Payment service channel missing. Set PAYMENT_CHANNEL_ID in your server environment.' 
+    });
   }
 
   // Format phone: ensure it starts with 254
@@ -73,11 +76,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const externalRef = reference || `PAY-${Date.now()}`;
 
   try {
-    const response = await fetch('https://backend.payhero.co.ke/api/v2/payments', {
+    const response = await fetch(`${PAYMENT_GATEWAY_URL}/payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: normalizePayHeroAuth(PAYHERO_API_KEY),
+        Authorization: normalizeAuth(PAYMENT_API_KEY),
       },
       body: JSON.stringify({
         amount: numericAmount,
@@ -86,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         provider: 'm-pesa',
         external_reference: externalRef,
         customer_name: name || 'Customer',
-        callback_url: resolvePayHeroCallbackUrl(),
+        callback_url: resolveCallbackUrl(),
       }),
     });
 
@@ -99,20 +102,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!response.ok) {
-      const errorMessage = data?.message || data?.error || data?.detail || data?.errors?.[0]?.message || 'Payment initiation failed';
-      return res.status(response.status).json({ success: false, error: errorMessage });
+      const errorMessage = data?.message || data?.error || data?.detail || 'Failed to dispatch payment prompt';
+      return res.status(response.status).json({
+        success: false,
+        error: errorMessage,
+        reference: externalRef,
+      });
     }
 
-    // Return only what the partner needs – no PayHero branding
+    const assignedRef = data?.reference || data?.external_reference || externalRef;
+    const checkoutRequestId = data?.CheckoutRequestID || data?.checkout_request_id || assignedRef;
+    const status = (data?.status || 'QUEUED').toUpperCase();
+
     return res.status(200).json({
       success: true,
-      reference: data?.reference || data?.external_reference || externalRef,
-      CheckoutRequestID: data?.CheckoutRequestID,
-      status: data?.status,
-      message: 'STK push sent. Customer should enter M-Pesa PIN.',
+      reference: assignedRef,
+      CheckoutRequestID: checkoutRequestId,
+      status,
+      message: data?.message || 'Payment prompt sent successfully',
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message || 'Internal server error' });
+    console.error('Payment gateway error:', err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to communicate with payment gateway',
+      reference: externalRef,
+    });
   }
 }
-
