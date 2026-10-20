@@ -265,7 +265,7 @@ const EditProfile = () => {
       if (avatarFile) {
         const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const path = `avatars/${user.id}/${Date.now()}_${cleanName}`;
-        const uploaded = await uploadFileToSupabase(avatarFile, 'hideaway post storage', path);
+        const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', path);
         if (uploaded) {
           finalAvatarUrl = uploaded;
         }
@@ -275,7 +275,7 @@ const EditProfile = () => {
       if (bannerFile) {
         const cleanName = bannerFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const path = `covers/${user.id}/${Date.now()}_${cleanName}`;
-        const uploaded = await uploadFileToSupabase(bannerFile, 'hideaway post storage', path);
+        const uploaded = await uploadFileToSupabase(bannerFile, 'Daysman Gad', path);
         if (uploaded) {
           finalCoverUrl = uploaded;
         }

@@ -160,7 +160,7 @@ const UserSettings = () => {
         setUploadingAvatar(true);
         const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const path = `avatars/users/${user.id}/${Date.now()}_${cleanName}`;
-        const uploaded = await uploadFileToSupabase(avatarFile, 'hideaway post storage', path);
+        const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', path);
         if (uploaded) {
           finalAvatarUrl = uploaded;
         }

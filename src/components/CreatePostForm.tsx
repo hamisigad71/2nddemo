@@ -7,7 +7,7 @@ interface CreatePostFormProps {
   onPostCreated?: () => void;
 }
 
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB limit
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB limit
 
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve) => {
@@ -97,7 +97,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
 
     if (file.type.startsWith('video/')) {
       if (file.size > MAX_VIDEO_SIZE) {
-        setUploadError('Video file exceeds maximum size limit of 50MB.');
+        setUploadError('Video file exceeds maximum size limit of 500MB.');
         return;
       }
       if (videoPreview) URL.revokeObjectURL(videoPreview);
@@ -188,7 +188,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
         const cleanName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const fileName = `${Date.now()}_${cleanName}`;
         mediaUrl = visibility === 'public' && status === 'published'
-          ? await uploadFileToSupabase(fileToUpload, 'hideaway post storage', `posts/${user.id}/${fileName}`)
+          ? await uploadFileToSupabase(fileToUpload, 'Daysman Gad', `posts/${user.id}/${fileName}`)
           : await uploadPrivatePostMedia(fileToUpload, user.id, `posts/${fileName}`);
 
         if (!mediaUrl) {

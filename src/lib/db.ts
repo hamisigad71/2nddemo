@@ -162,10 +162,10 @@ export const uploadPrivatePostMedia = async (file: File, creatorId: string, path
   const cleanPath = `private/posts/${creatorId}/${path.replace(/^posts\//, '')}`;
   try {
     const { error } = await supabase.storage
-      .from('hideaway post storage')
+      .from('Daysman Gad')
       .upload(cleanPath, file, { upsert: true });
     if (!error) {
-      const { data } = supabase.storage.from('hideaway post storage').getPublicUrl(cleanPath);
+      const { data } = supabase.storage.from('Daysman Gad').getPublicUrl(cleanPath);
       if (data?.publicUrl) return data.publicUrl;
     } else {
       console.warn('Storage upload note:', error.message);
@@ -175,7 +175,7 @@ export const uploadPrivatePostMedia = async (file: File, creatorId: string, path
   }
 
   // Resilient fallback: Convert file to Base64 Data URL so media upload never fails
-  const fallbackUrl = await uploadFileToSupabase(file, 'hideaway post storage', cleanPath);
+  const fallbackUrl = await uploadFileToSupabase(file, 'Daysman Gad', cleanPath);
   if (fallbackUrl) return fallbackUrl;
 
   return cleanPath;
@@ -188,7 +188,7 @@ const resolvePrivatePostMedia = async (posts: any[], viewerId?: string) => {
   return Promise.all(posts.map(async (post) => {
     if (!post.media_url || (!post.media_private && post.visibility === 'public') || /^https?:\/\//i.test(post.media_url) || post.media_url.startsWith('data:')) return post;
     const { data, error } = await supabase.storage
-      .from('hideaway post storage')
+      .from('Daysman Gad')
       .createSignedUrl(post.media_url, 60 * 60);
     if (error) {
       console.warn('Could not authorize private post media:', error.message);
@@ -384,10 +384,10 @@ export const updatePostStatus = async (
     const fileName = mediaUrl.split('/').pop() || `draft-${postId}`;
     const publicPath = `posts/${creatorId}/${Date.now()}_${fileName}`;
     const { error: uploadError } = await supabase.storage
-      .from('hideaway post storage')
+      .from('Daysman Gad')
       .upload(publicPath, file, { upsert: true });
     if (uploadError) throw new Error(`Could not publish draft media: ${uploadError.message}`);
-    const { data: publicUrl } = supabase.storage.from('hideaway post storage').getPublicUrl(publicPath);
+    const { data: publicUrl } = supabase.storage.from('Daysman Gad').getPublicUrl(publicPath);
     mediaUrl = publicUrl.publicUrl;
     mediaPrivate = false;
   } else if (status === 'draft' && mediaUrl && !mediaPrivate) {

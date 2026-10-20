@@ -161,7 +161,7 @@ const EscortRegistration = () => {
           photoFiles.map(async (file) => {
             const clean = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
             const path = `escort-verification/${user.id}/${Date.now()}_${clean}`;
-            return uploadFileToSupabase(file, 'hideaway post storage', path);
+            return uploadFileToSupabase(file, 'Daysman Gad', path);
           })
         );
         const successful = uploads.filter(Boolean) as string[];
