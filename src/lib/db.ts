@@ -594,11 +594,7 @@ export const getPosts = async () => {
 
   allPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const enriched = await enrichPostsWithUsers(allPosts);
-
-  // Blend with fallback posts
-  const existingIds = new Set(enriched.map((p: any) => p.id));
-  const remainingFallbacks = FALLBACK_POSTS.filter(p => !existingIds.has(p.id));
-  return [...enriched, ...remainingFallbacks];
+  return enriched;
 };
 
 export const getPostsByCreator = async (creatorId: string, viewerId?: string) => {
@@ -721,10 +717,8 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
   );
   const enrichedReal = await resolvePrivatePostMedia(await enrichPostsWithUsers(visiblePosts), fanId);
 
-  // 4. Blend with mock fallback posts to keep the feed rich
-  const realIds = new Set(enrichedReal.map(p => p.id));
-  const remainingFallbacks = FALLBACK_POSTS.filter(p => !realIds.has(p.id));
-  const fullFeed = [...enrichedReal, ...remainingFallbacks];
+  // 4. Return strictly real posts (no mockups in user feeds)
+  const fullFeed = [...enrichedReal];
 
   // 5. Paginate
   const start = page * limit;
@@ -1585,14 +1579,8 @@ export const getCreatorProfile = async (id: string) => {
 };
 
 export const HARDCODED_DISCOVER_CREATORS = [
-  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "12k followers", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
-  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "9.5k followers", price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
-  { id: 'creator-chef', name: "Chef Kamau", handle: "@chefkamau", category: "Culinary", location: "Nairobi, Kenya", subs: "8.5k followers", price: "KES 1k/mo", avatar: "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg", cover: "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-17T08:00:00Z' },
-  { id: 'creator-betty', name: "Betty Vlog", handle: "@betty", category: "Vlogger", location: "Nakuru", subs: "3k followers", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c7/63/a1/c763a17c42705d2b6b981adc1130ed91.jpg", cover: "https://i.pinimg.com/736x/c7/63/a1/c763a17c42705d2b6b981adc1130ed91.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-17T07:00:00Z' },
-  { id: 'creator-wanjiku', name: "Wanjiku Tech", handle: "@wanjiku", category: "Education", location: "Nairobi", subs: "24k followers", price: "KES 300/mo", avatar: "https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg", cover: "https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-16T12:00:00Z' },
-  { id: 'creator-grace', name: "Grace Style", handle: "@grace", category: "Fashion", location: "Nairobi", subs: "32k followers", price: "KES 1.5k/mo", avatar: "https://i.pinimg.com/736x/80/78/c3/8078c38f0cb612302707c7429e3ecf59.jpg", cover: "https://i.pinimg.com/736x/80/78/c3/8078c38f0cb612302707c7429e3ecf59.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-16T10:00:00Z' },
-  { id: 'creator-fit', name: "Fit Guru", handle: "@fitguru", category: "Health", location: "Eldoret", subs: "18k followers", price: "KES 700/mo", avatar: "https://i.pinimg.com/736x/f6/b6/de/f6b6de8523e31a9f04f60ca66639c42f.jpg", cover: "https://i.pinimg.com/736x/f6/b6/de/f6b6de8523e31a9f04f60ca66639c42f.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-15T09:00:00Z' },
-  { id: 'creator-odc', name: "ODC Music", handle: "@odcmusic", category: "Entertainment", location: "Kisumu", subs: "45k followers", price: "KES 1k/mo", avatar: "https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg", cover: "https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-15T08:00:00Z' },
+  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "12k followers", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
+  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "9.5k followers", price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
 ];
 
 export const getDiscoverCreators = async () => {
@@ -1720,110 +1708,15 @@ export const getDiscoverCreators = async () => {
       };
     });
 
-    // 4. Showcase feed creators who actually have posts in mockPosts.ts
-    const showcaseFeedCreators = [
-      {
-        id: 'creator-wairimu',
-        name: 'Wairimu K.',
-        handle: '@wairimu',
-        category: 'Fashion & VIP Glamour',
-        location: 'Nairobi, Kenya',
-        subs: '1.2k followers',
-        price: 'KES 1,000/mo',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&q=80',
-        cover: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80',
-        hasPosts: true,
-        postsCount: 1,
-        createdAt: '2026-10-18T10:00:00Z'
-      },
-      {
-        id: 'creator-chebet',
-        name: 'Faith Chebet',
-        handle: '@chebet',
-        category: 'Fitness & Wellness',
-        location: 'Nairobi, Kenya',
-        subs: '940 followers',
-        price: 'KES 750/mo',
-        avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&q=80',
-        cover: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80',
-        hasPosts: true,
-        postsCount: 1,
-        createdAt: '2026-10-18T09:00:00Z'
-      },
-      {
-        id: 'creator-chloe',
-        name: 'Chloe Monet',
-        handle: '@chloe',
-        category: 'Private Shows & Dance',
-        location: 'Mombasa, Kenya',
-        subs: '2.5k followers',
-        price: 'KES 1,500/mo',
-        avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80',
-        cover: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
-        hasPosts: true,
-        postsCount: 1,
-        createdAt: '2026-10-17T08:00:00Z'
-      },
-      {
-        id: 'creator-amina',
-        name: 'Amina Kimani',
-        handle: '@aminak',
-        category: 'Luxury Lifestyle & Travel',
-        location: 'Nairobi, Kenya',
-        subs: '3.1k followers',
-        price: 'KES 1,200/mo',
-        avatar: 'https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg',
-        cover: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80',
-        hasPosts: true,
-        postsCount: 1,
-        createdAt: '2026-10-17T07:00:00Z'
-      },
-      {
-        id: 'creator-vanessa',
-        name: 'Vanessa Blue',
-        handle: '@vanessa',
-        category: 'Sensual Arts & VIP Previews',
-        location: 'Nakuru, Kenya',
-        subs: '1.8k followers',
-        price: 'KES 900/mo',
-        avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&q=80',
-        cover: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80',
-        hasPosts: true,
-        postsCount: 1,
-        createdAt: '2026-10-16T12:00:00Z'
-      },
-      {
-        id: 'creator-stacy',
-        name: 'Stacy W.',
-        handle: '@stacyw',
-        category: 'Nightlife & Backstage',
-        location: 'Nairobi, Kenya',
-        subs: '1.4k followers',
-        price: 'KES 800/mo',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
-        cover: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80',
-        hasPosts: true,
-        postsCount: 1,
-        createdAt: '2026-10-16T10:00:00Z'
-      }
-    ];
-
-    // Merge: Real registered creators first, sorted by hasPosts and post count, followed by user's hardcoded creators & showcase
+    // Merge: Real registered creators first, sorted by hasPosts and post count, followed by strictly 2 demo mockup creators
     const existingIds = new Set(realCreators.map(c => c.id));
     const combined = [...realCreators];
 
-    // Ensure all hardcoded creators from Discover are 100% preserved
+    // Append exactly the 2 demo mockup creators
     HARDCODED_DISCOVER_CREATORS.forEach(hc => {
       if (!existingIds.has(hc.id)) {
         combined.push(hc);
         existingIds.add(hc.id);
-      }
-    });
-
-    showcaseFeedCreators.forEach(sc => {
-      if (!existingIds.has(sc.id)) {
-        combined.push(sc);
-        existingIds.add(sc.id);
       }
     });
 

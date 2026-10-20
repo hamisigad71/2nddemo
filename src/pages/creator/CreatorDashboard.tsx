@@ -74,22 +74,22 @@ const CreatorDashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 w-full">
           {[
             { 
-              label: "Total Earnings", value: `KES ${stats.totalEarnings.toLocaleString()}`, increase: "+12.5%", 
+              label: "Total Earnings", value: `KES ${stats.totalEarnings.toLocaleString()}`, increase: stats.totalEarnings > 0 ? "+100%" : "0.0%", 
               iconWrapperClass: "bg-emerald-500/10",
               icon: <DollarSign className="w-5 h-5 text-emerald-500" /> 
             },
             { 
-              label: "Active Subs", value: stats.activeSubs.toString(), increase: "+4.2%", 
+              label: "Active Subs", value: stats.activeSubs.toString(), increase: stats.activeSubs > 0 ? `+${stats.activeSubs}` : "0.0%", 
               iconWrapperClass: "bg-blue-500/10",
               icon: <Users className="w-5 h-5 text-blue-500" /> 
             },
             { 
-              label: "Content Views", value: "---", increase: "+0.0%", 
+              label: "Content Views", value: "0", increase: "0.0%", 
               iconWrapperClass: "bg-primary/10",
               icon: <Eye className="w-5 h-5 text-primary" /> 
             },
             { 
-              label: "Engagement", value: "---", increase: "+0.0%", 
+              label: "Engagement", value: "0%", increase: "0.0%", 
               iconWrapperClass: "bg-orange-500/10",
               icon: <BarChart3 className="w-5 h-5 text-orange-500" /> 
             }
