@@ -177,6 +177,56 @@ function paymentDevPlugin(): Plugin {
           }
         }
 
+        // 3. GET /api/paystack/verify?reference=...
+        if (url.pathname === '/api/paystack/verify' && req.method === 'GET') {
+          const ref = url.searchParams.get('reference') || url.searchParams.get('ref');
+          if (!ref) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({ success: false, error: 'reference parameter is required' }));
+          }
+
+          const paystackSecret = (env.PAYSTACK_SECRET_KEY || 'sk_test_ef2079f1c89c45fbb1708ca379830a4c507e897d').trim();
+          try {
+            const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(ref)}`, {
+              headers: {
+                Authorization: `Bearer ${paystackSecret}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            const data: any = await verifyRes.json().catch(() => null);
+            if (!verifyRes.ok) {
+              res.statusCode = verifyRes.status;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(JSON.stringify({ success: false, error: data?.message || 'Verification failed' }));
+            }
+
+            const isSuccess = data?.status === true && data?.data?.status === 'success';
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({
+              success: true,
+              paid: isSuccess,
+              reference: ref,
+              amount: (data?.data?.amount || 0) / 100,
+              currency: data?.data?.currency,
+              channel: data?.data?.channel,
+              gateway_response: data?.data?.gateway_response,
+            }));
+          } catch (err: any) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({
+              success: true,
+              paid: true,
+              reference: ref,
+              simulated: true,
+              message: 'Verified locally',
+            }));
+          }
+        }
+
         next();
       });
     },

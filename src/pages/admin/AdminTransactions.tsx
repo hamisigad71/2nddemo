@@ -3,14 +3,6 @@ import { CheckCircle, XCircle, Clock, Download, Receipt, ArrowUpRight, AlertTria
 import AdminLayout from './AdminLayout';
 import { getAdminTransactions } from '../../lib/db';
 
-const mockTransactions = [
-  { id: 'TXN001', user: 'Kevin Otieno', creator: 'Amina K.', method: 'M-Pesa', amount: 'KES 500', fee: 'KES 50', net: 'KES 450', status: 'success', date: 'Oct 4, 2026 · 03:12 AM' },
-  { id: 'TXN002', user: 'Mercy Wanjiru', creator: 'Wanjiku Tech', method: 'Card', amount: 'KES 300', fee: 'KES 30', net: 'KES 270', status: 'success', date: 'Oct 4, 2026 · 02:55 AM' },
-  { id: 'TXN003', user: 'John Mwangi', creator: 'ODC Music', method: 'M-Pesa', amount: 'KES 800', fee: 'KES 80', net: 'KES 720', status: 'failed', date: 'Oct 4, 2026 · 01:30 AM' },
-  { id: 'TXN004', user: 'Aisha Salim', creator: 'Chef Kamau', method: 'Card', amount: 'KES 1,000', fee: 'KES 100', net: 'KES 900', status: 'success', date: 'Oct 3, 2026 · 11:45 PM' },
-  { id: 'TXN005', user: 'Brian Kipkoech', creator: 'Grace Fashion', method: 'M-Pesa', amount: 'KES 500', fee: 'KES 50', net: 'KES 450', status: 'pending', date: 'Oct 3, 2026 · 10:20 PM' },
-];
-
 const statusStyles: Record<string, string> = {
   success: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
   failed: 'text-red-400 bg-red-500/10 border-red-500/20',
@@ -30,9 +22,15 @@ const AdminTransactions = () => {
   useEffect(() => {
     const loadTx = async () => {
       setIsLoading(true);
-      const data = await getAdminTransactions();
-      setTransactionsList([...data, ...mockTransactions]);
-      setIsLoading(false);
+      try {
+        const data = await getAdminTransactions();
+        setTransactionsList(data || []);
+      } catch (err) {
+        console.error('Error loading admin transactions:', err);
+        setTransactionsList([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadTx();
   }, []);

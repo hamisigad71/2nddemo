@@ -9,6 +9,7 @@ import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getStore
 import { supabase } from '../../lib/supabase';
 import { getEscorts } from '../../lib/mockData';
 import FeedImage from '../../components/FeedImage';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
   const escort = getEscorts().find(e => e.id === post.creator_id);
   
   const creatorName = creator?.name || localProfile?.name || localProfile?.display_name || escort?.name || 'Creator';
-  const avatarUrl = creator?.avatar || localProfile?.avatar || localProfile?.avatar_url || escort?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+  const avatarUrl = resolveUserAvatar(creator?.avatar || localProfile?.avatar || localProfile?.avatar_url || escort?.avatar, creatorName);
   const creatorHandle = escort ? `@${escort.name.replace(/\s+/g, '').toLowerCase()}` : `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`;
   const profileRoute = `/creator/${post.creator_id || escort?.id || 'escort-1'}`;
   const isPpvPost = post.visibility === 'ppv' || post.is_locked;
@@ -289,8 +290,13 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
             ) : (
               <div className="flex flex-col gap-2.5 max-h-48 overflow-y-auto">
                 {comments.map(c => {
-                  const commenterAvatar = c.users?.avatar || `https://i.pravatar.cc/60?u=${c.user_id}`;
-                  const commenterName = c.users?.name || 'User';
+                  const commenterName = (c.user_id === currentUserId
+                    ? (localStorage.getItem(`tgd_user_name_${currentUserId}`) || c.users?.name)
+                    : c.users?.name) || 'User';
+                  const rawAvatar = c.user_id === currentUserId
+                    ? (localStorage.getItem(`tgd_user_avatar_${currentUserId}`) || c.users?.avatar)
+                    : c.users?.avatar;
+                  const commenterAvatar = resolveUserAvatar(rawAvatar, commenterName);
                   return (
                     <div key={c.id} className="flex items-start gap-2.5">
                       <img

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle2, Phone, Coins, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle } from 'lucide-react';
-import { submitPesapalOrder } from '../lib/pesapal';
 import { formatPhone } from '../lib/daraja';
 import { processPayment, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
@@ -152,39 +151,40 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
     }
   };
 
-  // ── Pesapal ─────────────────────────────────────────────────
-  const handlePesapalCheckout = async () => {
+  // ── Paystack Card Checkout ────────────────────────────────────
+  const handlePaystackCardCheckout = async () => {
     if (!amount || !user) return;
-    setStep('pesapal_loading');
     setErrorMessage(null);
 
-    const referenceId = `TIP-${Date.now()}`;
     try {
-      await processPayment('tip', user.id, creatorId, amount, referenceId);
-      const order = await submitPesapalOrder({
-        id: referenceId,
-        currency: 'KES',
+      const { initiatePaystackCardPayment, verifyPaystackTransaction } = await import('../lib/paystack');
+      await initiatePaystackCardPayment({
+        email: user.email || 'customer@thegentsdollhouse.com',
         amount,
-        description: `Tip for ${creatorName}`,
-        callback_url: `${window.location.origin}/user`,
-        billing_address: {
-          email_address: user.email || 'fan@hideaway.co.ke',
-          phone_number: phone || '0700000000',
-          first_name: user.user_metadata?.name?.split(' ')[0] || 'Fan',
-          last_name: user.user_metadata?.name?.split(' ')[1] || 'User',
+        name: user.user_metadata?.name || user.user_metadata?.full_name || 'Fan',
+        currency: 'KES',
+        metadata: {
+          creator_id: creatorId,
+          creator_name: creatorName,
+          type: 'tip',
+        },
+        onSuccess: async ({ reference }) => {
+          setStep('success');
+          try {
+            await verifyPaystackTransaction(reference);
+            await processPayment('tip', user.id, creatorId, amount, reference);
+          } catch (err: any) {
+            console.warn('Tip registration notice:', err);
+          }
+        },
+        onCancel: () => {},
+        onError: (err) => {
+          setErrorMessage(err || 'Failed to start card payment');
         },
       });
-
-      if (order?.redirect_url) {
-        setPesapalUrl(order.redirect_url);
-        setStep('pesapal_iframe');
-      } else {
-        setErrorMessage(order?.error || 'Could not initialize Pesapal session.');
-        setStep('method');
-      }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Pesapal checkout failed');
-      setStep('method');
+      console.error('Paystack card tip error:', err);
+      setErrorMessage(err?.message || 'Failed to initialize Paystack card payment');
     }
   };
 
@@ -310,20 +310,20 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
               )}
               <div className="space-y-4 mb-6">
                 <button
-                  onClick={handlePesapalCheckout}
+                  onClick={handlePaystackCardCheckout}
                   className="w-full relative overflow-hidden p-4 rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40 hover:from-primary/10 transition-all flex items-center justify-between text-left group active:scale-[0.98] shadow-sm hover:shadow-primary/10"
                 >
                   <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-12 h-12 rounded-2xl bg-white border border-primary/30 flex items-center justify-center font-black text-sm shadow-inner group-hover:scale-105 transition-transform duration-300 overflow-hidden p-1.5">
-                      <img src="https://www.pesapal.com/media/118158/pesapal-logo.png?v=3" alt="Pesapal" className="w-full h-full object-contain" />
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-primary/30 flex items-center justify-center font-black text-sm shadow-inner group-hover:scale-105 transition-transform duration-300 overflow-hidden p-1.5 text-primary">
+                      <CreditCard className="w-6 h-6" />
                     </div>
                     <div>
                       <div className="font-bold text-[15px] text-foreground flex items-center gap-2 tracking-tight">
-                        Pesapal Express 
-                        <CreditCard className="w-4 h-4 text-primary" />
+                        Pay with Card 
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase">Paystack</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 tracking-wide">M-Pesa, Airtel & Cards</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 tracking-wide">Visa, Mastercard, Verve</div>
                     </div>
                   </div>
                   <ExternalLink className="w-5 h-5 text-primary opacity-50 group-hover:opacity-100 transition-all relative z-10 group-hover:translate-x-1" />

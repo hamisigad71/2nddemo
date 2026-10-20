@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getFanSubscriptions, cancelSubscription } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
 import SubscribeModal from '../../components/SubscribeModal';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 interface SubItem {
   id: string;
@@ -20,48 +21,6 @@ interface SubItem {
   renewDate: string;
   isReal?: boolean;
 }
-
-const DEFAULT_MOCK_SUBS: SubItem[] = [
-  {
-    id: 'mock-sub-1',
-    creatorId: 'escort-1',
-    name: 'Valentina',
-    handle: '@valentina',
-    avatar: 'https://i.pinimg.com/736x/27/a7/8e/27a78e6e8f924a2e01c24fe905172364.jpg',
-    tier: 'VIP Tier',
-    tierBadgeClass: 'bg-red-500/10 text-red-400 border-red-500/30',
-    price: 5000,
-    autoRenew: true,
-    renewDate: 'Auto-renews Oct 28',
-    isReal: false,
-  },
-  {
-    id: 'mock-sub-2',
-    creatorId: 'escort-2',
-    name: 'Chloe Vibe',
-    handle: '@chloevibe',
-    avatar: 'https://i.pinimg.com/736x/28/8c/76/288c76c680527b6fa111cf8d0c1a8878.jpg',
-    tier: 'Superfan Tier',
-    tierBadgeClass: 'bg-white/10 text-white border-white/20',
-    price: 1500,
-    autoRenew: true,
-    renewDate: 'Auto-renews Oct 28',
-    isReal: false,
-  },
-  {
-    id: 'mock-sub-3',
-    creatorId: 'escort-3',
-    name: 'Sofia Monroe',
-    handle: '@sofiamonroe',
-    avatar: 'https://i.pinimg.com/736x/22/1f/76/221f76786c595429bf159054ffec074e.jpg',
-    tier: 'Fan Tier',
-    tierBadgeClass: 'bg-zinc-900 text-zinc-400 border-white/10',
-    price: 500,
-    autoRenew: false,
-    renewDate: 'Expires Oct 15',
-    isReal: false,
-  },
-];
 
 const Subscriptions = () => {
   const navigate = useNavigate();
@@ -79,7 +38,8 @@ const Subscriptions = () => {
 
   const fetchSubscriptions = async () => {
     if (!user?.id) {
-      setActiveSubs(DEFAULT_MOCK_SUBS);
+      setActiveSubs([]);
+      setExpiredSubs([]);
       setLoading(false);
       return;
     }
@@ -103,7 +63,7 @@ const Subscriptions = () => {
             creatorId: sub.creator?.id || sub.creator_id,
             name: sub.creator?.name || 'Creator',
             handle: sub.creator?.handle || `@creator_${sub.creator_id.slice(0, 5)}`,
-            avatar: sub.creator?.avatar || `https://i.pravatar.cc/150?u=${sub.creator_id}`,
+            avatar: resolveUserAvatar(sub.creator?.avatar, sub.creator?.name),
             tier: sub.tier_name || 'VIP Tier',
             tierBadgeClass: 'bg-red-500/10 text-red-400 border-red-500/30',
             price: sub.creator?.price || 1000,
@@ -119,15 +79,16 @@ const Subscriptions = () => {
           }
         });
 
-        setActiveSubs(active.length > 0 ? active : DEFAULT_MOCK_SUBS);
+        setActiveSubs(active);
         setExpiredSubs(expired);
       } else {
-        // Fallback to demo subscriptions so the page is ready to interact with
-        setActiveSubs(DEFAULT_MOCK_SUBS);
+        setActiveSubs([]);
+        setExpiredSubs([]);
       }
     } catch (err) {
       console.error('Error fetching user subscriptions:', err);
-      setActiveSubs(DEFAULT_MOCK_SUBS);
+      setActiveSubs([]);
+      setExpiredSubs([]);
     } finally {
       setLoading(false);
     }
@@ -176,6 +137,22 @@ const Subscriptions = () => {
           <div className="py-20 flex flex-col items-center justify-center gap-3 text-zinc-400">
             <Loader2 className="w-8 h-8 animate-spin text-red-500" />
             <p className="text-sm">Loading your subscriptions...</p>
+          </div>
+        ) : activeSubs.length === 0 ? (
+          <div className="py-16 text-center bg-black/60 border border-white/10 rounded-3xl p-8">
+            <div className="w-14 h-14 rounded-2xl bg-red-600/10 text-red-500 flex items-center justify-center mx-auto mb-4">
+              <UserCheck className="w-7 h-7" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">No Active Subscriptions</h3>
+            <p className="text-sm text-zinc-400 max-w-sm mx-auto mb-6">
+              You haven't subscribed to any creators yet. Support your favorite creators to unlock exclusive content and direct messaging.
+            </p>
+            <button
+              onClick={() => navigate('/feed')}
+              className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-red-600/20"
+            >
+              Explore Feed
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -346,33 +323,8 @@ const Subscriptions = () => {
               ))}
             </div>
           ) : (
-            <div
-              onClick={() => navigate('/creator/escort-1')}
-              className="bg-black border border-white/10 rounded-2xl p-5 flex items-center justify-between hover:border-white/20 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-3.5">
-                <img
-                  src="https://i.pravatar.cc/150?img=40"
-                  alt="creator"
-                  className="w-12 h-12 rounded-full object-cover grayscale opacity-60 ring-1 ring-white/10 group-hover:grayscale-0 group-hover:opacity-100 transition-all"
-                />
-                <div>
-                  <div className="font-bold text-sm text-white group-hover:text-red-400 transition-colors">
-                    Seraphina Lux
-                  </div>
-                  <div className="text-xs text-zinc-400">Expired Sept 12</div>
-                </div>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setResubCreator({ id: 'escort-1', name: 'Seraphina Lux', price: 1000 });
-                }}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all hover:scale-105 active:scale-95 shadow-[0_2px_10px_rgba(220,38,38,0.3)] flex items-center gap-1.5 cursor-pointer"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Resubscribe
-              </button>
+            <div className="py-8 text-center bg-black/40 border border-white/5 rounded-2xl p-6 text-zinc-500 text-sm font-medium">
+              No expired subscriptions.
             </div>
           )}
         </div>

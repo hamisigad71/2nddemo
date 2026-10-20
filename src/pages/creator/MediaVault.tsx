@@ -40,16 +40,7 @@ const MediaVault = () => {
           price: p.price || 0,
         }));
 
-      // Fallback demo items if creator is brand new so they see what the vault looks like
-      if (mediaPosts.length === 0) {
-        setItems([
-          { id: 'sample-1', type: 'image', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800', title: 'Studio Portrait Series', date: 'Yesterday', isLocked: false, price: 0 },
-          { id: 'sample-2', type: 'video', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800', title: 'Behind the Scenes Vlog', date: '3 days ago', isLocked: true, price: 250 },
-          { id: 'sample-3', type: 'image', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800', title: 'Golden Hour Photoset', date: '5 days ago', isLocked: true, price: 200 },
-        ]);
-      } else {
-        setItems(mediaPosts);
-      }
+      setItems(mediaPosts);
     } catch (err) {
       console.error('Error loading vault media:', err);
     } finally {

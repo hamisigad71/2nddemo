@@ -33,75 +33,6 @@ export interface NotificationItem {
   badge?: string;
 }
 
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    category: 'admin',
-    title: 'Welcome to The Gents DollHouse',
-    message: 'Explore exclusive creator content, send direct tips, and enjoy discreet, instant M-Pesa subscriptions anytime.',
-    created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-    is_read: false,
-    action_label: 'Explore creators',
-    action_url: '/user',
-    badge: 'Welcome'
-  },
-  {
-    id: 'notif-2',
-    category: 'creator',
-    title: 'Kennedy Ngugi Kimemia posted new media',
-    message: 'A new high-roller lounge gallery has just been published. Browse the latest exclusive photos on your feed.',
-    created_at: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
-    is_read: false,
-    action_label: 'View post',
-    action_url: '/user',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-    badge: 'New post'
-  },
-  {
-    id: 'notif-3',
-    category: 'payment',
-    title: 'Payment confirmed: VIP subscription',
-    message: 'Your monthly subscription to Wairimu K. (KES 500) was processed via M-Pesa. Receipt: MP829104.',
-    created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    is_read: false,
-    action_label: 'Manage subscriptions',
-    action_url: '/user/subscriptions',
-    badge: 'M-Pesa'
-  },
-  {
-    id: 'notif-4',
-    category: 'creator',
-    title: 'Wairimu K. sent you a private message',
-    message: '"Thank you so much for the tip earlier love! Let me know which photos you like best 💕"',
-    created_at: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-    is_read: true,
-    action_label: 'Reply in chat',
-    action_url: '/user/messages',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    badge: 'Private message'
-  },
-  {
-    id: 'notif-5',
-    category: 'payment',
-    title: 'Tip delivered successfully',
-    message: 'You sent a tip of KES 1,000 to Chloe Vibe. Transaction settled directly to creator wallet.',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    is_read: true,
-    action_label: 'View wallet',
-    action_url: '/user/wallet',
-    badge: 'Tip'
-  },
-  {
-    id: 'notif-6',
-    category: 'admin',
-    title: 'Platform terms and safety update',
-    message: 'We refreshed our discreet billing statement policies and content guidelines for subscriber privacy.',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    is_read: true,
-    badge: 'Policy'
-  }
-];
-
 const formatNotificationTime = (dateStr: string) => {
   try {
     const d = new Date(dateStr);
@@ -141,11 +72,11 @@ const UserNotifications = () => {
   const load = async () => {
     setLoading(true);
     if (user?.id) {
-      const dbItems = await getUserNotifications(user.id);
-      if (dbItems && dbItems.length > 0) {
-        const mapped: NotificationItem[] = dbItems.map((item: any) => ({
+      try {
+        const dbItems = await getUserNotifications(user.id);
+        const mapped: NotificationItem[] = (dbItems || []).map((item: any) => ({
           id: item.id,
-          category: (item.type === 'payment' || item.type === 'tip' || item.type === 'ppv')
+          category: (item.type === 'payment' || item.type === 'tip' || item.type === 'ppv' || item.type === 'subscription')
             ? 'payment'
             : (item.type === 'warning' || item.type === 'system')
               ? 'admin'
@@ -159,16 +90,13 @@ const UserNotifications = () => {
           avatar: item.avatar,
           badge: item.badge,
         }));
-
-        // Merge with initial defaults if not already present
-        const existingIds = new Set(mapped.map(m => m.id));
-        const remaining = DEFAULT_NOTIFICATIONS.filter(d => !existingIds.has(d.id));
-        setNotifications([...mapped, ...remaining]);
-      } else {
-        setNotifications(DEFAULT_NOTIFICATIONS);
+        setNotifications(mapped);
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+        setNotifications([]);
       }
     } else {
-      setNotifications(DEFAULT_NOTIFICATIONS);
+      setNotifications([]);
     }
     setLoading(false);
   };
@@ -218,11 +146,19 @@ const UserNotifications = () => {
   const getCategoryMeta = (item: NotificationItem) => {
     if (item.category === 'payment') {
       const isTip = /tip/i.test(`${item.title} ${item.message}`);
+      const isSub = /subscri/i.test(`${item.title} ${item.message}`);
+      const isPpv = /unlock|ppv/i.test(`${item.title} ${item.message}`);
       return {
-        icon: isTip ? DollarSign : CreditCard,
-        iconColor: 'text-emerald-400',
-        badgeBg: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-        label: isTip ? 'Tip' : 'M-Pesa',
+        icon: isTip ? DollarSign : isSub ? Sparkles : isPpv ? Film : CreditCard,
+        iconColor: isTip ? 'text-emerald-400' : isSub ? 'text-amber-400' : isPpv ? 'text-purple-400' : 'text-emerald-400',
+        badgeBg: isTip 
+          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
+          : isSub 
+            ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' 
+            : isPpv 
+              ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' 
+              : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+        label: isTip ? 'Tip' : isSub ? 'VIP Subscription' : isPpv ? 'PPV Unlock' : 'Payment',
       };
     }
     if (item.category === 'admin') {
@@ -241,11 +177,13 @@ const UserNotifications = () => {
 
     return {
       icon: isDebut ? Sparkles : isVideo ? Film : isMessage ? MessageCircle : ImageIcon,
-      iconColor: isDebut ? 'text-amber-400' : 'text-rose-400',
+      iconColor: isDebut ? 'text-amber-400' : isMessage ? 'text-sky-400' : 'text-rose-400',
       badgeBg: isDebut 
         ? 'bg-amber-400/10 text-amber-300 border-amber-400/20' 
-        : 'bg-rose-500/10 text-rose-300 border-rose-500/20',
-      label: isDebut ? 'New creator' : isVideo ? 'Video' : 'New post',
+        : isMessage
+          ? 'bg-sky-500/10 text-sky-300 border-sky-500/20'
+          : 'bg-rose-500/10 text-rose-300 border-rose-500/20',
+      label: isDebut ? 'New creator' : isMessage ? 'Direct Message' : isVideo ? 'Video' : 'New post',
     };
   };
 

@@ -4,7 +4,9 @@ import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getUserNotifications } from '../lib/db';
+import { getUserNotifications, getUserProfile } from '../lib/db';
+import { resolveUserAvatar } from '../lib/avatar';
+import { supabase } from '../lib/supabase';
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -51,14 +53,17 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    if (!user?.id) {
+      setUnreadNotifications(0);
+      return;
+    }
+
     const fetchUnread = async () => {
-      if (user?.id) {
-        try {
-          const notifs = await getUserNotifications(user.id);
-          const count = notifs.filter(n => !n.is_read).length;
-          setUnreadNotifications(count);
-        } catch {}
-      }
+      try {
+        const notifs = await getUserNotifications(user.id);
+        const count = notifs.filter(n => !n.is_read).length;
+        setUnreadNotifications(count);
+      } catch {}
     };
 
     fetchUnread();
@@ -68,8 +73,30 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     };
 
     window.addEventListener('notifications_updated', handleUpdate);
-    return () => window.removeEventListener('notifications_updated', handleUpdate);
-  }, [user]);
+
+    // Live Supabase Realtime channel for instant notification updates across devices
+    const channel = supabase
+      .channel(`user_notifications_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchUnread();
+          window.dispatchEvent(new CustomEvent('notifications_updated', { detail: { userId: user.id } }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('notifications_updated', handleUpdate);
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
@@ -77,8 +104,41 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     navigate('/login', { replace: true });
   };
 
-  const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || "Fan User";
-  const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://i.pravatar.cc/150?img=50";
+  const [userName, setUserName] = useState<string>(() => {
+    return user?.user_metadata?.name || user?.user_metadata?.full_name || "Fan User";
+  });
+
+  const [userAvatar, setUserAvatar] = useState<string>(() => {
+    const cached = typeof window !== 'undefined' && user?.id ? localStorage.getItem(`tgd_user_avatar_${user.id}`) : null;
+    return resolveUserAvatar(cached || user?.user_metadata?.avatar_url || user?.user_metadata?.picture, user?.user_metadata?.name || user?.user_metadata?.full_name);
+  });
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // 1. Initial hydration from cache and DB
+    const cached = localStorage.getItem(`tgd_user_avatar_${user.id}`);
+    if (cached) setUserAvatar(cached);
+
+    getUserProfile(user.id).then(profile => {
+      if (profile?.avatar) {
+        setUserAvatar(profile.avatar);
+        try {
+          localStorage.setItem(`tgd_user_avatar_${user.id}`, profile.avatar);
+        } catch {}
+      }
+      if (profile?.name) setUserName(profile.name);
+    }).catch(() => {});
+
+    // 2. Listen to profile_updated event for instant multi-component reactivity
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail?.avatar) setUserAvatar(e.detail.avatar);
+      if (e.detail?.name) setUserName(e.detail.name);
+    };
+
+    window.addEventListener('profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile_updated', handleProfileUpdate);
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-[#0A0A0C] text-foreground flex flex-col md:flex-row font-sans selection:bg-primary/30 relative">

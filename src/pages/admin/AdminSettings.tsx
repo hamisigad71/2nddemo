@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import { Save, Settings, DollarSign, Shield, CreditCard, Megaphone, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, Settings, DollarSign, CreditCard, Megaphone, CheckCircle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
+import { getPlatformSettings, savePlatformSettings, logAdminAction } from '../../lib/db';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from '../../context/ToastContext';
 
 const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
   <button
@@ -12,6 +15,7 @@ const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 );
 
 const AdminSettings = () => {
+  const { user } = useAuth();
   const [platformFee, setPlatformFee] = useState('15');
   const [minPayout, setMinPayout] = useState('1000');
   const [announcement, setAnnouncement] = useState('');
@@ -21,8 +25,44 @@ const AdminSettings = () => {
   const [autoApprove, setAutoApprove] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
+  useEffect(() => {
+    const load = async () => {
+      const s = await getPlatformSettings();
+      setPlatformFee(s.platformFee);
+      setMinPayout(s.minPayout);
+      setAnnouncement(s.announcement);
+      setEmailAlerts(s.emailAlerts);
+      setMaintenanceMode(s.maintenanceMode);
+      setNewCreators(s.newCreators);
+      setAutoApprove(s.autoApprove);
+    };
+    load();
+  }, []);
+
+  const handleSave = async () => {
+    const newSettings = {
+      platformFee,
+      minPayout,
+      announcement,
+      emailAlerts,
+      maintenanceMode,
+      newCreators,
+      autoApprove,
+    };
+    await savePlatformSettings(newSettings);
+    
+    // Log to audit log
+    await logAdminAction({
+      admin: user?.email || 'Admin',
+      action: 'Updated Settings',
+      target: 'Platform Settings',
+      details: `Commission set to ${platformFee}%, Min payout KES ${minPayout}, Maintenance mode: ${maintenanceMode ? 'ON' : 'OFF'}`,
+      type: 'settings',
+      ip: '197.156.XX.XX'
+    });
+
     setSaved(true);
+    toast.success('Platform settings saved successfully');
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -40,7 +80,7 @@ const AdminSettings = () => {
 
   return (
     <AdminLayout>
-      <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-3xl mx-auto">
+      <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-3xl mx-auto custom-scrollbar overflow-y-auto">
 
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0d0e12] to-[#0d0e12] p-6 lg:p-8 rounded-3xl border border-zinc-800/80 shadow-2xl relative overflow-hidden">
@@ -108,7 +148,7 @@ const AdminSettings = () => {
             <textarea
               value={announcement}
               onChange={e => setAnnouncement(e.target.value)}
-              placeholder="e.g. We are performing scheduled maintenance on Oct 15..."
+              placeholder="e.g. Welcome to The Gents Dollhouse official launch..."
               rows={3}
               className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-2xl text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 placeholder:text-zinc-600 resize-none transition-all"
             />
@@ -116,36 +156,23 @@ const AdminSettings = () => {
           </div>
         </Section>
 
-        {/* Payment Gateway */}
-        <Section icon={CreditCard} title="Payment Gateway Keys">
-          {[
-            { label: 'M-Pesa Consumer Key', placeholder: 'sk_mpesa_xxxxxxxxxxxxx' },
-            { label: 'M-Pesa Consumer Secret', placeholder: 'cs_mpesa_xxxxxxxxxxxxx' },
-            { label: 'Stripe API Key (Optional)', placeholder: 'sk_live_xxxxxxxxxxxxx' },
-          ].map(({ label, placeholder }, i) => (
-            <div key={i}>
-              <label className="text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-2 block">{label}</label>
-              <input
-                type="password" placeholder={placeholder}
-                className="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-2xl text-white text-sm font-mono focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/30 placeholder:text-zinc-600 transition-all"
-              />
+        {/* Payment Gateway Status */}
+        <Section icon={CreditCard} title="Active Payment Gateways">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl">
+              <div>
+                <div className="text-sm font-bold text-white">M-Pesa Express (STK Push)</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Safaricom Daraja API Production Gateway</div>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">Active</span>
             </div>
-          ))}
-        </Section>
-
-        {/* Security */}
-        <Section icon={Shield} title="Admin Security">
-          <div className="space-y-3">
-            {[
-              { label: 'Change Admin Password', desc: 'Update your super admin credentials' },
-              { label: 'Two-Factor Authentication', desc: 'Enable 2FA for login security' },
-              { label: 'Session Management', desc: 'View and revoke active admin sessions' },
-            ].map(({ label, desc }, i) => (
-              <button key={i} className="w-full text-left px-5 py-4 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-500/30 hover:bg-zinc-900/80 transition-all group">
-                <div className="font-bold text-white text-sm group-hover:text-red-400 transition-colors">{label}</div>
-                <div className="text-xs text-zinc-500 mt-0.5">{desc}</div>
-              </button>
-            ))}
+            <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl">
+              <div>
+                <div className="text-sm font-bold text-white">Card Payments (Visa / Mastercard)</div>
+                <div className="text-xs text-zinc-500 mt-0.5">Paystack Secure Checkout Gateway</div>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">Active</span>
+            </div>
           </div>
         </Section>
 

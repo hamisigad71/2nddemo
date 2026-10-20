@@ -6,7 +6,7 @@ import { toast } from '../../context/ToastContext';
 
 const Signup = () => {
   const [accountType, setAccountType] = useState('creator'); // 'subscriber' or 'creator'
-  const { user, signInWithGoogle, signInWithFacebook, signUpWithEmail, verifyOtp } = useAuth();
+  const { user, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, verifyOtp } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,8 +57,22 @@ const Signup = () => {
       setError('');
       setLoading(true);
       const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
-      await signUpWithEmail(email, password, `${firstName} ${lastName}`, fullPhone, accountType);
-      // Move to OTP step
+      const result: any = await signUpWithEmail(email, password, `${firstName} ${lastName}`, fullPhone, accountType);
+      
+      // If user already exists in Supabase
+      if (result?.isExistingUser) {
+        setError(`An account with ${email} already exists. Please log in with your password.`);
+        return;
+      }
+
+      // If session exists (email confirmation disabled in Supabase), user is already logged in!
+      if (result?.hasSession || result?.session) {
+        toast.success('Registration successful! Welcome.');
+        navigate(accountType === 'creator' ? '/dashboard' : '/user');
+        return;
+      }
+
+      // Move to confirmation / OTP step
       setOtpStep(true);
     } catch (err: any) {
       setError('Registration failed: ' + (err?.message || err));
@@ -67,16 +81,34 @@ const Signup = () => {
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode || otpCode.length < 6) {
-      setError("Please enter the 6-digit OTP code.");
+  const handleDirectPasswordLogin = async () => {
+    if (!email || !password) {
+      navigate('/login');
       return;
     }
     try {
       setError('');
       setLoading(true);
-      await verifyOtp(email, otpCode.trim());
+      await signInWithEmail(email, password);
+      navigate(accountType === 'creator' ? '/dashboard' : '/user');
+    } catch (err: any) {
+      setError(err?.message || 'Login failed. If you clicked the email link, please visit the Login page.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanToken = otpCode.replace(/\s+/g, '').trim();
+    if (!cleanToken || cleanToken.length < 6) {
+      setError("Please enter the complete verification code from your email.");
+      return;
+    }
+    try {
+      setError('');
+      setLoading(true);
+      await verifyOtp(email, cleanToken);
       navigate(accountType === 'creator' ? '/dashboard' : '/user');
     } catch (err: any) {
       setError('Invalid or expired OTP code: ' + (err?.message || err));
@@ -106,14 +138,30 @@ const Signup = () => {
         {/* Step 2: OTP Code Verification Screen */}
         {otpStep ? (
           <div>
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-red-950/60 border border-red-500/40 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-950/60 border border-red-500/40 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/10">
                 <Mail className="w-8 h-8" />
               </div>
               <h2 className="text-2xl font-black text-white mb-2">Check Your Email</h2>
               <p className="text-zinc-400 text-sm">
-                We've sent a 6-digit verification code to <strong className="text-white">{email}</strong>
+                We've sent a verification email to <strong className="text-white">{email}</strong>
               </p>
+            </div>
+
+            {/* Helpful instructions for Supabase link vs code */}
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 mb-6 space-y-2 text-xs text-zinc-300">
+              <div className="flex items-start gap-2">
+                <span className="text-red-400 font-bold">•</span>
+                <span>Please check your <strong>Spam / Junk</strong> or <strong>Promotions</strong> folder if not in primary inbox.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-red-400 font-bold">•</span>
+                <span>If your email contains a <strong>Confirmation Link / Button</strong>, click it in your email to instantly activate your account.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-red-400 font-bold">•</span>
+                <span>If your email contains a <strong>6-digit code</strong>, enter it below:</span>
+              </div>
             </div>
 
             {error && (
@@ -122,22 +170,22 @@ const Signup = () => {
                   <AlertTriangle className="w-4 h-4 text-red-500" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-red-400 font-black text-xs uppercase tracking-wider mb-1">Error</div>
+                  <div className="text-red-400 font-black text-xs uppercase tracking-wider mb-1">Notice</div>
                   <div className="text-red-300/90 text-sm font-medium leading-relaxed break-words">{error}</div>
                 </div>
               </div>
             )}
 
-            <form onSubmit={handleVerifyOtp} className="flex flex-col gap-6">
+            <form onSubmit={handleVerifyOtp} className="flex flex-col gap-5">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider mb-2 text-zinc-400 text-center">Enter 6-Digit Code</label>
+                <label className="block text-xs font-black uppercase tracking-wider mb-2 text-zinc-400 text-center">Enter Verification Code</label>
                 <input 
                   type="text" 
-                  maxLength={6}
+                  maxLength={12}
                   value={otpCode} 
-                  onChange={e => setOtpCode(e.target.value)} 
-                  className="w-full bg-[#0d0e12] border border-zinc-800 rounded-2xl px-4 py-4 text-center text-3xl font-black tracking-[0.4em] text-white focus:border-red-500 focus:outline-none" 
-                  placeholder="123456" 
+                  onChange={e => setOtpCode(e.target.value.replace(/\s+/g, ''))} 
+                  className="w-full bg-[#0d0e12] border border-zinc-800 rounded-2xl px-4 py-4 text-center text-3xl font-black tracking-[0.25em] text-white focus:border-red-500 focus:outline-none" 
+                  placeholder="Code from email" 
                   autoFocus
                 />
               </div>
@@ -145,26 +193,37 @@ const Signup = () => {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl py-4 transition-all border border-red-500 shadow-lg shadow-red-600/20 flex items-center justify-center gap-2"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl py-4 transition-all border border-red-500 shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
               >
                 {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <>Verify & Complete Registration <ArrowRight className="w-5 h-5" /></>}
               </button>
 
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-medium pt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setOtpStep(false)}
-                  className="hover:text-white transition-colors"
+              <div className="pt-2 border-t border-zinc-800/80 flex flex-col gap-3 text-center">
+                <button
+                  type="button"
+                  onClick={handleDirectPasswordLogin}
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
-                  ← Back to details
+                  Already confirmed via link? Sign In with Password →
                 </button>
-                <button 
-                  type="button" 
-                  onClick={handleResendOtp}
-                  className="text-red-500 font-bold hover:text-red-400 transition-colors"
-                >
-                  Resend code
-                </button>
+
+                <div className="flex items-center justify-between text-xs text-zinc-400 font-medium px-1">
+                  <button 
+                    type="button" 
+                    onClick={() => setOtpStep(false)}
+                    className="hover:text-white transition-colors cursor-pointer"
+                  >
+                    ← Back to details
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={handleResendOtp}
+                    className="text-red-500 font-bold hover:text-red-400 transition-colors cursor-pointer"
+                  >
+                    Resend email
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Lock, CheckCircle2, Phone, Crown } from 'lucide-react';
+import { X, Lock, CheckCircle2, Phone, Crown, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUserProfile, processPayment } from '../lib/db';
 import { initiateSTKPush, checkPaymentStatus } from '../lib/payments';
@@ -150,6 +150,50 @@ export default function PPVUnlockModal({
     }
   };
 
+  const handlePaystackUnlock = async () => {
+    if (!user) {
+      setErrorMessage('Sign in to unlock this content.');
+      setStep('failed');
+      return;
+    }
+    if (!mediaItem) return;
+
+    try {
+      const { initiatePaystackCardPayment, verifyPaystackTransaction } = await import('../lib/paystack');
+      await initiatePaystackCardPayment({
+        email: user.email || 'customer@thegentsdollhouse.com',
+        amount: mediaItem.price,
+        name: user.user_metadata?.name || user.user_metadata?.full_name || 'Subscriber',
+        currency: 'KES',
+        metadata: {
+          creator_id: creatorId,
+          creator_name: creatorName,
+          media_id: mediaItem.id,
+          media_title: mediaItem.title,
+          type: 'ppv',
+        },
+        onSuccess: async ({ reference }) => {
+          onUnlocked(mediaItem.id);
+          setStep('success');
+          toast.success(`Unlocked "${mediaItem.title}"!`);
+          try {
+            await verifyPaystackTransaction(reference);
+            await processPayment('ppv', user.id, creatorId, mediaItem.price, reference, mediaItem.id);
+          } catch (err: any) {
+            console.warn('PPV record notice:', err);
+          }
+        },
+        onError: (err) => {
+          setErrorMessage(err || 'Card payment could not be completed.');
+          setStep('failed');
+        },
+      });
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to initialize Paystack');
+      setStep('failed');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
       <div className="relative w-full max-w-md bg-[#0D0E12] border border-white/15 rounded-3xl p-6 shadow-2xl text-white">
@@ -187,16 +231,16 @@ export default function PPVUnlockModal({
               </p>
             </div>
 
-            {/* Option 1: Unlock this single item */}
+            {/* Option 1: Unlock with M-Pesa */}
             <div
               onClick={handleStartUnlock}
               className="p-4 rounded-2xl bg-black border border-white/15 hover:border-red-500/60 transition-all cursor-pointer group shadow-lg"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">🎬</span>
+                  <span className="text-lg">📱</span>
                   <span className="font-extrabold text-sm text-white group-hover:text-red-400 transition-colors">
-                    Unlock Just This {mediaItem.type === 'video' ? 'Video' : 'Photoset'}
+                    Unlock with M-Pesa
                   </span>
                 </div>
                 <span className="font-black text-red-500 text-base">
@@ -204,10 +248,35 @@ export default function PPVUnlockModal({
                 </span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Pay once via M-Pesa. Lifetime access to this specific media item in your library.
+                Pay instantly via M-Pesa STK Push prompt to your phone.
               </p>
               <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-red-400">
-                <span>Instant M-Pesa STK Push</span> →
+                <span>Instant M-Pesa STK</span> →
+              </div>
+            </div>
+
+            {/* Option 2: Unlock with Card (Paystack) */}
+            <div
+              onClick={handlePaystackUnlock}
+              className="p-4 rounded-2xl bg-black border border-white/15 hover:border-red-500/60 transition-all cursor-pointer group shadow-lg"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  <span className="font-extrabold text-sm text-white group-hover:text-red-400 transition-colors">
+                    Unlock with Card
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase">Paystack</span>
+                </div>
+                <span className="font-black text-red-500 text-base">
+                  KES {mediaItem.price.toLocaleString()}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Pay securely with Visa, Mastercard, or Verve card.
+              </p>
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-red-400">
+                <span>Instant Card Checkout</span> →
               </div>
             </div>
 
@@ -315,25 +384,6 @@ export default function PPVUnlockModal({
             </div>
 
             <div className="flex flex-col items-center gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (pollRef.current) clearInterval(pollRef.current);
-                  if (user) {
-                    try {
-                      await processPayment('ppv', user.id, creatorId, mediaItem.price, `DEMO-PPV-${Date.now()}`);
-                    } catch (err) {
-                      console.error('Error saving simulated PPV transaction:', err);
-                    }
-                  }
-                  onUnlocked(mediaItem.id);
-                  setStep('success');
-                  toast.success(`Unlocked "${mediaItem.title}"!`);
-                }}
-                className="text-xs text-red-400 hover:text-red-300 underline font-semibold transition-colors cursor-pointer"
-              >
-                Simulate Instant PIN Approval (Demo)
-              </button>
               <button
                 type="button"
                 onClick={() => {

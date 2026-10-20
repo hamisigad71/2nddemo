@@ -4,6 +4,8 @@ import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Setting
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
+import { resolveUserAvatar } from '../lib/avatar';
+import { supabase } from '../lib/supabase';
 
 interface CreatorLayoutProps {
   children: React.ReactNode;
@@ -81,9 +83,29 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
 
     const handleUpdate = () => loadUnread();
     window.addEventListener('notifications_updated', handleUpdate);
+
+    // Live Supabase Realtime channel for instant notification updates across devices
+    const channel = supabase
+      .channel(`creator_notifications_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          loadUnread();
+          window.dispatchEvent(new CustomEvent('notifications_updated', { detail: { userId: user.id } }));
+        }
+      )
+      .subscribe();
+
     return () => {
       window.removeEventListener('notifications_updated', handleUpdate);
       window.removeEventListener('profile_updated', handleProfileUpdate);
+      supabase.removeChannel(channel);
     };
   }, [user?.id]);
 
@@ -180,7 +202,7 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         <div className="pt-4 mt-auto shrink-0 mb-safe gap-2 flex flex-col border-t border-border/50 relative z-10">
            <div className="p-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/50 rounded-2xl flex items-center justify-between transition-colors">
              <Link to="/edit-profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 flex-1 min-w-0 group overflow-hidden pl-1">
-               <img src={creatorAvatar || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"} alt="avatar" referrerPolicy="no-referrer" className="w-9.5 h-9.5 rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
+               <img src={resolveUserAvatar(creatorAvatar || user?.user_metadata?.avatar_url || user?.user_metadata?.picture, creatorName || user?.user_metadata?.name || user?.user_metadata?.full_name)} alt="avatar" referrerPolicy="no-referrer" className="w-9.5 h-9.5 rounded-full ring-2 ring-primary/20 shrink-0 group-hover:ring-primary/50 transition-all object-cover" />
                <div className="flex-1 min-w-0 pr-1">
                   <div className="font-semibold text-[14px] truncate text-foreground group-hover:text-primary transition-colors">{creatorName || user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator"}</div>
                   <div className="text-[11px] text-muted-foreground truncate">Edit Profile</div>

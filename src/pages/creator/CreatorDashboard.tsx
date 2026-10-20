@@ -5,6 +5,7 @@ import CreatePostForm from '../../components/CreatePostForm';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { getCreatorDashboardStats } from '../../lib/db';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 const CreatorDashboard = () => {
   const { user } = useAuth();
@@ -147,7 +148,7 @@ const CreatorDashboard = () => {
                     <div key={t.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <img 
-                          src={t.users?.avatar || "https://i.pravatar.cc/150?img=1"} 
+                          src={resolveUserAvatar(t.users?.avatar, t.users?.name)} 
                           alt="user" 
                           referrerPolicy="no-referrer"
                           className="w-10 h-10 rounded-full object-cover" 

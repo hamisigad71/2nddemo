@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, MoreVertical, Users, UserX, UserCheck, RefreshCw, MessageSquare, Check, X, ShieldAlert, Loader2 } from 'lucide-react';
+import { Search, Users, UserX, UserCheck, Check, X, ShieldAlert, Loader2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { supabase } from '../../lib/supabase';
-
-const users = [
-  { id: 1, name: 'Kevin Otieno', email: 'kevin@email.com', type: 'fan', subs: 3, spent: 'KES 4,500', status: 'active', joined: 'Aug 2025', img: 'https://i.pravatar.cc/150?img=11' },
-  { id: 2, name: 'Mercy Wanjiru', email: 'mercy@email.com', type: 'fan', subs: 1, spent: 'KES 800', status: 'active', joined: 'Sep 2025', img: 'https://i.pravatar.cc/150?img=5' },
-  { id: 3, name: 'John Mwangi', email: 'john@email.com', type: 'fan', subs: 5, spent: 'KES 12,000', status: 'active', joined: 'Jun 2025', img: 'https://i.pravatar.cc/150?img=14' },
-  { id: 4, name: 'Fatuma Hassan', email: 'fatuma@email.com', type: 'fan', subs: 2, spent: 'KES 2,400', status: 'banned', joined: 'Jul 2025', img: 'https://i.pravatar.cc/150?img=9' },
-  { id: 5, name: 'Brian Kipkoech', email: 'brian@email.com', type: 'fan', subs: 0, spent: 'KES 0', status: 'active', joined: 'Sep 2025', img: 'https://i.pravatar.cc/150?img=17' },
-  { id: 6, name: 'Aisha Salim', email: 'aisha@email.com', type: 'fan', subs: 4, spent: 'KES 7,200', status: 'active', joined: 'May 2025', img: 'https://i.pravatar.cc/150?img=25' },
-];
+import { getAdminUsers, updateUserStatus } from '../../lib/db';
+import { toast } from '../../context/ToastContext';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 const statusStyles: Record<string, string> = {
   active: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
@@ -21,17 +15,29 @@ const statusStyles: Record<string, string> = {
 const AdminUsers = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-
-  const filtered = users.filter(u => {
-    const matchFilter = filter === 'all' || u.status === filter;
-    const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
-    return matchFilter && matchSearch;
-  });
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
   const [view, setView] = useState<'list' | 'kyc'>('list');
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const data = await getAdminUsers();
+      setUsersList(data);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     if (view === 'kyc') fetchPending();
@@ -50,12 +56,33 @@ const AdminUsers = () => {
   const handleKycAction = async (id: string, newStatus: 'verified' | 'rejected') => {
     setActionLoading(id);
     try {
-      await supabase.from('users').update({ kyc_status: newStatus }).eq('id', id);
-      setPendingUsers(prev => prev.filter(u => u.id !== id));
+      await supabase.from('users').update({ kyc_status: newStatus }).eq('uid', id);
+      setPendingUsers(prev => prev.filter(u => u.uid !== id));
+      toast.success(`User KYC status set to ${newStatus}`);
+    } catch {
+      toast.error('Failed to update KYC status');
     } finally {
       setActionLoading(null);
     }
   };
+
+  const handleToggleBan = async (userId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'banned' ? 'active' : 'banned';
+    try {
+      await updateUserStatus(userId, newStatus as any);
+      setUsersList(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      toast.success(`User marked as ${newStatus}`);
+    } catch {
+      toast.error('Failed to update user status');
+    }
+  };
+
+  const filtered = usersList.filter(u => {
+    const matchFilter = filter === 'all' || u.status === filter;
+    const matchSearch = (u.name || '').toLowerCase().includes(search.toLowerCase()) || 
+                        (u.email || '').toLowerCase().includes(search.toLowerCase());
+    return matchFilter && matchSearch;
+  });
 
   return (
     <AdminLayout>
@@ -73,21 +100,32 @@ const AdminUsers = () => {
               <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">User / Fan Management</h1>
             </div>
             <p className="text-zinc-400 text-sm font-medium max-w-xl leading-relaxed mb-6">
-              View and manage all registered platform fans. Issue refunds, manage bans, and communicate with user accounts.
+              View and manage all registered platform users directly from the live database. Manage bans, verification, and user activity.
             </p>
             
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => setView('list')}
-                className={`px-6 py-2 rounded-xl text-xs uppercase font-black tracking-widest transition-all ${view === 'list' ? 'bg-white text-black' : 'bg-[#0d0e12] text-zinc-500 border border-zinc-800 hover:text-white'}`}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+                  view === 'list' 
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/25 border border-red-500 scale-100' 
+                    : 'bg-[#0d0e12] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700'
+                }`}
               >
-                All Users
+                All Users ({usersList.length})
               </button>
               <button 
                 onClick={() => setView('kyc')}
-                className={`px-6 py-2 rounded-xl text-xs uppercase font-black tracking-widest transition-all flex items-center gap-2 ${view === 'kyc' ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]' : 'bg-[#0d0e12] text-zinc-500 border border-zinc-800 hover:text-white'}`}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 relative ${
+                  view === 'kyc' 
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/25 border border-red-500 scale-100' 
+                    : 'bg-[#0d0e12] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700'
+                }`}
               >
-                KYC Verification <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">Queue</span>
+                ID Verifications / KYC
+                {pendingUsers.length > 0 && (
+                  <span className="ml-2 w-2 h-2 rounded-full bg-red-400 inline-block animate-pulse"></span>
+                )}
               </button>
             </div>
           </div>
@@ -95,32 +133,15 @@ const AdminUsers = () => {
 
         {view === 'list' ? (
           <>
-            {/* Summary stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: 'Total Users', value: '182,430', highlight: 'text-white' },
-                { label: 'Active Today', value: '4,218', highlight: 'text-white' },
-                { label: 'New This Week', value: '1,342', highlight: 'text-emerald-500' },
-                { label: 'Banned', value: '14', highlight: 'text-red-500' },
-              ].map(({ label, value, highlight }, i) => (
-                <div key={i} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition-colors group relative overflow-hidden">
-                   <div className="text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-2">{label}</div>
-                   <div className={`text-3xl font-black mb-1 drop-shadow-md ${highlight}`}>{value}</div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="relative w-full md:w-96 group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Search className="w-5 h-5 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
-                </div>
+            {/* Search and Filters Bar */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative w-full md:w-96">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <input
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search users..."
+                  placeholder="Search real users by name or email..."
                   className="w-full bg-[#0d0e12] border border-zinc-800 pl-11 pr-4 py-3.5 rounded-2xl text-white text-sm font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
                 />
               </div>
@@ -146,75 +167,89 @@ const AdminUsers = () => {
 
             {/* Extravagant Table */}
             <div className="bg-[#0d0e12] border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="overflow-x-auto min-h-[400px]">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#0d0e12] border-b border-zinc-800">
-                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">User profile</th>
-                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Subscriptions</th>
-                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Spent</th>
-                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Account Status</th>
-                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Date Joined</th>
-                      <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-right pr-8">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800/50">
-                    {filtered.map(u => (
-                      <tr key={u.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
-                        <td className="px-6 py-4 pl-8">
-                          <div className="flex items-center gap-4">
-                            <div className="relative shrink-0 w-12 h-12">
-                              <img src={u.img} className="w-full h-full rounded-full object-cover border-2 border-zinc-800 group-hover:border-red-500/50 transition-colors" />
-                              <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0d0e12] ${u.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                            </div>
-                            <div>
-                              <div className="font-bold text-white text-sm group-hover:text-red-400 transition-colors">{u.name}</div>
-                              <div className="text-[11px] text-zinc-500 font-medium">{u.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1.5 font-bold text-white text-sm">
-                            <span className="text-zinc-400">{u.subs} active</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-black text-red-500 text-sm drop-shadow-md">{u.spent}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-black px-3 py-1.5 rounded-full border ${statusStyles[u.status]}`}>
-                            {u.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-zinc-400 text-xs font-medium">
-                          {u.joined}
-                        </td>
-                        <td className="px-6 py-4 pr-8 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {u.status === 'active' ? (
-                              <button className="px-4 py-2 bg-[#0d0e12] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                                <UserX className="w-3.5 h-3.5" /> Ban
-                              </button>
-                            ) : (
-                              <button className="px-4 py-2 bg-[#0d0e12] text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                                <UserCheck className="w-3.5 h-3.5" /> Unban
-                              </button>
-                            )}
-                            <button className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                              <RefreshCw className="w-3.5 h-3.5" /> Refund
-                            </button>
-                            <button className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                              <MessageSquare className="w-3.5 h-3.5" /> Message
-                            </button>
-                            <button className="p-2 bg-[#0d0e12] rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+              <div className="overflow-x-auto min-h-[300px]">
+                {loadingUsers ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
+                    <Loader2 className="w-8 h-8 animate-spin text-red-500 mb-3" />
+                    <span className="text-sm">Loading live users from database...</span>
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="py-20 text-center text-sm text-zinc-500">
+                    No users matching criteria. New subscriber registrations will appear here immediately.
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#0d0e12] border-b border-zinc-800">
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">User profile</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Account Type</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Subscriptions</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Spent</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Account Status</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Date Joined</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-right pr-8">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/50">
+                      {filtered.map(u => (
+                        <tr key={u.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
+                          <td className="px-6 py-4 pl-8">
+                            <div className="flex items-center gap-4">
+                              <div className="relative shrink-0 w-12 h-12">
+                                <img src={u.img} alt={u.name} className="w-full h-full rounded-full object-cover border-2 border-zinc-800 group-hover:border-red-500/50 transition-colors" />
+                                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0d0e12] ${u.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                              </div>
+                              <div>
+                                <div className="font-bold text-white text-sm group-hover:text-red-400 transition-colors">{u.name}</div>
+                                <div className="text-[11px] text-zinc-500 font-medium">{u.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-zinc-800/60 text-zinc-300 border border-zinc-700/50 uppercase text-[10px] tracking-wider">
+                              {u.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1.5 font-bold text-white text-sm">
+                              <span className="text-zinc-400">{u.subs} active</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="font-black text-red-500 text-sm drop-shadow-md">{u.spent}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-black px-3 py-1.5 rounded-full border ${statusStyles[u.status] || statusStyles.active}`}>
+                              {u.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-zinc-400 text-xs font-medium">
+                            {u.joined}
+                          </td>
+                          <td className="px-6 py-4 pr-8 text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {u.status === 'active' ? (
+                                <button 
+                                  onClick={() => handleToggleBan(u.id, u.status)}
+                                  className="px-4 py-2 bg-[#0d0e12] text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+                                >
+                                  <UserX className="w-3.5 h-3.5" /> Ban
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleToggleBan(u.id, u.status)}
+                                  className="px-4 py-2 bg-[#0d0e12] text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+                                >
+                                  <UserCheck className="w-3.5 h-3.5" /> Unban
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </>
@@ -233,51 +268,37 @@ const AdminUsers = () => {
                 <p className="text-zinc-500 max-w-sm">All identity verifications have been processed. Great job keeping the queue perfectly clean!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {pendingUsers.map(user => (
-                  <div key={user.id} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl group shadow-xl hover:shadow-2xl transition-all flex flex-col overflow-hidden">
-                    <div className="px-6 py-5 border-b border-zinc-800/50 bg-[#0d0e12] flex items-center justify-between">
-                       <div className="flex items-center gap-4">
-                          <img src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`} alt="avatar" className="w-12 h-12 rounded-xl object-cover ring-2 ring-zinc-800" />
-                          <div>
-                            <div className="font-bold text-white mb-0.5">{user.legal_name || user.name || 'Unnamed User'}</div>
-                            <div className="text-[11px] text-zinc-500 font-medium font-mono">{user.email || 'No email'}</div>
-                          </div>
-                       </div>
-                       <span className="text-[10px] font-black uppercase tracking-widest text-[#eab308] bg-[#eab308]/10 px-3 py-1.5 rounded-full border border-[#eab308]/20">
-                         Pending
-                       </span>
-                    </div>
-
-                    <div className="p-6 space-y-5 flex-1">
-                      <div className="grid grid-cols-2 gap-3">
-                         <div className="bg-[#0d0e12] rounded-2xl p-4 border border-zinc-800/50">
-                            <span className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">National ID / Passport</span>
-                            <span className="font-bold text-white text-sm font-mono tracking-wider">{user.national_id_number || 'N/A'}</span>
-                         </div>
-                         <div className="bg-[#0d0e12] rounded-2xl p-4 border border-zinc-800/50">
-                            <span className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">Date of Birth</span>
-                            <span className="font-bold text-white text-sm">{user.dob ? new Date(user.dob).toLocaleDateString() : 'N/A'}</span>
-                         </div>
+                  <div key={user.uid} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-4 mb-4">
+                        <img src={resolveUserAvatar(user.avatar, user.name)} alt="avatar" className="w-12 h-12 rounded-xl object-cover ring-2 ring-zinc-800" />
+                        <div>
+                          <div className="font-bold text-white text-base">{user.name}</div>
+                          <div className="text-xs text-zinc-500">{user.email}</div>
+                        </div>
+                      </div>
+                      <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-6">
+                        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-1">Phone Number</div>
+                        <div className="text-sm font-bold text-white">{user.phone || 'Not provided'}</div>
                       </div>
                     </div>
-
-                    <div className="px-6 py-4 bg-[#0d0e12]/80 border-t border-zinc-800 flex justify-end gap-3 mt-auto">
+                    
+                    <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-800">
                       <button 
-                         onClick={() => handleKycAction(user.id, 'rejected')}
-                         disabled={actionLoading === user.id}
-                         className="px-5 py-2.5 bg-transparent text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-2 border border-transparent hover:border-red-500/20"
+                        disabled={actionLoading === user.uid}
+                        onClick={() => handleKycAction(user.uid, 'verified')}
+                        className="py-3 bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
                       >
-                         {actionLoading === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4 shrink-0" />}
-                         Reject
+                        {actionLoading === user.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Approve</>}
                       </button>
                       <button 
-                         onClick={() => handleKycAction(user.id, 'verified')}
-                         disabled={actionLoading === user.id}
-                         className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-2"
+                        disabled={actionLoading === user.uid}
+                        onClick={() => handleKycAction(user.uid, 'rejected')}
+                        className="py-3 bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
                       >
-                         {actionLoading === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 shrink-0" />}
-                         Approve Account
+                        {actionLoading === user.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <><X className="w-4 h-4" /> Reject</>}
                       </button>
                     </div>
                   </div>

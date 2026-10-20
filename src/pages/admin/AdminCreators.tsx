@@ -3,14 +3,6 @@ import { CheckCircle, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, S
 import AdminLayout from './AdminLayout';
 import { getAdminCreators, updateCreatorStatus } from '../../lib/db';
 
-const mockCreators = [
-  { id: 'mock1', name: 'Amina K.', email: 'amina@email.com', category: 'Fitness', subs: '12.4k', revenue: 'KES 420K', status: 'active', joined: 'Jan 2025', img: 'https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg' },
-  { id: 'mock2', name: 'Chef Kamau', email: 'kamau@email.com', category: 'Culinary', subs: '8.5k', revenue: 'KES 275K', status: 'active', joined: 'Feb 2025', img: 'https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg' },
-  { id: 'mock3', name: 'Wanjiku Tech', email: 'wanjiku@email.com', category: 'Education', subs: '24.1k', revenue: 'KES 380K', status: 'active', joined: 'Dec 2024', img: 'https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg' },
-  { id: 'mock4', name: 'ODC Music', email: 'odc@email.com', category: 'Entertainment', subs: '45.2k', revenue: 'KES 312K', status: 'suspended', joined: 'Nov 2024', img: 'https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg' },
-  { id: 'mock5', name: 'Grace Fashion', email: 'grace@email.com', category: 'Fashion', subs: '6.2k', revenue: 'KES 98K', status: 'pending', joined: 'Sep 2025', img: 'https://i.pravatar.cc/150?img=47' },
-];
-
 const statusStyles: Record<string, string> = {
   active: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
   pending: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
@@ -30,9 +22,15 @@ const AdminCreators = () => {
 
   const loadCreators = async () => {
     setIsLoading(true);
-    const data = await getAdminCreators();
-    setCreatorsList([...data, ...mockCreators]);
-    setIsLoading(false);
+    try {
+      const data = await getAdminCreators();
+      setCreatorsList(data || []);
+    } catch (err) {
+      console.error('Error loading admin creators:', err);
+      setCreatorsList([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

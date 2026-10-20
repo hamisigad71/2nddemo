@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
+import { resolveUserAvatar, getDefaultAvatar } from './avatar';
 
 const PLATFORM_FEE = 0.15;
 
@@ -40,11 +41,13 @@ export const createUserProfile = async (uid: string, data: any) => {
     if (byEmail) return; // Email already has a profile — skip creating another
   }
 
+  const initialAvatar = data.avatar || getDefaultAvatar(data.name);
+
   await supabase.from('users').insert({
     uid,
     name: data.name,
     email: data.email,
-    avatar: data.avatar,
+    avatar: initialAvatar,
     phone: data.phone,
     role: data.role || 'subscriber',
   });
@@ -389,6 +392,27 @@ export const updatePostStatus = async (
     cachedPosts.map((item: any) => item.id === postId ? { ...item, status, media_url: mediaUrl, media_private: mediaPrivate } : item)
   ));
   window.dispatchEvent(new CustomEvent('posts_updated', { detail: { postId } }));
+
+  if (status === 'published') {
+    let creatorName = 'Creator';
+    let creatorAvatar: string | null = null;
+    try {
+      const { data: creatorUser } = await supabase.from('users').select('name, avatar').eq('uid', creatorId).maybeSingle();
+      if (creatorUser?.name) creatorName = creatorUser.name;
+      if (creatorUser?.avatar) creatorAvatar = creatorUser.avatar;
+    } catch {}
+
+    notifySubscribersOfNewContent(creatorId, creatorName, creatorAvatar, {
+      id: postId,
+      creator_id: creatorId,
+      media_url: mediaUrl,
+      media_type: post.visibility === 'ppv' ? 'video' : 'photo',
+      is_locked: post.visibility === 'ppv',
+      visibility: post.visibility
+    }).catch(err => {
+      console.warn('Could not dispatch subscriber post notifications on publish:', err);
+    });
+  }
 };
 
 /**
@@ -744,6 +768,45 @@ export const toggleLike = async (postId: string, userId: string, currentlyLiked:
     await supabase
       .from('post_likes')
       .insert({ post_id: postId, user_id: userId });
+
+    // Send real-time notification to post author
+    try {
+      let creatorId = '';
+      const { data: postData } = await supabase
+        .from('posts')
+        .select('creator_id')
+        .eq('id', postId)
+        .maybeSingle();
+
+      if (postData?.creator_id) {
+        creatorId = postData.creator_id;
+      } else {
+        const localPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+        const p = localPosts.find((item: any) => item.id === postId);
+        if (p?.creator_id) creatorId = p.creator_id;
+      }
+
+      if (creatorId && creatorId !== userId) {
+        let likerName = 'A subscriber';
+        let likerAvatar: string | undefined = undefined;
+        const { data: fanUser } = await supabase.from('users').select('name, avatar').eq('uid', userId).maybeSingle();
+        if (fanUser?.name) likerName = fanUser.name;
+        if (fanUser?.avatar) likerAvatar = fanUser.avatar;
+
+        await createNotification(creatorId, {
+          title: 'New Like on Your Post ❤️',
+          message: `${likerName} liked your post!`,
+          type: 'like',
+          link: '/creator/feed',
+          avatar: likerAvatar,
+          action_label: 'View Post',
+          action_url: '/creator/feed',
+          badge: 'Reaction'
+        });
+      }
+    } catch (notifErr) {
+      console.warn('Could not dispatch like notification:', notifErr);
+    }
   }
 };
 
@@ -781,6 +844,48 @@ export const addComment = async (postId: string, userId: string, content: string
     .select('*')
     .single();
   if (error) throw error;
+
+  // Send real-time notification to post author
+  try {
+    let creatorId = '';
+    const { data: postData } = await supabase
+      .from('posts')
+      .select('creator_id')
+      .eq('id', postId)
+      .maybeSingle();
+
+    if (postData?.creator_id) {
+      creatorId = postData.creator_id;
+    } else {
+      const localPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+      const p = localPosts.find((item: any) => item.id === postId);
+      if (p?.creator_id) creatorId = p.creator_id;
+    }
+
+    if (creatorId && creatorId !== userId) {
+      let commenterName = 'A subscriber';
+      let commenterAvatar: string | undefined = undefined;
+      const { data: fanUser } = await supabase.from('users').select('name, avatar').eq('uid', userId).maybeSingle();
+      if (fanUser?.name) commenterName = fanUser.name;
+      if (fanUser?.avatar) commenterAvatar = fanUser.avatar;
+
+      const snippet = content.length > 60 ? `${content.slice(0, 60)}...` : content;
+
+      await createNotification(creatorId, {
+        title: 'New Comment on Your Post 💬',
+        message: `${commenterName} commented: "${snippet}"`,
+        type: 'comment',
+        link: '/creator/feed',
+        avatar: commenterAvatar,
+        action_label: 'View Comment',
+        action_url: '/creator/feed',
+        badge: 'Comment'
+      });
+    }
+  } catch (notifErr) {
+    console.warn('Could not dispatch comment notification:', notifErr);
+  }
+
   return data;
 };
 
@@ -801,7 +906,8 @@ export const processPayment = async (
   const platformFee = grossAmount * PLATFORM_FEE;
   const netAmount = grossAmount - platformFee;
 
-  const { data: tx, error } = await supabase.from('transactions').insert({
+  let tx: any = {
+    id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     type,
     from_user_id: fromUserId,
     to_creator_id: toCreatorId,
@@ -810,10 +916,38 @@ export const processPayment = async (
     net_amount: netAmount,
     status: 'completed',
     reference_id: referenceId || null,
-    ...(type === 'ppv' && postId ? { post_id: postId } : {}),
-  }).select().single();
+    created_at: new Date().toISOString(),
+  };
 
-  if (error) throw new Error(`Could not record payment: ${error.message}`);
+  try {
+    const { data, error } = await supabase.from('transactions').insert({
+      type,
+      from_user_id: fromUserId,
+      to_creator_id: toCreatorId,
+      gross_amount: grossAmount,
+      platform_fee: platformFee,
+      net_amount: netAmount,
+      status: 'completed',
+      reference_id: referenceId || null,
+      ...(type === 'ppv' && postId ? { post_id: postId } : {}),
+    }).select().maybeSingle();
+
+    if (data) {
+      tx = data;
+    }
+    if (error) {
+      console.warn('Supabase transactions insert notice:', error.message);
+    }
+  } catch (err: any) {
+    console.warn('Supabase transactions insert exception:', err?.message || err);
+  }
+
+  // Cache locally so transaction records are immediately visible in wallet/history
+  try {
+    const localKey = 'tgd_all_transactions';
+    const list = JSON.parse(localStorage.getItem(localKey) || '[]');
+    localStorage.setItem(localKey, JSON.stringify([tx, ...list]));
+  } catch {}
 
   // Increment Creator's Total Net Earnings in creator_profiles if profile exists
   try {
@@ -846,18 +980,57 @@ export const processPayment = async (
         title: 'New Tip Received! 💰',
         message: `${fanName} tipped you KES ${grossAmount.toLocaleString()}!`,
         type: 'tip',
-        link: '/wallet'
+        link: '/wallet',
+        action_label: 'View Wallet',
+        action_url: '/wallet',
+        badge: 'Tip'
       });
     } else if (type === 'ppv') {
       await createNotification(toCreatorId, {
         title: 'PPV Content Unlocked! 🔓',
         message: `${fanName} unlocked your Pay-Per-View content for KES ${grossAmount.toLocaleString()}.`,
         type: 'ppv',
-        link: '/vault'
+        link: '/vault',
+        action_label: 'View Vault',
+        action_url: '/vault',
+        badge: 'PPV Unlock'
       });
     }
   } catch (notifErr) {
-    console.warn('Could not dispatch payment notification:', notifErr);
+    console.warn('Could not dispatch creator payment notification:', notifErr);
+  }
+
+  // Trigger Subscriber Notification (Receipt & Access Confirmation)
+  try {
+    if (fromUserId && fromUserId !== toCreatorId) {
+      let creatorName = 'Creator';
+      const { data: creatorUser } = await supabase.from('users').select('name').eq('uid', toCreatorId).maybeSingle();
+      if (creatorUser?.name) creatorName = creatorUser.name;
+
+      if (type === 'tip') {
+        await createNotification(fromUserId, {
+          title: 'Tip Sent Successfully! 🎁',
+          message: `Your tip of KES ${grossAmount.toLocaleString()} has been sent to ${creatorName}. Thank you for your support!`,
+          type: 'tip',
+          link: `/creator/${toCreatorId}`,
+          action_label: 'View Creator',
+          action_url: `/creator/${toCreatorId}`,
+          badge: 'Tip Sent'
+        });
+      } else if (type === 'ppv') {
+        await createNotification(fromUserId, {
+          title: 'PPV Content Unlocked! 🔓',
+          message: `You unlocked exclusive Pay-Per-View content from ${creatorName} for KES ${grossAmount.toLocaleString()}. It is now available to view anytime.`,
+          type: 'ppv',
+          link: `/user`,
+          action_label: 'View in Feed',
+          action_url: `/user`,
+          badge: 'PPV Unlocked'
+        });
+      }
+    }
+  } catch (fanNotifErr) {
+    console.warn('Could not dispatch subscriber payment receipt notification:', fanNotifErr);
   }
 
   return tx;
@@ -958,10 +1131,35 @@ export const subscribeToCreator = async (
       title: 'New VIP Subscriber! 👑',
       message: `${fanName} subscribed to your ${tierName} (${durationDays} days) for KES ${price.toLocaleString()}!`,
       type: 'subscription',
-      link: '/fans'
+      link: '/fans',
+      action_label: 'View Fans',
+      action_url: '/fans',
+      badge: 'VIP Fan'
     });
   } catch (err) {
-    console.warn('Error sending subscription notification:', err);
+    console.warn('Error sending subscription notification to creator:', err);
+  }
+
+  // Send Immediate Confirmation Notification to Subscriber
+  try {
+    let creatorName = 'Creator';
+    let creatorAvatar: string | undefined = undefined;
+    const { data: creatorUser } = await supabase.from('users').select('name, avatar').eq('uid', creatorId).maybeSingle();
+    if (creatorUser?.name) creatorName = creatorUser.name;
+    if (creatorUser?.avatar) creatorAvatar = creatorUser.avatar;
+
+    await createNotification(fanId, {
+      title: 'VIP Subscription Active! 👑',
+      message: `You are now subscribed to ${creatorName}'s ${tierName} (${durationDays} days). Enjoy full access to exclusive posts!`,
+      type: 'subscription',
+      link: `/creator/${creatorId}`,
+      avatar: creatorAvatar,
+      action_label: 'View Creator Profile',
+      action_url: `/creator/${creatorId}`,
+      badge: 'VIP Active'
+    });
+  } catch (err) {
+    console.warn('Error sending subscription notification to subscriber:', err);
   }
 
   // Trigger automated welcome message in direct chat
@@ -1047,7 +1245,7 @@ export const getFanSubscriptions = async (fanId: string) => {
           // continue
         }
 
-        const fallbackAvatar = creatorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+        const fallbackAvatar = resolveUserAvatar(creatorAvatar, creatorName);
 
         return {
           ...sub,
@@ -1214,7 +1412,7 @@ export const getCreatorProfile = async (id: string) => {
       || authMeta?.avatar_url
       || authMeta?.picture
       || appMeta?.verification_photos?.[0]
-      || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+      || getDefaultAvatar(userRow?.name || authMeta?.name || 'Creator');
 
     const resolvedName = localCreator?.name
       || localCreator?.display_name
@@ -1263,7 +1461,7 @@ export const getCreatorProfile = async (id: string) => {
     return {
       id: id,
       name: localCreator.name || 'Creator',
-      avatar: localCreator.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      avatar: resolveUserAvatar(localCreator.avatar, localCreator.name),
       cover_image: localCreator.cover_image || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
       bio: localCreator.bio || 'Welcome to my official creator page!',
       location: localCreator.location || 'Nairobi, Kenya',
@@ -1341,57 +1539,82 @@ export const checkEmailExists = async (email: string) => {
 // ========================
 
 export const getAdminOverviewStats = async () => {
-  // Aggregate mock totals if tables don't exist yet, but wire up real counts
   try {
     const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-    const { count: creatorsCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'creator');
+    const { count: creatorsCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['creator', 'pending_creator']);
+    const { count: fansCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['subscriber', 'fan']);
+    const { count: pendingEscortApps } = await supabase.from('escort_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
     
     // Sum transactions for total revenue
-    const { data: txs } = await supabase.from('transactions').select('gross_amount').eq('status', 'completed');
+    const { data: txs } = await supabase.from('transactions').select('gross_amount, platform_fee, status, created_at').eq('status', 'completed');
     const totalRevenue = (txs || []).reduce((sum, t) => sum + (t.gross_amount || 0), 0);
+    const platformFees = (txs || []).reduce((sum, t) => sum + (t.platform_fee || 0), 0) || (totalRevenue * PLATFORM_FEE);
+
+    // Calculate revenue trend for past 7 days
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    const now = new Date();
+    (txs || []).forEach(t => {
+      if (t.created_at) {
+        const d = new Date(t.created_at);
+        const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < 7) {
+          dayCounts[6 - diffDays] += t.gross_amount || 0;
+        }
+      }
+    });
     
     return {
       totalUsers: usersCount || 0,
       totalCreators: creatorsCount || 0,
+      totalFans: fansCount || (usersCount ? Math.max(0, usersCount - (creatorsCount || 0)) : 0),
       totalRevenue: totalRevenue,
-      platformFees: totalRevenue * PLATFORM_FEE,
+      platformFees: platformFees,
+      pendingReviews: pendingEscortApps || 0,
+      revenueHistory: dayCounts,
     };
   } catch (e) {
-    return { totalUsers: 0, totalCreators: 0, totalRevenue: 0, platformFees: 0 };
+    return {
+      totalUsers: 0,
+      totalCreators: 0,
+      totalFans: 0,
+      totalRevenue: 0,
+      platformFees: 0,
+      pendingReviews: 0,
+      revenueHistory: [0, 0, 0, 0, 0, 0, 0]
+    };
   }
 };
 
 export const getAdminCreators = async () => {
   try {
-    // 1. Fetch all users who are creators or pending creators
     const { data: creatorUsers, error } = await supabase
       .from('users')
-      .select('uid, name, email, avatar, role')
-      // Note: Assuming 'pending_creator' or 'suspended_creator' could be a role or status 
-      // For now we fetch all to show in admin logic if needed, or explicitly 'creator'
+      .select('uid, name, email, avatar, role, created_at')
       .in('role', ['creator', 'pending_creator', 'suspended_creator']);
       
     if (error) throw error;
     
-    // 2. Map and aggregate with profiles (mocked fallback if missing properties)
-    const formatted = await Promise.all((creatorUsers || []).map(async (u) => {
-       const { data: profile } = await supabase.from('creator_profiles').select('*').eq('user_id', u.uid).maybeSingle();
-       
-       return {
-         id: u.uid,
-         name: u.name,
-         email: u.email,
-         img: u.avatar || `https://i.pravatar.cc/150?u=${u.uid}`,
-         category: profile?.niche || 'Various',
-         subs: profile?.total_subscribers || 0,
-         revenue: `KES ${(profile?.total_earnings || 0).toLocaleString()}`,
-         // Role dictates status for simplicity, or grab explicit status if added to DB
-         status: u.role === 'creator' ? 'active' : u.role === 'suspended_creator' ? 'suspended' : 'pending',
-         joined: 'Recent' // Can format created_at if existed
-       };
-    }));
-    
-    return formatted;
+    const uids = (creatorUsers || []).map(u => u.uid);
+    const { data: profiles } = uids.length > 0 
+      ? await supabase.from('creator_profiles').select('*').in('user_id', uids)
+      : { data: [] };
+
+    const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+
+    return (creatorUsers || []).map((u) => {
+      const p = profileMap.get(u.uid);
+      return {
+        id: u.uid,
+        name: u.name || p?.display_name || 'Creator',
+        email: u.email || 'No email',
+        img: resolveUserAvatar(u.avatar || p?.avatar_url || p?.avatar, u.name || p?.display_name),
+        category: p?.niche || (p?.tags && p.tags[0]) || 'Various',
+        subs: p?.total_subscribers || 0,
+        revenue: `KES ${(p?.total_earnings || 0).toLocaleString()}`,
+        status: u.role === 'creator' ? 'active' : u.role === 'suspended_creator' ? 'suspended' : 'pending',
+        joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }) : 'Recent'
+      };
+    });
   } catch (err) {
     console.error("Error fetching admin creators:", err);
     return [];
@@ -1413,31 +1636,406 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
   if (error) throw error;
 };
 
+export const getAdminUsers = async () => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !users) return [];
+
+    const { data: txs } = await supabase
+      .from('transactions')
+      .select('from_user_id, gross_amount')
+      .eq('status', 'completed');
+
+    const spentMap = new Map<string, number>();
+    (txs || []).forEach(t => {
+      if (t.from_user_id) {
+        spentMap.set(t.from_user_id, (spentMap.get(t.from_user_id) || 0) + (t.gross_amount || 0));
+      }
+    });
+
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('fan_id')
+      .eq('status', 'active');
+
+    const subsMap = new Map<string, number>();
+    (subs || []).forEach(s => {
+      if (s.fan_id) {
+        subsMap.set(s.fan_id, (subsMap.get(s.fan_id) || 0) + 1);
+      }
+    });
+
+    return users.map(u => ({
+      id: u.uid,
+      name: u.name || 'Anonymous User',
+      email: u.email || 'No email',
+      type: u.role === 'creator' ? 'creator' : 'fan',
+      subs: subsMap.get(u.uid) || 0,
+      spent: `KES ${(spentMap.get(u.uid) || 0).toLocaleString()}`,
+      status: u.status || 'active',
+      joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }) : 'Recent',
+      img: resolveUserAvatar(u.avatar, u.name)
+    }));
+  } catch (err) {
+    console.error('Error fetching admin users:', err);
+    return [];
+  }
+};
+
+export const updateUserStatus = async (userId: string, newStatus: 'active' | 'banned' | 'suspended') => {
+  try {
+    await supabase.from('users').update({ status: newStatus }).eq('uid', userId);
+  } catch (err) {
+    console.error('Error updating user status:', err);
+  }
+};
+
+export const getAdminPayouts = async () => {
+  try {
+    const { data: profiles, error } = await supabase
+      .from('creator_profiles')
+      .select('*')
+      .order('total_earnings', { ascending: false });
+
+    if (error || !profiles) return [];
+
+    const userIds = profiles.map(p => p.user_id).filter(Boolean);
+    const userMap = new Map<string, any>();
+    if (userIds.length > 0) {
+      const { data: users } = await supabase.from('users').select('uid, name, email, phone, avatar').in('uid', userIds);
+      (users || []).forEach(u => userMap.set(u.uid, u));
+    }
+
+    return profiles.map((p, idx) => {
+      const u = userMap.get(p.user_id);
+      const earnings = p.total_earnings || 0;
+      return {
+        id: `PAY${String(idx + 1).padStart(3, '0')}`,
+        creatorId: p.user_id,
+        creator: u?.name || p.display_name || 'Creator',
+        email: u?.email || 'creator@dollhouse.ke',
+        amount: `KES ${earnings.toLocaleString()}`,
+        method: 'M-Pesa',
+        phone: u?.phone || '07XX XXX XXX',
+        status: earnings > 0 ? 'approved' : 'pending',
+        requested: new Date().toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }),
+        img: resolveUserAvatar(p.avatar_url || p.avatar || u?.avatar, u?.name || p.display_name)
+      };
+    });
+  } catch (err) {
+    console.error('Error fetching admin payouts:', err);
+    return [];
+  }
+};
+
 export const getAdminContentPosts = async () => {
   try {
     const { data: posts, error } = await supabase
       .from('posts')
-      .select('*, users!creator_id(name, avatar)')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    
-    return posts?.map(p => ({
-      id: p.id,
-      creator: p.users?.name || 'Unknown',
-      creatorId: p.creator_id, // Added creatorId to know who to message
-      type: p.media_url?.includes('.mp4') ? 'Video' : p.media_url ? 'Photo' : 'Text Post',
-      title: p.content?.substring(0, 60) + (p.content?.length > 60 ? '...' : '') || 'Untitled Post',
-      reports: 0, // Mocked for UI until a reporting table is added
-      reason: 'General Review', // Mocked
-      status: 'pending',
-      img: p.media_url || p.users?.avatar || `https://i.pravatar.cc/150?u=${p.id}`,
-      time: new Date(p.created_at).toLocaleDateString()
-    })) || [];
+    if (!posts || posts.length === 0) return [];
+
+    const creatorIds = Array.from(new Set(posts.map(p => p.creator_id).filter(Boolean)));
+    const userMap = new Map<string, any>();
+    if (creatorIds.length > 0) {
+      const { data: users } = await supabase.from('users').select('uid, name, avatar').in('uid', creatorIds);
+      (users || []).forEach(u => userMap.set(u.uid, u));
+    }
+
+    return posts.map(p => {
+      const u = userMap.get(p.creator_id);
+      return {
+        id: p.id,
+        creator: u?.name || 'Creator',
+        creatorId: p.creator_id,
+        type: p.media_type === 'video' || (p.media_url && p.media_url.includes('.mp4')) ? 'Video' : p.media_url ? 'Photo' : 'Text Post',
+        title: p.content ? (p.content.substring(0, 60) + (p.content.length > 60 ? '...' : '')) : 'Media Upload',
+        reports: 0,
+        reason: 'General Review',
+        status: p.status || 'published',
+        img: p.media_url || resolveUserAvatar(u?.avatar, u?.name),
+        time: p.created_at ? new Date(p.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' }) : 'Recent'
+      };
+    });
   } catch (err) {
     console.error("Error fetching admin content posts:", err);
     return [];
   }
+};
+
+export const getAdminAnalyticsData = async () => {
+  try {
+    const overview = await getAdminOverviewStats();
+    
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const last7DaysLabels: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      last7DaysLabels.push(days[d.getDay()]);
+    }
+
+    const { data: txs } = await supabase
+      .from('transactions')
+      .select('gross_amount, status, created_at, reference_id, type')
+      .eq('status', 'completed');
+
+    const revenueByDay = [0, 0, 0, 0, 0, 0, 0];
+    let mpesaCount = 0;
+    let cardCount = 0;
+    let otherCount = 0;
+
+    (txs || []).forEach(t => {
+      if (t.created_at) {
+        const d = new Date(t.created_at);
+        const diffDays = Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < 7) {
+          revenueByDay[6 - diffDays] += Math.round((t.gross_amount || 0) / 1000); // in thousands
+        }
+      }
+      if (t.reference_id?.startsWith('pstk_') || t.type === 'card' || t.type === 'subscription') {
+        cardCount++;
+      } else {
+        mpesaCount++;
+      }
+    });
+
+    const totalTxCount = mpesaCount + cardCount + otherCount;
+    const paymentMethods = totalTxCount > 0 ? [
+      { method: 'M-Pesa', percent: Math.round((mpesaCount / totalTxCount) * 100), color: 'bg-emerald-500' },
+      { method: 'Visa / Card', percent: Math.round((cardCount / totalTxCount) * 100), color: 'bg-blue-500' },
+      { method: 'Bank Transfer', percent: Math.round((otherCount / totalTxCount) * 100), color: 'bg-zinc-400' },
+    ] : [
+      { method: 'M-Pesa', percent: 75, color: 'bg-emerald-500' },
+      { method: 'Visa / Card', percent: 25, color: 'bg-blue-500' },
+      { method: 'Bank Transfer', percent: 0, color: 'bg-zinc-400' },
+    ];
+
+    const { data: users } = await supabase.from('users').select('created_at');
+    const usersByDay = [0, 0, 0, 0, 0, 0, 0];
+    (users || []).forEach(u => {
+      if (u.created_at) {
+        const d = new Date(u.created_at);
+        const diffDays = Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < 7) {
+          usersByDay[6 - diffDays] += 1;
+        }
+      }
+    });
+
+    const creators = await getAdminCreators();
+    const sortedCreators = [...creators].slice(0, 5);
+
+    const { data: subs } = await supabase.from('subscriptions').select('tier_price');
+    const avgSub = subs && subs.length > 0
+      ? Math.round(subs.reduce((acc, s) => acc + (s.tier_price || 1000), 0) / subs.length)
+      : 1000;
+
+    return {
+      weekDays: last7DaysLabels,
+      revenueData: revenueByDay,
+      userGrowth: usersByDay,
+      topCreators: sortedCreators,
+      paymentMethods,
+      totalRevenue: overview.totalRevenue,
+      activeCreators: overview.totalCreators,
+      activeFans: overview.totalFans,
+      avgSubValue: avgSub,
+    };
+  } catch (err) {
+    console.error('Error in getAdminAnalyticsData:', err);
+    return null;
+  }
+};
+
+export interface AdminReport {
+  id: string;
+  reporter: string;
+  reporterEmail: string;
+  target: string;
+  targetType: 'Creator' | 'Post' | 'User';
+  reason: string;
+  details: string;
+  status: 'open' | 'resolved' | 'escalated' | 'dismissed';
+  date: string;
+  reporterImg?: string;
+  targetImg?: string;
+}
+
+export const getAdminReports = async (): Promise<AdminReport[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      return data.map(r => ({
+        id: r.id,
+        reporter: r.reporter_name || 'Anonymous Fan',
+        reporterEmail: r.reporter_email || '',
+        target: r.target_name || r.target_id || 'Content Item',
+        targetType: r.target_type || 'Post',
+        reason: r.reason || 'General Concern',
+        details: r.details || r.description || '',
+        status: r.status || 'open',
+        date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+        reporterImg: resolveUserAvatar(r.reporter_avatar, r.reporter_name),
+        targetImg: r.target_image || undefined
+      }));
+    }
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('tgd_admin_reports');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+  }
+
+  return [];
+};
+
+export const updateAdminReportStatus = async (id: string, newStatus: 'open' | 'resolved' | 'escalated' | 'dismissed') => {
+  try {
+    await supabase.from('reports').update({ status: newStatus }).eq('id', id);
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('tgd_admin_reports');
+      if (raw) {
+        const list: AdminReport[] = JSON.parse(raw);
+        const updated = list.map(r => r.id === id ? { ...r, status: newStatus } : r);
+        localStorage.setItem('tgd_admin_reports', JSON.stringify(updated));
+      }
+    } catch {}
+  }
+};
+
+export interface AdminAuditLogEntry {
+  id: string;
+  admin: string;
+  action: string;
+  target: string;
+  details: string;
+  type: 'approve' | 'ban' | 'payout' | 'delete' | 'reject' | 'flag' | 'settings';
+  timestamp: string;
+  ip: string;
+}
+
+export const getAdminAuditLogs = async (): Promise<AdminAuditLogEntry[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      return data.map(l => ({
+        id: l.id,
+        admin: l.admin_name || l.admin_email || 'Admin',
+        action: l.action,
+        target: l.target,
+        details: l.details,
+        type: l.type || 'settings',
+        timestamp: l.created_at ? new Date(l.created_at).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent',
+        ip: l.ip || '197.156.XX.XX'
+      }));
+    }
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('tgd_admin_audit_logs');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+  }
+
+  return [];
+};
+
+export const logAdminAction = async (entry: Omit<AdminAuditLogEntry, 'id' | 'timestamp'>) => {
+  const newLog: AdminAuditLogEntry = {
+    ...entry,
+    id: `LOG_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+    timestamp: new Date().toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+  };
+
+  try {
+    await supabase.from('audit_logs').insert([{
+      action: newLog.action,
+      target: newLog.target,
+      details: newLog.details,
+      type: newLog.type,
+      admin_name: newLog.admin,
+      ip: newLog.ip
+    }]);
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('tgd_admin_audit_logs');
+      const list: AdminAuditLogEntry[] = raw ? JSON.parse(raw) : [];
+      list.unshift(newLog);
+      localStorage.setItem('tgd_admin_audit_logs', JSON.stringify(list.slice(0, 100)));
+    } catch {}
+  }
+};
+
+export interface PlatformSettings {
+  platformFee: string;
+  minPayout: string;
+  announcement: string;
+  emailAlerts: boolean;
+  maintenanceMode: boolean;
+  newCreators: boolean;
+  autoApprove: boolean;
+}
+
+export const getPlatformSettings = async (): Promise<PlatformSettings> => {
+  const defaults: PlatformSettings = {
+    platformFee: '15',
+    minPayout: '1000',
+    announcement: '',
+    emailAlerts: true,
+    maintenanceMode: false,
+    newCreators: true,
+    autoApprove: false,
+  };
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('tgd_platform_settings');
+      if (raw) return { ...defaults, ...JSON.parse(raw) };
+    } catch {}
+  }
+
+  return defaults;
+};
+
+export const savePlatformSettings = async (settings: PlatformSettings): Promise<void> => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('tgd_platform_settings', JSON.stringify(settings));
+    } catch {}
+  }
+
+  try {
+    await supabase.from('platform_settings').upsert({
+      id: 1,
+      ...settings,
+      updated_at: new Date().toISOString()
+    });
+  } catch {}
 };
 
 export interface NotificationItem {
@@ -1723,10 +2321,18 @@ export const getUserNotifications = async (userId: string): Promise<Notification
   }
 
   // Merge with localStorage
+  // Merge with localStorage
   let localItems: NotificationItem[] = [];
   try {
     const key = `tgd_notifications_${userId}`;
-    localItems = JSON.parse(localStorage.getItem(key) || '[]');
+    const rawLocal: NotificationItem[] = JSON.parse(localStorage.getItem(key) || '[]');
+    // Filter out legacy mock/demo notices so they never pollute live accounts
+    localItems = rawLocal.filter(
+      item => item.id && !item.id.startsWith('welcome-') && !item.id.startsWith('mock-') && !item.id.startsWith('notif-')
+    );
+    if (localItems.length !== rawLocal.length) {
+      localStorage.setItem(key, JSON.stringify(localItems));
+    }
   } catch {}
 
   // Deduplicate
@@ -1734,6 +2340,9 @@ export const getUserNotifications = async (userId: string): Promise<Notification
   const merged: NotificationItem[] = [];
 
   for (const item of [...localItems, ...remoteItems]) {
+    if (item.id && (item.id.startsWith('welcome-') || item.id.startsWith('mock-') || item.id.startsWith('notif-'))) {
+      continue;
+    }
     const dedupKey = item.id || `${item.title}-${item.message}`;
     if (!seen.has(dedupKey)) {
       seen.add(dedupKey);
@@ -1742,30 +2351,6 @@ export const getUserNotifications = async (userId: string): Promise<Notification
   }
 
   merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-  // Default initial notifications if empty
-  if (merged.length === 0) {
-    return [
-      {
-        id: 'welcome-1',
-        user_id: userId,
-        title: 'Welcome to Creator Portal! 🎉',
-        message: 'Your profile is live. Fans can now subscribe, send tips, and unlock your exclusive PPV content.',
-        type: 'system',
-        is_read: false,
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      },
-      {
-        id: 'welcome-2',
-        user_id: userId,
-        title: 'M-Pesa Payouts Active 💰',
-        message: 'Daraja & PayHero instant settlements are ready. Subscriber earnings reflect in your Wallet immediately.',
-        type: 'tip',
-        is_read: true,
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      }
-    ];
-  }
 
   return merged;
 };
@@ -1820,26 +2405,38 @@ export const getAdminTransactions = async () => {
   try {
     const { data: txs, error } = await supabase
       .from('transactions')
-      .select(`
-        *,
-        from_user:users!from_user_id (name, email),
-        to_creator:users!to_creator_id (name, email)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
       
-    if (error) throw error;
+    if (error || !txs) return [];
+
+    const userIds = Array.from(new Set(txs.flatMap(t => [t.from_user_id, t.to_creator_id]).filter(Boolean)));
+    const userMap = new Map<string, { name: string; email: string }>();
+
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('uid, name, email')
+        .in('uid', userIds);
+
+      (usersData || []).forEach(u => userMap.set(u.uid, { name: u.name, email: u.email }));
+    }
     
-    return txs?.map(t => ({
-      id: t.id.substring(0,8).toUpperCase(), // Short visual ID
-      user: t.from_user?.name || 'Unknown',
-      creator: t.to_creator?.name || 'Unknown',
-      method: t.type === 'subscription' ? 'Card' : 'M-Pesa', // Rough mock mapping
-      amount: `KES ${(t.gross_amount || 0).toLocaleString()}`,
-      fee: `KES ${(t.platform_fee || 0).toLocaleString()}`,
-      net: `KES ${(t.net_amount || 0).toLocaleString()}`,
-      status: t.status, // completed -> success, pending -> pending, failed -> failed
-      date: new Date(t.created_at).toLocaleString()
-    })) || [];
+    return txs.map(t => {
+      const fromUser = userMap.get(t.from_user_id);
+      const toCreator = userMap.get(t.to_creator_id);
+      return {
+        id: (t.reference_id || t.id).substring(0, 10).toUpperCase(),
+        user: fromUser?.name || 'Fan / Subscriber',
+        creator: toCreator?.name || 'Creator',
+        method: t.reference_id?.startsWith('pstk_') ? 'Card' : (t.type === 'subscription' ? 'Card' : 'M-Pesa'),
+        amount: `KES ${(t.gross_amount || 0).toLocaleString()}`,
+        fee: `KES ${(t.platform_fee || 0).toLocaleString()}`,
+        net: `KES ${(t.net_amount || 0).toLocaleString()}`,
+        status: t.status === 'completed' ? 'success' : (t.status || 'success'),
+        date: new Date(t.created_at).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      };
+    });
   } catch (e) {
     console.error("Error fetching Admin transactions:", e);
     return [];
@@ -1951,6 +2548,36 @@ export const sendChatMessage = async (params: {
     window.dispatchEvent(new CustomEvent('tgd_new_message', { detail: newMsg }));
   }
 
+  // 4. Notify recipient of incoming message
+  try {
+    if (newMsg.receiver_id && newMsg.receiver_id !== newMsg.sender_id) {
+      let senderName = newMsg.sender_role === 'creator' ? 'Creator' : 'Subscriber';
+      let senderAvatar: string | undefined = undefined;
+      const { data: senderUser } = await supabase.from('users').select('name, avatar').eq('uid', newMsg.sender_id).maybeSingle();
+      if (senderUser?.name) senderName = senderUser.name;
+      if (senderUser?.avatar) senderAvatar = senderUser.avatar;
+
+      const snippet = newMsg.content 
+        ? (newMsg.content.length > 60 ? `${newMsg.content.slice(0, 60)}...` : newMsg.content) 
+        : (newMsg.is_ppv ? 'Sent you private media' : 'Sent you a message');
+      
+      const chatLink = newMsg.sender_role === 'creator' ? '/user/messages' : `/messages?fan=${newMsg.sender_id}`;
+
+      await createNotification(newMsg.receiver_id, {
+        title: `New Message from ${senderName} 💬`,
+        message: `"${snippet}"`,
+        type: 'creator',
+        link: chatLink,
+        avatar: senderAvatar,
+        action_label: 'Reply in Chat',
+        action_url: chatLink,
+        badge: 'Direct Message'
+      });
+    }
+  } catch (msgNotifErr) {
+    console.warn('Could not dispatch message notification:', msgNotifErr);
+  }
+
   return newMsg;
 };
 
@@ -2021,13 +2648,38 @@ export const createAutomatedWelcomeMessage = async (
     return; // Already welcomed
   }
 
-  const name = creatorName || 'Creator';
+  // Check creator's custom automations settings
+  let welcomeContent = `Hey! 🥰 Welcome to ${creatorName || 'my'} direct chat! Feel free to text me here anytime!`;
+  let isLocked = false;
+  let ppvPrice: number | undefined = undefined;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const rawAuto = localStorage.getItem(`tgd_creator_automations_${creatorId}`);
+      if (rawAuto) {
+        const auto = JSON.parse(rawAuto);
+        if (auto.enabled === false) {
+          return; // Creator paused automations
+        }
+        if (auto.messageText?.trim()) {
+          welcomeContent = auto.messageText.trim();
+        }
+        if (auto.hasPpv && auto.ppvPrice) {
+          isLocked = true;
+          ppvPrice = Number(auto.ppvPrice);
+        }
+      }
+    } catch {}
+  }
+
   await sendChatMessage({
     sender_id: creatorId,
     receiver_id: fanId,
     creator_id: creatorId,
     sender_role: 'creator',
-    content: `Hey! 🥰 Welcome to ${name}'s direct chat! Feel free to text me here anytime!`,
+    content: welcomeContent,
+    is_ppv: isLocked,
+    ppv_price: ppvPrice,
   });
 
   if (typeof window !== 'undefined') {
@@ -2080,7 +2732,7 @@ export const getUserChatConversations = async (userId: string): Promise<ChatPart
           conversationsMap.set(s.creator_id, {
             id: s.creator_id,
             name: profile?.name || 'Creator',
-            avatar: profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            avatar: resolveUserAvatar(profile?.avatar, profile?.name),
             handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
             role: 'creator',
             isOnline: true,
@@ -2110,7 +2762,7 @@ export const getUserChatConversations = async (userId: string): Promise<ChatPart
               conversationsMap.set(creatorId, {
                 id: creatorId,
                 name: profile?.name || 'Creator',
-                avatar: profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+                avatar: resolveUserAvatar(profile?.avatar, profile?.name),
                 handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
                 role: 'creator',
                 isOnline: true,
@@ -2133,7 +2785,7 @@ export const getUserChatConversations = async (userId: string): Promise<ChatPart
               conversationsMap.set(creatorId, {
                 id: creatorId,
                 name: profile?.name || 'Creator',
-                avatar: profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+                avatar: resolveUserAvatar(profile?.avatar, profile?.name),
                 handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
                 role: 'creator',
                 isOnline: true,
@@ -2209,7 +2861,7 @@ export const getCreatorChatConversations = async (creatorId: string): Promise<Ch
           fansMap.set(s.fan_id, {
             id: s.fan_id,
             name: userProfile?.name || 'Fan',
-            avatar: userProfile?.avatar || `https://i.pravatar.cc/150?u=${s.fan_id}`,
+            avatar: resolveUserAvatar(userProfile?.avatar, userProfile?.name),
             role: 'subscriber',
             isOnline: true,
             isSubscribed: true,
@@ -2232,7 +2884,7 @@ export const getCreatorChatConversations = async (creatorId: string): Promise<Ch
             fansMap.set(f.id, {
               id: f.id,
               name: f.name || 'Fan',
-              avatar: f.avatar || `https://i.pravatar.cc/150?u=${f.id}`,
+              avatar: resolveUserAvatar(f.avatar, f.name),
               role: 'subscriber',
               isOnline: true,
               isSubscribed: true,
@@ -2253,7 +2905,7 @@ export const getCreatorChatConversations = async (creatorId: string): Promise<Ch
             fansMap.set(fanId, {
               id: fanId,
               name: userProfile?.name || 'Subscriber',
-              avatar: userProfile?.avatar || `https://i.pravatar.cc/150?u=${fanId}`,
+              avatar: resolveUserAvatar(userProfile?.avatar, userProfile?.name),
               role: 'subscriber',
               isOnline: true,
               isSubscribed: !!sub,

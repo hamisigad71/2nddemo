@@ -1,14 +1,8 @@
-import { useState } from 'react';
-import { CheckCircle, XCircle, Clock, Search, Wallet } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle, XCircle, Clock, Search, Wallet, Loader2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-
-const mockPayouts = [
-  { id: 'PAY001', creator: 'Amina K.', email: 'amina@email.com', amount: 'KES 85,000', method: 'M-Pesa', phone: '07XX XXX 001', status: 'pending', requested: 'Oct 9, 2026', img: 'https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg' },
-  { id: 'PAY002', creator: 'Wanjiku Tech', email: 'wanjiku@email.com', amount: 'KES 120,000', method: 'Bank Transfer', phone: 'Equity – 0012XXXX', status: 'pending', requested: 'Oct 9, 2026', img: 'https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg' },
-  { id: 'PAY003', creator: 'Chef Kamau', email: 'kamau@email.com', amount: 'KES 42,500', method: 'M-Pesa', phone: '07XX XXX 003', status: 'approved', requested: 'Oct 8, 2026', img: 'https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg' },
-  { id: 'PAY004', creator: 'ODC Music', email: 'odc@email.com', amount: 'KES 15,200', method: 'M-Pesa', phone: '07XX XXX 004', status: 'rejected', requested: 'Oct 7, 2026', img: 'https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg' },
-  { id: 'PAY005', creator: 'Grace Fashion', email: 'grace@email.com', amount: 'KES 31,000', method: 'M-Pesa', phone: '07XX XXX 005', status: 'pending', requested: 'Oct 7, 2026', img: 'https://i.pravatar.cc/150?img=47' },
-];
+import { getAdminPayouts } from '../../lib/db';
+import { toast } from '../../context/ToastContext';
 
 const statusStyles: Record<string, string> = {
   pending: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
@@ -25,10 +19,29 @@ const statusIcons: Record<string, React.ReactNode> = {
 const AdminPayouts = () => {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [payouts, setPayouts] = useState(mockPayouts);
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadPayouts = async () => {
+    try {
+      setLoading(true);
+      const data = await getAdminPayouts();
+      setPayouts(data || []);
+    } catch (err) {
+      console.error('Failed to load payouts:', err);
+      setPayouts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPayouts();
+  }, []);
 
   const handleAction = (id: string, action: 'approved' | 'rejected') => {
     setPayouts(prev => prev.map(p => p.id === id ? { ...p, status: action } : p));
+    toast.success(`Payout ${id} marked as ${action}`);
   };
 
   const filtered = payouts.filter(p => {
@@ -37,7 +50,9 @@ const AdminPayouts = () => {
     return matchFilter && matchSearch;
   });
 
-  const totalPending = payouts.filter(p => p.status === 'pending').reduce((acc, p) => acc + parseInt(p.amount.replace(/\D/g, '')), 0);
+  const totalPending = payouts
+    .filter(p => p.status === 'pending')
+    .reduce((acc, p) => acc + (parseInt(p.amount.replace(/\D/g, ''), 10) || 0), 0);
 
   return (
     <AdminLayout>
@@ -53,7 +68,9 @@ const AdminPayouts = () => {
               </div>
               <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Payout Management</h1>
             </div>
-            <p className="text-zinc-400 text-sm font-medium leading-relaxed">Review and approve creator withdrawal requests. All payouts are processed via M-Pesa or Bank Transfer.</p>
+            <p className="text-zinc-400 text-sm font-medium leading-relaxed">
+              Live balances and withdrawal requests for creators. Payouts are settled via Daraja / PayHero instant M-Pesa.
+            </p>
           </div>
         </div>
 
@@ -62,7 +79,7 @@ const AdminPayouts = () => {
           {[
             { label: 'Pending Requests', value: payouts.filter(p => p.status === 'pending').length, color: 'text-yellow-400' },
             { label: 'Total Pending Amount', value: `KES ${totalPending.toLocaleString()}`, color: 'text-red-500' },
-            { label: 'Approved This Week', value: payouts.filter(p => p.status === 'approved').length, color: 'text-emerald-400' },
+            { label: 'Approved Payouts', value: payouts.filter(p => p.status === 'approved').length, color: 'text-emerald-400' },
           ].map(({ label, value, color }, i) => (
             <div key={i} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6">
               <div className="text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-2">{label}</div>
@@ -102,67 +119,74 @@ const AdminPayouts = () => {
 
         {/* Table */}
         <div className="bg-[#0d0e12] border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#0d0e12] border-b border-zinc-800">
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">Creator</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Request ID</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Amount</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Method</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Status</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Requested</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-right pr-8">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="py-16 text-center text-zinc-500 font-medium">No payout requests match your criteria.</td></tr>
-                ) : filtered.map(p => (
-                  <tr key={p.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
-                    <td className="px-6 py-4 pl-8">
-                      <div className="flex items-center gap-3">
-                        <img src={p.img} className="w-10 h-10 rounded-full object-cover border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors shrink-0" />
-                        <div>
-                          <div className="font-bold text-white text-sm">{p.creator}</div>
-                          <div className="text-[11px] text-zinc-500">{p.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-400 text-xs font-mono">{p.id}</td>
-                    <td className="px-6 py-4 font-black text-red-500 text-sm">{p.amount}</td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-white text-xs font-bold">{p.method}</div>
-                        <div className="text-zinc-500 text-[11px]">{p.phone}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-black px-3 py-1.5 rounded-full border ${statusStyles[p.status]}`}>
-                        {statusIcons[p.status]} {p.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-400 text-xs font-medium">{p.requested}</td>
-                    <td className="px-6 py-4 pr-8 text-right">
-                      {p.status === 'pending' ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleAction(p.id, 'approved')}
-                            className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                            <CheckCircle className="w-3.5 h-3.5" /> Approve
-                          </button>
-                          <button onClick={() => handleAction(p.id, 'rejected')}
-                            className="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                            <XCircle className="w-3.5 h-3.5" /> Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-zinc-600 text-xs font-medium italic">{p.status === 'approved' ? 'Paid Out' : 'Rejected'}</span>
-                      )}
-                    </td>
+          <div className="overflow-x-auto min-h-[250px]">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
+                <Loader2 className="w-8 h-8 animate-spin text-red-500 mb-3" />
+                <span className="text-sm">Loading live payouts...</span>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#0d0e12] border-b border-zinc-800">
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">Creator</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Request ID</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Amount</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Method</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Status</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Requested</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-right pr-8">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/50">
+                  {filtered.length === 0 ? (
+                    <tr><td colSpan={7} className="py-16 text-center text-zinc-500 font-medium">No live creator payout requests match your criteria.</td></tr>
+                  ) : filtered.map(p => (
+                    <tr key={p.id} className="group hover:bg-[#0d0e12]/50 transition-colors">
+                      <td className="px-6 py-4 pl-8">
+                        <div className="flex items-center gap-3">
+                          <img src={p.img} alt={p.creator} className="w-10 h-10 rounded-full object-cover border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors shrink-0" />
+                          <div>
+                            <div className="font-bold text-white text-sm">{p.creator}</div>
+                            <div className="text-[11px] text-zinc-500">{p.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-zinc-400 text-xs font-mono">{p.id}</td>
+                      <td className="px-6 py-4 font-black text-red-500 text-sm">{p.amount}</td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="text-white text-xs font-bold">{p.method}</div>
+                          <div className="text-zinc-500 text-[11px]">{p.phone}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-black px-3 py-1.5 rounded-full border ${statusStyles[p.status] || statusStyles.pending}`}>
+                          {statusIcons[p.status] || statusIcons.pending} {p.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-zinc-400 text-xs font-medium">{p.requested}</td>
+                      <td className="px-6 py-4 pr-8 text-right">
+                        {p.status === 'pending' ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => handleAction(p.id, 'approved')}
+                              className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                              <CheckCircle className="w-3.5 h-3.5" /> Approve
+                            </button>
+                            <button onClick={() => handleAction(p.id, 'rejected')}
+                              className="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                              <XCircle className="w-3.5 h-3.5" /> Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-zinc-600 text-xs font-medium italic">{p.status === 'approved' ? 'Paid Out' : 'Rejected'}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 

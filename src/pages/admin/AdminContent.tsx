@@ -4,13 +4,7 @@ import AdminLayout from './AdminLayout';
 import { getAdminContentPosts, deletePost, sendAdminMessage } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
 
-const allContent = [
-  { id: 1, creator: 'ODC Music', type: 'Video', title: 'Behind the Scenes - Studio Session', reports: 4, reason: 'Inappropriate Content', status: 'pending', img: 'https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg', time: '2h ago' },
-  { id: 2, creator: 'Grace Fashion', type: 'Photo', title: 'Summer Collection Drop', reports: 2, reason: 'Misleading Information', status: 'reviewing', img: 'https://i.pravatar.cc/150?img=47', time: '5h ago' },
-  { id: 3, creator: 'Baraka Fitness', type: 'Post', title: 'Workout Challenge Part 3', reports: 1, reason: 'Spam', status: 'pending', img: 'https://i.pravatar.cc/150?img=12', time: '1d ago' },
-  { id: 4, creator: 'Amina K.', type: 'Photo', title: 'Morning Routine Reveal', reports: 6, reason: 'Explicit Content', status: 'pending', img: 'https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg', time: '3h ago' },
-  { id: 5, creator: 'Chef Kamau', type: 'Post', title: 'Exclusive Recipe Preview', reports: 1, reason: 'Fraud / Scam', status: 'cleared', img: 'https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg', time: '2d ago' },
-];
+
 
 const statusStyles: Record<string, string> = {
   pending: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
@@ -66,12 +60,10 @@ const AdminContent = () => {
           : p.time || '',
       }));
 
-      // Merge with mock data for demo purposes
-      const mixed = [...normalised, ...allContent.filter(c => !normalised.find((p: any) => p.id === c.id))];
-      setItems(mixed);
+      setItems(normalised);
     } catch (err) {
-      console.error(err);
-      setItems(allContent);
+      console.error('Error loading admin content posts:', err);
+      setItems([]);
     } finally {
       setLoading(false);
     }

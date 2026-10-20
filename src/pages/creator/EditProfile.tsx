@@ -7,6 +7,7 @@ import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSu
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import CreatePostForm from '../../components/CreatePostForm';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 const EditProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -344,6 +345,11 @@ const EditProfile = () => {
       };
       localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(profilePayload));
       localStorage.setItem('creator_profile_data', JSON.stringify(profilePayload));
+      if (finalAvatarUrl) {
+        try {
+          localStorage.setItem(`tgd_user_avatar_${user.id}`, finalAvatarUrl);
+        } catch {}
+      }
 
       // 7. Update all existing posts by this creator in tgd_all_posts
       try {
@@ -385,7 +391,7 @@ const EditProfile = () => {
     }
   };
 
-  const currentAvatar = avatarPreview || profileData.avatarUrl || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80";
+  const currentAvatar = resolveUserAvatar(avatarPreview || profileData.avatarUrl || user?.user_metadata?.avatar_url || user?.user_metadata?.picture, profileData.displayName || user?.user_metadata?.name || user?.user_metadata?.full_name);
   const currentName = profileData.displayName || user?.user_metadata?.name || user?.user_metadata?.full_name || "Creator";
 
   return (
@@ -494,7 +500,8 @@ const EditProfile = () => {
               {/* Profile Body */}
               <div className="p-6 sm:p-10">
                 {/* Avatar with Camera Overlay & Real File Upload */}
-                <div className="relative -mt-20 sm:-mt-24 mb-8 inline-block group cursor-pointer">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-5 -mt-20 sm:-mt-24 mb-8">
+                  <div className="relative inline-block group cursor-pointer shrink-0">
                     <input type="file" id="avatarUpload" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                     <label htmlFor="avatarUpload" className="cursor-pointer block relative rounded-full">
                       <img 
@@ -506,6 +513,39 @@ const EditProfile = () => {
                         <Camera className="w-8 h-8 text-white drop-shadow-lg" />
                       </div>
                     </label>
+                  </div>
+
+                  <div className="space-y-2 pb-2">
+                    <div className="flex items-center gap-3">
+                      <label 
+                        htmlFor="avatarUpload"
+                        className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl shadow-md transition-all active:scale-95"
+                      >
+                        <Camera className="w-3.5 h-3.5" /> Upload Photo
+                      </label>
+                      {avatarPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAvatarFile(null);
+                            setAvatarPreview(null);
+                            setProfileData(p => ({ ...p, avatarUrl: '' }));
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white font-medium text-xs rounded-xl border border-zinc-800 transition-colors"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      Square image recommended. JPG, PNG or WebP up to 5MB.
+                    </p>
+                    {avatarFile && (
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                        <Check className="w-3 h-3" /> New photo staged: {avatarFile.name} (Click "Save Changes" to publish)
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-6 max-w-3xl">

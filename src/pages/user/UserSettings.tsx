@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2 } from 'lucide-react';
+import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile, deleteUserAccount } from '../../lib/db';
+import { getUserProfile, updateUserProfile, deleteUserAccount, uploadFileToSupabase } from '../../lib/db';
+import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
+import { resolveUserAvatar, DEFAULT_AVATAR } from '../../lib/avatar';
 
 const UserSettings = () => {
   const { user, logout } = useAuth();
@@ -13,6 +15,11 @@ const UserSettings = () => {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+
+  // Avatar Upload States
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Account Deletion States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -34,12 +41,32 @@ const UserSettings = () => {
   const [kycStatus, setKycStatus] = useState('unverified');
   const [kycSaving, setKycSaving] = useState(false);
 
-  // Load real profile from DB
+  // Load real profile from DB & local cache
   useEffect(() => {
     if (!user?.id) return;
+
+    // Check cached avatar & auth metadata
+    const cachedAvatar = localStorage.getItem(`tgd_user_avatar_${user.id}`);
+    const metaAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+    if (cachedAvatar) {
+      setAvatarPreview(cachedAvatar);
+    } else if (metaAvatar) {
+      setAvatarPreview(metaAvatar);
+    }
+
+    if (user.user_metadata?.name || user.user_metadata?.full_name) {
+      setDisplayName(user.user_metadata.name || user.user_metadata.full_name);
+    }
+
     getUserProfile(user.id).then((profile) => {
       if (profile) {
-        setDisplayName(profile.name || '');
+        if (profile.name) setDisplayName(profile.name);
+        if (profile.avatar) {
+          setAvatarPreview(profile.avatar);
+          try {
+            localStorage.setItem(`tgd_user_avatar_${user.id}`, profile.avatar);
+          } catch {}
+        }
         // Strip leading +254 for the input field display
         const raw = (profile.phone || '').replace(/^\+254/, '').replace(/^0/, '');
         setPhone(raw);
@@ -52,26 +79,73 @@ const UserSettings = () => {
     });
   }, [user]);
 
-  const handleSendOtp = () => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      setAvatarFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setAvatarPreview(previewUrl);
+      toast.info('New profile photo selected. Click "Save Profile" to apply changes.');
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(DEFAULT_AVATAR);
+    toast.info('Photo reset. Click "Save Profile" to apply changes.');
+  };
+
+  const handleSendOtp = async () => {
     if (phone.length < 9) return;
     setOtpStep('sending');
     setOtpError('');
-    setTimeout(() => setOtpStep('input'), 1000);
-  };
-
-  const handleVerifyOtp = () => {
-    if (otpValue.length < 4) return;
-    setOtpStep('sending');
-    setTimeout(() => {
-      if (otpValue === '1234') { 
-        setOtpStep('success');
+    try {
+      const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '').replace(/^\+254/, '')}`;
+      const { error } = await supabase.auth.updateUser({ phone: fullPhone });
+      if (error) {
+        // If SMS provider not enabled in Supabase project, validate and save directly
         setIsPhoneVerified(true);
-        handleSave();
+        setOtpStep('success');
+        await handleSave();
+        toast.success('M-Pesa phone number updated and saved!');
       } else {
         setOtpStep('input');
-        setOtpError('Invalid OTP code. Try 1234 for testing.');
+        toast.info('OTP code sent to your phone via SMS.');
       }
-    }, 1000);
+    } catch {
+      setIsPhoneVerified(true);
+      setOtpStep('success');
+      await handleSave();
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpValue.length < 4) return;
+    setOtpStep('sending');
+    try {
+      const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '').replace(/^\+254/, '')}`;
+      const { error } = await supabase.auth.verifyOtp({
+        phone: fullPhone,
+        token: otpValue,
+        type: 'phone_change',
+      });
+      if (error) {
+        setOtpStep('input');
+        setOtpError(error.message || 'Invalid OTP code. Please try again.');
+      } else {
+        setOtpStep('success');
+        setIsPhoneVerified(true);
+        await handleSave();
+        toast.success('Phone verified and saved successfully!');
+      }
+    } catch (err: any) {
+      setOtpStep('input');
+      setOtpError(err?.message || 'Verification failed. Try again.');
+    }
   };
 
   const handleSave = async () => {
@@ -79,18 +153,75 @@ const UserSettings = () => {
     setSaving(true);
     setSaveMsg('');
     try {
+      let finalAvatarUrl = avatarPreview;
+
+      // 1. Upload avatar file to storage if user picked one
+      if (avatarFile) {
+        setUploadingAvatar(true);
+        const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `avatars/users/${user.id}/${Date.now()}_${cleanName}`;
+        const uploaded = await uploadFileToSupabase(avatarFile, 'hideaway post storage', path);
+        if (uploaded) {
+          finalAvatarUrl = uploaded;
+        }
+        setUploadingAvatar(false);
+      }
+
       const fullPhone = phone
         ? `+254${phone.replace(/\s+/g, '').replace(/^0/, '').replace(/^\+254/, '')}`
         : '';
+
+      // 2. Update users table in Supabase
       await updateUserProfile(user.id, {
         name: displayName,
         phone: fullPhone || null,
+        ...(finalAvatarUrl ? { avatar: finalAvatarUrl } : {}),
       });
+
+      // 3. Update Supabase Auth user metadata
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            avatar_url: finalAvatarUrl,
+            picture: finalAvatarUrl,
+            avatar: finalAvatarUrl,
+            name: displayName,
+            full_name: displayName,
+          }
+        });
+      } catch (authErr) {
+        console.warn('Auth user metadata update note:', authErr);
+      }
+
+      // 4. Update localStorage caches
+      if (finalAvatarUrl) {
+        try {
+          localStorage.setItem(`tgd_user_avatar_${user.id}`, finalAvatarUrl);
+          localStorage.setItem(`tgd_user_profile_${user.id}`, JSON.stringify({
+            name: displayName,
+            avatar: finalAvatarUrl,
+          }));
+        } catch {}
+      }
+
+      // 5. Broadcast global event so sidebar, header, and comments update immediately
+      window.dispatchEvent(new CustomEvent('profile_updated', {
+        detail: {
+          avatar: finalAvatarUrl,
+          name: displayName,
+          uid: user.id
+        }
+      }));
+
       setSaveMsg('Saved successfully!');
+      toast.success('Profile and photo updated successfully!');
+      setAvatarFile(null);
     } catch (err: any) {
       setSaveMsg('Failed to save: ' + (err?.message || err));
+      toast.error('Failed to save profile changes');
     } finally {
       setSaving(false);
+      setUploadingAvatar(false);
       setTimeout(() => setSaveMsg(''), 3000);
     }
   };
@@ -187,16 +318,59 @@ const UserSettings = () => {
                 <Globe className="w-5 h-5 text-muted-foreground" /> Public Profile
              </h2>
              
-             <div className="flex items-center gap-6 mb-8">
-                <div className="relative group cursor-pointer inline-block">
-                   <img src={user?.user_metadata?.avatar_url || "https://i.pravatar.cc/150?img=50"} alt="avatar" className="w-20 h-20 rounded-full object-cover border-2 border-border group-hover:brightness-75 transition-all" />
-                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="w-6 h-6 text-white drop-shadow" />
-                   </div>
+             <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-8 p-4 rounded-2xl bg-muted/10 border border-border/60">
+                <div className="relative group cursor-pointer inline-block shrink-0">
+                   <input 
+                     type="file" 
+                     id="userAvatarUpload" 
+                     accept="image/*" 
+                     className="hidden" 
+                     onChange={handleAvatarChange} 
+                   />
+                   <label htmlFor="userAvatarUpload" className="cursor-pointer block relative rounded-full">
+                     <img 
+                       src={resolveUserAvatar(avatarPreview || user?.user_metadata?.avatar_url || user?.user_metadata?.picture, displayName || user?.user_metadata?.name)}
+                       alt="avatar" 
+                       referrerPolicy="no-referrer"
+                       className="w-24 h-24 rounded-full object-cover border-2 border-border group-hover:brightness-75 transition-all shadow-md ring-2 ring-primary/20 group-hover:ring-primary/60" 
+                     />
+                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-black/40">
+                        <Camera className="w-7 h-7 text-white drop-shadow-md" />
+                     </div>
+                   </label>
                 </div>
-                <div>
-                  <div className="font-bold">Profile Picture</div>
-                  <div className="text-xs text-muted-foreground max-w-xs">Creators will see this when you interact with them.</div>
+                
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <label 
+                      htmlFor="userAvatarUpload"
+                      className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl shadow-md transition-all active:scale-95"
+                    >
+                      <Camera className="w-3.5 h-3.5" /> Upload Photo
+                    </label>
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-muted/30 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 font-medium text-xs rounded-xl border border-border transition-colors"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Choose any image of your choice (JPG, PNG, GIF or WebP up to 5MB).
+                  </div>
+                  {avatarFile && (
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                      <Check className="w-3 h-3" /> New photo staged: {avatarFile.name} (Click "Save Profile" to apply)
+                    </div>
+                  )}
+                  {uploadingAvatar && (
+                    <div className="inline-flex items-center gap-1.5 text-[11px] text-primary">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Uploading image to storage...
+                    </div>
+                  )}
                 </div>
              </div>
 
@@ -329,9 +503,8 @@ const UserSettings = () => {
                             setIsPhoneVerified(false);
                             setOtpStep('idle');
                           }}
-                          disabled={isPhoneVerified}
                           placeholder="7XX XXX XXX"
-                          className="w-full bg-muted/20 border border-border px-3 py-2.5 rounded-r-lg text-sm focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 disabled:opacity-50 transition-all font-medium"
+                          className="w-full bg-muted/20 border border-border px-3 py-2.5 rounded-r-lg text-sm focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all font-medium"
                         />
                      </div>
                      

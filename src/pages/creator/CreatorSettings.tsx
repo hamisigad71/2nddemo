@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import { Save, Shield, CreditCard, Smartphone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -62,7 +63,7 @@ const CreatorSettings = () => {
         {/* Navigation sidebar */}
         <div className="hidden md:flex flex-col gap-2">
            <button className="text-left px-4 py-3 rounded-xl font-bold bg-primary/10 text-primary">Subscription & Tiers</button>
-           <button className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Profile Options</button>
+           <Link to="/edit-profile" className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Profile & Photos (Edit)</Link>
            <button className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Privacy & Safety</button>
            <button className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Watermarks</button>
         </div>

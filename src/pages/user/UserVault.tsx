@@ -119,7 +119,8 @@ const UserVault = () => {
               type: isVideo ? "video" : "image",
               url:
                 escort?.avatar ||
-                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800",
+                escort?.cover_image ||
+                "/placeholder-cover.jpg",
               title: `VIP Unlocked Set #${match[2]}`,
               creatorId: escortId,
               creatorName: escort?.name || "Dollhouse Creator",
@@ -128,39 +129,6 @@ const UserVault = () => {
           }
         }
       });
-
-      // Default mock purchases so user always sees the vibrant experience if fresh
-      if (loaded.length === 0) {
-        loaded.push(
-          {
-            id: "sample-1",
-            type: "video",
-            url: "https://i.pinimg.com/736x/a5/2c/24/a52c24b336999807ca6c0ff7cb50c206.jpg",
-            title: "Midnight Poolside Shoot & Q&A",
-            creatorId: "escort-1",
-            creatorName: "Amara Vance",
-            date: "Oct 24, 2026",
-          },
-          {
-            id: "sample-2",
-            type: "image",
-            url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-            title: "Golden Hour Silhouette Photoset",
-            creatorId: "escort-2",
-            creatorName: "Chloe Bennett",
-            date: "Oct 25, 2026",
-          },
-          {
-            id: "sample-3",
-            type: "image",
-            url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
-            title: "VIP Velvet Lounge Exclusive (4 Photos)",
-            creatorId: "escort-3",
-            creatorName: "Elena Rostova",
-            date: "Oct 26, 2026",
-          },
-        );
-      }
 
       setItems(loaded);
       setLoading(false);

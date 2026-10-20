@@ -4,14 +4,16 @@ import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from '../../context/ToastContext';
-import { submitPesapalOrder } from '../../lib/pesapal';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 const Checkout = () => {
   const location = useLocation();
-  const creator = location.state?.creator || {
-    name: "Jane Doe",
-    price: "KES 1,000/mo",
-    avatar: "https://i.pravatar.cc/150?img=12"
+  const stateCreator = location.state?.creator;
+  const creator = {
+    id: stateCreator?.id || 'creator-default',
+    name: stateCreator?.name || "Creator Subscription",
+    price: stateCreator?.price || "KES 1,000/mo",
+    avatar: resolveUserAvatar(stateCreator?.avatar, stateCreator?.name || "Creator Subscription")
   };
 
   const { user } = useAuth();
@@ -103,27 +105,41 @@ const Checkout = () => {
     const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
 
     try {
-      const order = await submitPesapalOrder({
-        id: `SUB-${Date.now()}`,
-        currency: 'KES',
+      const { initiatePaystackCardPayment, verifyPaystackTransaction } = await import('../../lib/paystack');
+      await initiatePaystackCardPayment({
+        email: user.email || 'customer@thegentsdollhouse.com',
         amount,
-        description: `Subscription to ${creator.name}`,
-        callback_url: `${window.location.origin}/checkout`,
-        billing_address: {
-          email_address: user.email || 'customer@gmail.com',
-          phone_number: phone || '0700000000',
-          first_name: user.user_metadata?.name?.split(' ')[0] || 'Subscriber',
-          last_name: user.user_metadata?.name?.split(' ')[1] || 'Fan',
+        name: user.user_metadata?.name || user.user_metadata?.full_name || 'Subscriber',
+        currency: 'KES',
+        metadata: {
+          creator_id: creator.id || 'creator-default',
+          creator_name: creator.name,
         },
+        onSuccess: async ({ reference }) => {
+          setStatus('pending');
+          try {
+            await verifyPaystackTransaction(reference);
+            const { subscribeToCreator } = await import('../../lib/db');
+            await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30);
+            setStatus('success');
+            toast.success('Subscription Activated!', {
+              description: `You are now subscribed to ${creator.name}.`
+            });
+          } catch (err: any) {
+            console.error('Subscription record error:', err);
+            setStatus('success');
+          }
+        },
+        onCancel: () => {
+          setCardLoading(false);
+        },
+        onError: (err) => {
+          toast.error('Card Payment Error', {
+            description: err || 'Could not initiate Paystack card payment.'
+          });
+          setCardLoading(false);
+        }
       });
-
-      if (order?.redirect_url) {
-        window.location.href = order.redirect_url;
-      } else {
-        toast.error('Card Payment Error', {
-          description: order?.error || 'Unable to connect to Pesapal card gateway.'
-        });
-      }
     } catch (err: any) {
       toast.error('Card Checkout Error', {
         description: err?.message || 'Failed to start card session.'

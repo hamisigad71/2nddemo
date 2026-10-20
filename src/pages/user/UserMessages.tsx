@@ -29,6 +29,7 @@ import {
 import type { ChatParticipant, ChatMessage } from '../../lib/db';
 import { validateChatMessage, stripDigits } from '../../lib/chatFilter';
 import { supabase } from '../../lib/supabase';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 const UserMessages = () => {
   const { user } = useAuth();
@@ -87,7 +88,7 @@ const UserMessages = () => {
             const newEntry: ChatParticipant = {
               id: queryCreatorId,
               name: profile?.name || 'Creator',
-              avatar: profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+              avatar: resolveUserAvatar(profile?.avatar, profile?.name),
               handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
               role: 'creator',
               isOnline: true,

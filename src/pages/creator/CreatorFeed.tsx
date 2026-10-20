@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
 import { useAuth } from '../../context/AuthContext';
-import { getPostsByCreator, deletePost, getPostLikes, getComments, updatePostAccess, updatePostStatus } from '../../lib/db';
+import { getPostsByCreator, deletePost, getPostLikes, getComments, updatePostAccess, updatePostStatus, getUserProfile, getStoredCreatorProfile } from '../../lib/db';
 import { Lock, Unlock, Trash2, PlusCircle, Loader2, ImageOff, MoreHorizontal, Heart, MessageCircle } from 'lucide-react';
 import FeedImage from '../../components/FeedImage';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 interface Post {
   id: string;
@@ -47,6 +48,31 @@ const CreatorFeed = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>(() => user?.user_metadata?.name || user?.user_metadata?.full_name || 'Creator');
+  const [userAvatar, setUserAvatar] = useState<string | null>(() => {
+    if (!user?.id) return user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+    const local = getStoredCreatorProfile(user.id);
+    return local?.avatar || local?.avatar_url || localStorage.getItem(`tgd_user_avatar_${user.id}`) || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+  });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const local = getStoredCreatorProfile(user.id);
+    if (local?.avatar || local?.avatar_url) setUserAvatar(local.avatar || local.avatar_url);
+    if (local?.name || local?.display_name) setUserName(local.name || local.display_name);
+
+    getUserProfile(user.id).then(profile => {
+      if (profile?.avatar) setUserAvatar(profile.avatar);
+      if (profile?.name) setUserName(profile.name);
+    }).catch(() => {});
+
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail?.avatar) setUserAvatar(e.detail.avatar);
+      if (e.detail?.name) setUserName(e.detail.name);
+    };
+    window.addEventListener('profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('profile_updated', handleProfileUpdate);
+  }, [user?.id]);
 
   const loadPosts = useCallback(async () => {
     if (!user) return;
@@ -120,8 +146,6 @@ const CreatorFeed = () => {
     return `${datePart} · ${timePart}`;
   };
 
-  const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Creator';
-  const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
 
   return (
     <CreatorLayout>
@@ -183,7 +207,7 @@ const CreatorFeed = () => {
               <div className="flex items-center justify-between px-5 py-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={userAvatar || 'https://i.pravatar.cc/150?img=12'}
+                    src={resolveUserAvatar(userAvatar, userName)}
                     alt="avatar"
                     className="w-10 h-10 rounded-full object-cover border border-border"
                     referrerPolicy="no-referrer"

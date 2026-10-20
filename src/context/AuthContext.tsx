@@ -107,7 +107,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       if (error) throw error;
       
-      if (data.user) {
+      const isExistingUser = !!(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
+      const hasSession = !!data.session;
+
+      if (data.user && !isExistingUser) {
         await createUserProfile(data.user.id, {
           name,
           email,
@@ -115,7 +118,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role
         });
       }
-      return data.user;
+      return {
+        ...data.user,
+        isExistingUser,
+        hasSession,
+        session: data.session
+      } as any;
     } catch (error) {
       console.error("Error signing up with email", error);
       throw error;
@@ -137,13 +145,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const verifyOtp = async (email: string, token: string) => {
+    const cleanToken = token.replace(/\s+/g, '').trim();
     try {
       const { data, error } = await supabase.auth.verifyOtp({
         email,
-        token,
+        token: cleanToken,
         type: 'signup'
       });
-      if (error) throw error;
+      if (error) {
+        // Fallback attempt with type: 'email'
+        const { data: fbData, error: fbError } = await supabase.auth.verifyOtp({
+          email,
+          token: cleanToken,
+          type: 'email'
+        });
+        if (fbError) throw error;
+        return fbData.user;
+      }
       return data.user;
     } catch (error) {
       console.error("Error verifying OTP", error);

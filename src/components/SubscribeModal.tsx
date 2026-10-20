@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle, ArrowRight } from 'lucide-react';
-import { submitPesapalOrder } from '../lib/pesapal';
 import { formatPhone } from '../lib/daraja';
 import { subscribeToCreator, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
@@ -165,44 +164,48 @@ export default function SubscribeModal({
     }
   };
 
-  // ── Pesapal ─────────────────────────────────────────────────
-  const handlePesapalCheckout = async () => {
+  // ── Paystack Card Checkout ────────────────────────────────────
+  const handlePaystackCardCheckout = async () => {
     if (!price || !user) return;
-    setStep('pesapal_loading');
     setErrorMessage(null);
 
-    const referenceId = `SUB-${Date.now()}`;
     try {
-      const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
-      onSuccess?.({
-        tierName,
-        durationDays,
-        expiresAt: sub.expiresAt
-      });
-      const order = await submitPesapalOrder({
-        id: referenceId,
-        currency: 'KES',
+      const { initiatePaystackCardPayment, verifyPaystackTransaction } = await import('../lib/paystack');
+      await initiatePaystackCardPayment({
+        email: user.email || 'customer@thegentsdollhouse.com',
         amount: price,
-        description: `Subscription to ${creatorName}`,
-        callback_url: `${window.location.origin}/user`,
-        billing_address: {
-          email_address: user.email || 'fan@hideaway.co.ke',
-          phone_number: phone || '0700000000',
-          first_name: user.user_metadata?.name?.split(' ')[0] || 'Fan',
-          last_name: user.user_metadata?.name?.split(' ')[1] || 'User',
+        name: user.user_metadata?.name || user.user_metadata?.full_name || 'Subscriber',
+        currency: 'KES',
+        metadata: {
+          creator_id: creatorId,
+          creator_name: creatorName,
+          tier: tierName,
+          days: durationDays,
+        },
+        onSuccess: async ({ reference }) => {
+          setStep('success');
+          try {
+            await verifyPaystackTransaction(reference);
+            const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
+            onSuccess?.({
+              tierName,
+              durationDays,
+              expiresAt: sub.expiresAt,
+            });
+          } catch (err: any) {
+            console.warn('Subscription registration notice:', err);
+          }
+        },
+        onCancel: () => {
+          // Modal dismissed by user
+        },
+        onError: (err) => {
+          setErrorMessage(err || 'Failed to start card payment');
         },
       });
-
-      if (order?.redirect_url) {
-        setPesapalUrl(order.redirect_url);
-        setStep('pesapal_iframe');
-      } else {
-        setErrorMessage(order?.error || 'Could not initialize Pesapal session.');
-        setStep('method');
-      }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Pesapal checkout failed');
-      setStep('method');
+      console.error('Paystack initialization error:', err);
+      setErrorMessage(err?.message || 'Failed to initialize Paystack card payment');
     }
   };
 
@@ -306,15 +309,15 @@ export default function SubscribeModal({
 
               <div className="space-y-3 mb-2">
                 <button
-                  onClick={handlePesapalCheckout}
+                  onClick={handlePaystackCardCheckout}
                   className="w-full group p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:bg-red-500/5 hover:border-red-500/30 transition-all flex items-center gap-4 text-left"
                 >
                   <div className="w-10 h-10 rounded-xl bg-black text-zinc-400 group-hover:text-red-500 border border-white/10 group-hover:border-red-500/40 flex items-center justify-center transition-colors shrink-0">
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-bold text-[15px] text-white tracking-tight group-hover:text-red-500 transition-colors">Card or Mobile Money</div>
-                    <div className="text-[13px] text-zinc-400 mt-0.5">via Web Checkout</div>
+                    <div className="font-bold text-[15px] text-white tracking-tight group-hover:text-red-500 transition-colors">Credit / Debit Card</div>
+                    <div className="text-[13px] text-zinc-400 mt-0.5">Instant Card Payment via Paystack</div>
                   </div>
                   <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-colors group-hover:translate-x-0.5" />
                 </button>
@@ -392,28 +395,6 @@ export default function SubscribeModal({
                 </div>
               )}
               <div className="flex flex-col items-center gap-3">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (pollRef.current) clearInterval(pollRef.current);
-                    if (price && user) {
-                      try {
-                        const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
-                        onSuccess?.({
-                          tierName,
-                          durationDays,
-                          expiresAt: sub.expiresAt
-                        });
-                      } catch (e) {
-                        console.error('Simulated sub error:', e);
-                      }
-                    }
-                    setStep('success');
-                  }}
-                  className="text-xs text-red-400 hover:text-red-300 underline font-semibold transition-colors"
-                >
-                  Simulate Instant PIN Approval (Demo)
-                </button>
                 <button
                    onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep('method'); }}
                   className="text-sm text-zinc-400 hover:text-white transition-colors"
