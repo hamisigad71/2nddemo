@@ -4,6 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 // import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
 import Discover from "./pages/public/Discover";
@@ -145,19 +146,23 @@ const AppRoutes = () => {
               <Route path="/creator/ads" element={<CreatorAds />} />
               <Route path="/ads" element={<CreatorAds />} />
               <Route path="/user/ads" element={<UserAds />} />
-              <Route path="/admin" element={<AdminOverview />} />
-              <Route path="/admin/ads" element={<AdminAds />} />
-              <Route path="/admin/creators" element={<AdminCreators />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/transactions" element={<AdminTransactions />} />
-              <Route path="/admin/content" element={<AdminContent />} />
-              <Route path="/admin/analytics" element={<AdminAnalytics />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/payouts" element={<AdminPayouts />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
-              <Route path="/admin/audit-log" element={<AdminAuditLog />} />
-              <Route path="/admin/escorts" element={<AdminEscorts />} />
-              <Route path="/admin/escorts/hardcoded" element={<AdminHardcodedEscorts />} />
+              
+              {/* Authenticated & Passcode Protected Admin Portal */}
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminOverview />} />
+                <Route path="/admin/ads" element={<AdminAds />} />
+                <Route path="/admin/creators" element={<AdminCreators />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/transactions" element={<AdminTransactions />} />
+                <Route path="/admin/content" element={<AdminContent />} />
+                <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/payouts" element={<AdminPayouts />} />
+                <Route path="/admin/reports" element={<AdminReports />} />
+                <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+                <Route path="/admin/escorts" element={<AdminEscorts />} />
+                <Route path="/admin/escorts/hardcoded" element={<AdminHardcodedEscorts />} />
+              </Route>
             </Route>
           </Routes>
         </div>

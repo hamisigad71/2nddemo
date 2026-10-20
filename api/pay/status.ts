@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const PAYMENT_API_KEY = process.env.PAYMENT_API_KEY || process.env.PAYHERO_API_KEY || '';
+const PAYMENT_API_KEY = process.env.PAYMENT_API_KEY || process.env.PAYHERO_API_KEY || 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==';
 const PAYMENT_GATEWAY_URL = (process.env.PAYMENT_GATEWAY_URL || 'https://backend.payhero.co.ke/api/v2').replace(/\/+$/, '');
 
 const normalizeAuth = (key: string): string => {

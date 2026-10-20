@@ -10,9 +10,9 @@ function paymentDevPlugin(): Plugin {
         const url = new URL(rawUrl, 'http://localhost');
 
         const env = loadEnv(server.config.mode, process.cwd(), '');
-        const apiKey = (env.PAYMENT_API_KEY || env.PAYHERO_API_KEY || '').trim();
+        const apiKey = (env.PAYMENT_API_KEY || env.PAYHERO_API_KEY || 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==').trim();
         const authHeader = apiKey ? (apiKey.startsWith('Basic ') ? apiKey : `Basic ${apiKey}`) : '';
-        const channelId = Number(env.PAYMENT_CHANNEL_ID || env.PAYHERO_CHANNEL_ID || env.VITE_PAYHERO_CHANNEL_ID);
+        const channelId = Number(env.PAYMENT_CHANNEL_ID || env.PAYHERO_CHANNEL_ID || env.VITE_PAYHERO_CHANNEL_ID || 13942);
         const gatewayUrl = (env.PAYMENT_GATEWAY_URL || env.PAYHERO_GATEWAY_URL || 'https://backend.payhero.co.ke/api/v2').replace(/\/+$/, '');
 
         // 1. POST /api/pay

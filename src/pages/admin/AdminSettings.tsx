@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Settings, DollarSign, CreditCard, Megaphone, CheckCircle } from 'lucide-react';
+import { Save, Settings, DollarSign, CreditCard, Megaphone, CheckCircle, KeyRound, Copy } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getPlatformSettings, savePlatformSettings, logAdminAction } from '../../lib/db';
 import { useAuth } from '../../context/AuthContext';
@@ -172,6 +172,43 @@ const AdminSettings = () => {
                 <div className="text-xs text-zinc-500 mt-0.5">Paystack Secure Checkout Gateway</div>
               </div>
               <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">Active</span>
+            </div>
+          </div>
+        </Section>
+
+        {/* Admin Access Codes Section */}
+        <Section icon={KeyRound} title="Admin Portal Access Passcodes">
+          <div className="space-y-4">
+            <p className="text-xs text-zinc-400">
+              These secret access codes are required to unlock and access the Admin Portal. Share these codes only with trusted administrators.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { label: 'Master Boss Passcode', code: 'TGD-BOSS-7700', desc: 'Highest authority (All features)' },
+                { label: 'Senior Operations Passcode', code: 'TGD-OPS-9941', desc: 'Content, Ads & Creator Moderation' },
+                { label: 'Finance & Payouts Passcode', code: 'TGD-FIN-3388', desc: 'M-Pesa Settlements & Balances' },
+                { label: 'Quick Numeric PIN', code: '889900', desc: '6-digit emergency mobile access' },
+              ].map(({ label, code, desc }) => (
+                <div key={code} className="p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold text-zinc-400">{label}</div>
+                    <div className="text-sm font-mono font-black text-white tracking-widest mt-0.5">{code}</div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5">{desc}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(code);
+                      toast.success(`Copied: ${code}`);
+                    }}
+                    title="Copy Access Code"
+                    className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all active:scale-95"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </Section>

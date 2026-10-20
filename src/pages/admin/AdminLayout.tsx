@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, DollarSign,
   BarChart3, Settings, Menu, LogOut, Bell, ChevronRight,
-  Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart, Megaphone
+  Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart, Megaphone, Lock
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { getAdminPayouts } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
+import { lockAdminSession } from '../../components/AdminRoute';
 
 interface AdminNavItem {
   label: string;
@@ -146,6 +147,16 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </button>
         <button
+          onClick={() => {
+            lockAdminSession();
+            toast.info('Admin terminal locked.');
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
+        >
+          <Lock className="w-[18px] h-[18px] text-zinc-500 group-hover:text-red-400 transition-colors" />
+          Lock Terminal
+        </button>
+        <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
         >
@@ -206,6 +217,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0d0e12]" />
               )}
             </Link>
+
+            {/* Lock Admin Terminal Button */}
+            <button
+              onClick={() => {
+                lockAdminSession();
+                toast.info('Admin terminal locked.');
+              }}
+              title="Lock Admin Terminal"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/20 text-xs font-bold transition-all active:scale-95"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Lock Gate</span>
+            </button>
+
             <div className="flex items-center gap-3 pl-4 border-l border-zinc-800">
               <div className="w-9 h-9 rounded-full border-2 border-red-500/20 bg-red-600/10 flex items-center justify-center text-red-500 flex-shrink-0">
                 <User className="w-4 h-4" />
