@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
