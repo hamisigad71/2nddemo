@@ -144,18 +144,26 @@ export const uploadFileToSupabase = async (file: File, bucket: string, path: str
       if (data?.publicUrl) return data.publicUrl;
     } else {
       console.warn('Supabase storage upload note:', error.message);
+      if ((error as any).statusCode === '413' || error.message?.toLowerCase().includes('exceeded the maximum')) {
+        throw new Error('Video exceeds Supabase’s maximum upload limit (50MB). Please compress the video under 50MB or upgrade your Supabase storage limit.');
+      }
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message?.includes('50MB')) throw err;
     console.warn('Supabase storage upload exception:', err);
   }
 
-  // Resilient fallback: Convert file to Base64 Data URL so media upload never fails
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
-  });
+  // Resilient fallback for small files (under 4MB) only: Base64 Data URL
+  if (file.size <= 4 * 1024 * 1024) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  return null;
 };
 
 export const uploadPrivatePostMedia = async (file: File, creatorId: string, path: string): Promise<string> => {
@@ -169,8 +177,12 @@ export const uploadPrivatePostMedia = async (file: File, creatorId: string, path
       if (data?.publicUrl) return data.publicUrl;
     } else {
       console.warn('Storage upload note:', error.message);
+      if ((error as any).statusCode === '413' || error.message?.toLowerCase().includes('exceeded the maximum')) {
+        throw new Error('Video exceeds Supabase’s maximum upload limit (50MB). Please compress the video under 50MB or upgrade your Supabase storage limit.');
+      }
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message?.includes('50MB')) throw err;
     console.warn('Private media storage exception:', err);
   }
 
