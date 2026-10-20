@@ -17,6 +17,8 @@ import {
   Eye,
   X,
   Flame,
+  PlayCircle,
+  Sparkles,
 } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
@@ -229,24 +231,49 @@ export default function CreatorProfile() {
     );
   };
 
-  // Generate enriched media list matching Screenshot 2 (Videos & Photos with durations & PPV pricing)
-  const defaultGallery =
-    creator.gallery && creator.gallery.length > 0
-      ? creator.gallery
-      : [
-          "https://i.pinimg.com/736x/a5/2c/24/a52c24b336999807ca6c0ff7cb50c206.jpg",
-          "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
-        ];
+  // Check if this is a hardcoded demo/escort profile vs a real registered creator
+  const isEscortDemo = Boolean(creator?.isEscort || String(creator?.id || '').startsWith('escort-'));
 
-  const mediaItems: PPVMediaItem[] = [
+  const realPostMedia: PPVMediaItem[] = posts
+    .filter((p) => p.media_url)
+    .map((p) => {
+      const visibility = p.visibility || (p.is_locked ? "ppv" : "public");
+      return {
+        id: p.id,
+        type: (p.media_type === "video" || p.media_url?.includes(".mp4")
+          ? "video"
+          : "image") as "video" | "image",
+        url: p.media_url || creator.avatar,
+        duration: p.media_type === "video" ? "0:30" : undefined,
+        photoCount: p.media_type !== "video" ? 1 : undefined,
+        title: visibility === "public" && p.content
+          ? p.content.slice(0, 40) + "..."
+          : "Exclusive content",
+        price: p.price || 200,
+        visibility,
+        isLocked: !p.media_access_granted && !isSubscribed && (
+          visibility === "subscribers" ||
+          (visibility === "ppv" && !unlockedMediaIds.has(p.id))
+        ),
+      };
+    });
+
+  const realGalleryMedia: PPVMediaItem[] = (creator.gallery && Array.isArray(creator.gallery) ? creator.gallery : [])
+    .map((url: string, idx: number) => ({
+      id: `${creator.id}-g-${idx}`,
+      type: (url.includes('.mp4') ? 'video' : 'image') as 'video' | 'image',
+      url,
+      photoCount: 1,
+      title: `${creator.name} Gallery Item #${idx + 1}`,
+      price: 150,
+      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-g-${idx}`),
+    }));
+
+  const demoMedia: PPVMediaItem[] = isEscortDemo ? [
     {
       id: `${creator.id}-m-1`,
       type: "video",
-      url: defaultGallery[0],
+      url: creator.gallery?.[0] || "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
       duration: "9:28",
       title: "Midnight Poolside Shoot & Q&A",
       price: 250,
@@ -255,7 +282,7 @@ export default function CreatorProfile() {
     {
       id: `${creator.id}-m-2`,
       type: "image",
-      url: defaultGallery[1 % defaultGallery.length],
+      url: creator.gallery?.[1] || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
       photoCount: 1,
       title: "Golden Hour Silhouette Photoset",
       price: 150,
@@ -264,7 +291,7 @@ export default function CreatorProfile() {
     {
       id: `${creator.id}-m-3`,
       type: "image",
-      url: defaultGallery[2 % defaultGallery.length],
+      url: creator.gallery?.[2] || "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
       photoCount: 4,
       title: "VIP Velvet Lounge Exclusive (4 Photos)",
       price: 200,
@@ -273,7 +300,7 @@ export default function CreatorProfile() {
     {
       id: `${creator.id}-m-4`,
       type: "video",
-      url: defaultGallery[3 % defaultGallery.length],
+      url: creator.gallery?.[3] || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
       duration: "4:15",
       title: "Private Workout & Stretch Routine",
       price: 300,
@@ -282,7 +309,7 @@ export default function CreatorProfile() {
     {
       id: `${creator.id}-m-5`,
       type: "video",
-      url: defaultGallery[4 % defaultGallery.length],
+      url: creator.gallery?.[4] || "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
       duration: "12:40",
       title: "Exclusive Weekend Vlog & Behind The Scenes",
       price: 350,
@@ -291,37 +318,15 @@ export default function CreatorProfile() {
     {
       id: `${creator.id}-m-6`,
       type: "image",
-      url: defaultGallery[5 % defaultGallery.length],
+      url: creator.gallery?.[5] || "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
       photoCount: 6,
       title: "Lingerie Studio Series (Full Set)",
       price: 250,
       isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-6`),
     },
-    // Include real posts with media
-    ...posts
-      .filter((p) => p.media_url || (p.visibility !== "public" && p.status !== "draft"))
-      .map((p) => {
-        const visibility = p.visibility || (p.is_locked ? "ppv" : "public");
-        return {
-          id: p.id,
-          type: (p.media_type === "video" || p.media_url?.includes(".mp4")
-            ? "video"
-            : "image") as "video" | "image",
-          url: p.media_url || creator.avatar,
-          duration: p.media_type === "video" ? "6:12" : undefined,
-          photoCount: p.media_type !== "video" ? 1 : undefined,
-          title: visibility === "public" && p.content
-            ? p.content.slice(0, 40) + "..."
-            : "Exclusive content",
-          price: p.price || 200,
-          visibility,
-          isLocked: !p.media_access_granted && !isSubscribed && (
-            visibility === "subscribers" ||
-            (visibility === "ppv" && !unlockedMediaIds.has(p.id))
-          ),
-        };
-      }),
-  ];
+  ] : [];
+
+  const mediaItems: PPVMediaItem[] = [...realPostMedia, ...realGalleryMedia, ...demoMedia];
 
   const photosCount = mediaItems.filter((m) => m.type === "image").length;
   const videosCount = mediaItems.filter((m) => m.type === "video").length;
@@ -393,8 +398,9 @@ export default function CreatorProfile() {
       <div className="h-52 md:h-72 lg:h-80 w-full relative bg-zinc-900 overflow-hidden">
         <img
           src={
-            creator.cover_image ||
-            "https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80"
+            (creator.cover_image && !creator.cover_image.includes("photo-1549490349-8643362247b5"))
+              ? creator.cover_image
+              : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"
           }
           alt="Cover"
           className="w-full h-full object-cover"
@@ -470,8 +476,9 @@ export default function CreatorProfile() {
               </div>
               <p className="text-zinc-400 font-medium text-sm md:text-base">
                 @{creator.name.replace(/\s+/g, "").toLowerCase()}
-                <span className="text-xs text-zinc-500 ml-2">
-                  · Active 2h ago
+                <span className="text-xs text-emerald-400 font-semibold ml-2 inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Active now
                 </span>
               </p>
               {creator.age && (
@@ -662,7 +669,7 @@ export default function CreatorProfile() {
                 : "border-transparent text-zinc-500 hover:text-zinc-300"
             }`}
           >
-            {posts.length || 18} Posts
+            {posts.length} {posts.length === 1 ? "Post" : "Posts"}
           </button>
 
           <button
@@ -728,79 +735,91 @@ export default function CreatorProfile() {
             </div>
 
             {/* 3-Column Grid Matching Screenshot 2 */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {filteredMedia.map((item) => {
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => handleMediaClick(item)}
-                    className="relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 group cursor-pointer shadow-lg hover:border-red-500/50 transition-all select-none"
-                  >
-                    {/* Thumbnail / Teaser Background */}
-                    <img
-                      src={item.url}
-                      alt={item.title}
-                      className={`w-full h-full object-cover transition-transform duration-500 ${
-                        item.isLocked
-                          ? "filter blur-lg scale-110 opacity-40"
-                          : "group-hover:scale-105"
-                      }`}
-                    />
+            {filteredMedia.length === 0 ? (
+              <div className="bg-zinc-950/60 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-4 shadow-lg shadow-red-500/10">
+                  <PlayCircle className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-2">No Media Available</h3>
+                <p className="text-zinc-400 text-sm max-w-sm mb-4 leading-relaxed">
+                  {creator.name} hasn't uploaded any photo or video content yet.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {filteredMedia.map((item) => {
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleMediaClick(item)}
+                      className="relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 group cursor-pointer shadow-lg hover:border-red-500/50 transition-all select-none"
+                    >
+                      {/* Thumbnail / Teaser Background */}
+                      <img
+                        src={item.url}
+                        alt={item.title}
+                        className={`w-full h-full object-cover transition-transform duration-500 ${
+                          item.isLocked
+                            ? "filter blur-lg scale-110 opacity-40"
+                            : "group-hover:scale-105"
+                        }`}
+                      />
 
-                    {/* Locked State: Centered Padlock & Price Tag (Screenshot 2) */}
-                    {item.isLocked ? (
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-2 text-center">
-                        {/* Centered Large Padlock Icon */}
-                        <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-black/80 border border-white/20 group-hover:border-red-500/60 flex items-center justify-center text-red-500 shadow-xl transition-transform group-hover:scale-110">
-                          <Lock className="w-5 h-5 sm:w-6 sm:h-6" />
-                        </div>
+                      {/* Locked State: Centered Padlock & Price Tag (Screenshot 2) */}
+                      {item.isLocked ? (
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-2 text-center">
+                          {/* Centered Large Padlock Icon */}
+                          <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-black/80 border border-white/20 group-hover:border-red-500/60 flex items-center justify-center text-red-500 shadow-xl transition-transform group-hover:scale-110">
+                            <Lock className="w-5 h-5 sm:w-6 sm:h-6" />
+                          </div>
 
-                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-red-600/90 text-white font-black text-[10px] shadow">
-                          {item.visibility === "subscribers" ? "SUBSCRIBERS" : `KES ${item.price}`}
-                        </div>
+                          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-red-600/90 text-white font-black text-[10px] shadow">
+                            {item.visibility === "subscribers" ? "SUBSCRIBERS" : `KES ${item.price}`}
+                          </div>
 
-                        {/* Bottom Metadata Badges */}
-                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 text-white/90 text-[10px] sm:text-[11px] font-black bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10">
-                          {item.type === "video" ? (
-                            <>
-                              <Video className="w-3 h-3 text-red-400" />
-                              <span>{item.duration || "Video"}</span>
-                            </>
-                          ) : (
-                            <>
-                              <ImageIcon className="w-3 h-3 text-zinc-300" />
-                              <span>{item.photoCount || 1}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      /* Unlocked State */
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2 sm:p-2.5">
-                        <div className="flex items-center justify-between text-white text-[10px] sm:text-[11px] font-bold">
-                          <span className="flex items-center gap-1 bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">
+                          {/* Bottom Metadata Badges */}
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1.5 text-white/90 text-[10px] sm:text-[11px] font-black bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10">
                             {item.type === "video" ? (
                               <>
-                                <Play className="w-3 h-3 text-red-500 fill-red-500" />
-                                <span>{item.duration || "Watch"}</span>
+                                <Video className="w-3 h-3 text-red-400" />
+                                <span>{item.duration || "Video"}</span>
                               </>
                             ) : (
                               <>
-                                <Eye className="w-3 h-3 text-zinc-300" />
-                                <span>View</span>
+                                <ImageIcon className="w-3 h-3 text-zinc-300" />
+                                <span>{item.photoCount || 1}</span>
                               </>
                             )}
-                          </span>
-                          <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                            {isSubscribed ? "VIP ALL UNLOCKED" : `PAID (KES ${item.price})`}
-                          </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                      ) : (
+                        /* Unlocked State */
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2 sm:p-2.5">
+                          <div className="flex items-center justify-between text-white text-[10px] sm:text-[11px] font-bold">
+                            <span className="flex items-center gap-1 bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-md">
+                              {item.type === "video" ? (
+                                <>
+                                  <Play className="w-3 h-3 text-red-500 fill-red-500" />
+                                  <span>{item.duration || "Watch"}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="w-3 h-3 text-zinc-300" />
+                                  <span>View</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                              {isSubscribed ? "VIP ALL UNLOCKED" : `PAID (KES ${item.price})`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -900,142 +919,168 @@ export default function CreatorProfile() {
                 );
               })}
 
-            {/* Free Public Post */}
-            <div className="bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={creator.avatar}
-                    alt="avatar"
-                    className="w-11 h-11 rounded-full object-cover ring-2 ring-red-500/30"
-                  />
-                  <div>
-                    <div className="font-bold text-sm text-white flex items-center gap-1.5">
-                      {creator.name}
-                      {creator.isVerified && (
-                        <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" />
-                      )}
-                    </div>
-                    <div className="text-xs text-zinc-400">
-                      Public Teaser Drop
-                    </div>
-                  </div>
+            {/* Empty state for real creators with zero posts */}
+            {posts.length === 0 && !isEscortDemo && (
+              <div className="bg-zinc-950/60 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-4 shadow-lg shadow-red-500/10">
+                  <Sparkles className="w-7 h-7" />
                 </div>
-              </div>
-
-              <div className="px-4 pb-3">
-                <p className="text-sm text-zinc-200 leading-relaxed">
-                  Welcome to my official page! Here's a free preview. Subscribe
-                  to unlock all full videos and private DMs!
+                <h3 className="text-xl font-black text-white mb-2">No Posts Yet</h3>
+                <p className="text-zinc-400 text-sm max-w-sm mb-6 leading-relaxed">
+                  {creator.name} hasn't published any posts yet. Subscribe to receive instant updates when they drop new content.
                 </p>
-              </div>
-
-              <div className="relative w-full bg-zinc-950 flex justify-center items-center overflow-hidden max-h-[550px] border-y border-white/10">
-                <img
-                  src={defaultGallery[0]}
-                  alt="post media"
-                  className="w-full max-h-[550px] object-contain"
-                />
-              </div>
-
-              <div className="p-4 flex items-center justify-between bg-black/60 text-zinc-400 text-xs font-bold">
-                <div className="flex items-center gap-1 text-red-500">
-                  <Heart className="w-4 h-4 fill-red-500" /> Free Public Preview
-                </div>
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Share className="w-3.5 h-3.5" /> Share
-                </button>
-              </div>
-            </div>
-
-            {/* Locked VIP Post */}
-            <div className="bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={creator.avatar}
-                    alt="avatar"
-                    className="w-11 h-11 rounded-full object-cover ring-2 ring-red-500/30"
-                  />
-                  <div>
-                    <div className="font-bold text-sm text-white flex items-center gap-1.5">
-                      {creator.name}
-                      <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-black bg-red-500/10 text-red-400 border border-red-500/30">
-                        VIP Exclusive
-                      </span>
-                    </div>
-                    <div className="text-xs text-zinc-400">
-                      Subscriber Vault
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 pb-3">
-                <p className="text-sm text-zinc-200 leading-relaxed">
-                  Exclusive behind-the-scenes content & private high-resolution
-                  gallery just for my subscribers!
-                </p>
-              </div>
-
-              <div className="relative w-full max-h-[550px] flex justify-center items-center border-y border-white/10 overflow-hidden bg-black aspect-[4/5] sm:aspect-video">
-                {isSubscribed ? (
-                  <img
-                    src={creator.cover_image || creator.avatar}
-                    alt="VIP content"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <>
-                    <div
-                      className="absolute inset-0 opacity-40 blur-2xl scale-110"
-                      style={{
-                        backgroundImage: `url(${creator.cover_image || creator.avatar})`,
-                        backgroundPosition: "center",
-                        backgroundSize: "cover",
-                      }}
-                    />
-                    <div className="relative z-10 flex flex-col items-center justify-center p-6 text-center max-w-md w-full mx-auto backdrop-blur-md bg-black/60 border border-white/15 rounded-2xl shadow-2xl m-4">
-                      <div className="bg-red-500/20 text-red-400 p-4 rounded-full mb-4 shadow-[0_0_30px_rgba(220,38,38,0.3)] border border-red-500/30">
-                        <Lock className="w-8 h-8" />
-                      </div>
-                      <h4 className="text-xl md:text-2xl font-black mb-2 text-white">
-                        Subscribe to Unlock
-                      </h4>
-                      <p className="text-xs md:text-sm text-zinc-300 mb-6 max-w-xs mx-auto leading-relaxed">
-                        Join for KES {creatorPrice.toLocaleString()}/month to
-                        unlock all exclusive posts and media from {creator.name}
-                        .
-                      </p>
-                      <button
-                        onClick={() => setIsSubscribeOpen(true)}
-                        className="w-full max-w-xs flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-black px-6 py-3.5 rounded-xl transition-all shadow-[0_0_25px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 text-sm uppercase tracking-wider cursor-pointer"
-                      >
-                        Unlock Full Content
-                      </button>
-                    </div>
-                  </>
+                {user?.id === creator.id && (
+                  <Link
+                    to="/dashboard"
+                    className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-600/30 text-xs uppercase tracking-wider"
+                  >
+                    Create Your First Post
+                  </Link>
                 )}
               </div>
+            )}
 
-              <div className="p-4 flex items-center justify-between bg-black/60 text-zinc-400 text-xs font-bold">
-                <div className="flex items-center gap-1.5 text-zinc-300">
-                  <Lock className="w-3.5 h-3.5 text-red-500" />
-                  {isSubscribed
-                    ? "Unlocked with VIP Subscription"
-                    : "Subscribers Only"}
+            {/* Demo Escort Showcase Posts ONLY for hardcoded demo profiles */}
+            {isEscortDemo && (
+              <>
+                {/* Free Public Post */}
+                <div className="bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                  <div className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={creator.avatar}
+                        alt="avatar"
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-red-500/30"
+                      />
+                      <div>
+                        <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                          {creator.name}
+                          {creator.isVerified && (
+                            <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" />
+                          )}
+                        </div>
+                        <div className="text-xs text-zinc-400">
+                          Public Teaser Drop
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-3">
+                    <p className="text-sm text-zinc-200 leading-relaxed">
+                      Welcome to my official page! Here's a free preview. Subscribe
+                      to unlock all full videos and private DMs!
+                    </p>
+                  </div>
+
+                  <div className="relative w-full bg-zinc-950 flex justify-center items-center overflow-hidden max-h-[550px] border-y border-white/10">
+                    <img
+                      src={creator.gallery?.[0] || creator.avatar}
+                      alt="post media"
+                      className="w-full max-h-[550px] object-contain"
+                    />
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between bg-black/60 text-zinc-400 text-xs font-bold">
+                    <div className="flex items-center gap-1 text-red-500">
+                      <Heart className="w-4 h-4 fill-red-500" /> Free Public Preview
+                    </div>
+                    <button
+                      onClick={handleShare}
+                      className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <Share className="w-3.5 h-3.5" /> Share
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Share className="w-3.5 h-3.5" /> Share
-                </button>
-              </div>
-            </div>
+
+                {/* Locked VIP Post */}
+                <div className="bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                  <div className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={creator.avatar}
+                        alt="avatar"
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-red-500/30"
+                      />
+                      <div>
+                        <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                          {creator.name}
+                          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-black bg-red-500/10 text-red-400 border border-red-500/30">
+                            VIP Exclusive
+                          </span>
+                        </div>
+                        <div className="text-xs text-zinc-400">
+                          Subscriber Vault
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-3">
+                    <p className="text-sm text-zinc-200 leading-relaxed">
+                      Exclusive behind-the-scenes content & private high-resolution
+                      gallery just for my subscribers!
+                    </p>
+                  </div>
+
+                  <div className="relative w-full max-h-[550px] flex justify-center items-center border-y border-white/10 overflow-hidden bg-black aspect-[4/5] sm:aspect-video">
+                    {isSubscribed ? (
+                      <img
+                        src={creator.cover_image || creator.avatar}
+                        alt="VIP content"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <>
+                        <div
+                          className="absolute inset-0 opacity-40 blur-2xl scale-110"
+                          style={{
+                            backgroundImage: `url(${creator.cover_image || creator.avatar})`,
+                            backgroundPosition: "center",
+                            backgroundSize: "cover",
+                          }}
+                        />
+                        <div className="relative z-10 flex flex-col items-center justify-center p-6 text-center max-w-md w-full mx-auto backdrop-blur-md bg-black/60 border border-white/15 rounded-2xl shadow-2xl m-4">
+                          <div className="bg-red-500/20 text-red-400 p-4 rounded-full mb-4 shadow-[0_0_30px_rgba(220,38,38,0.3)] border border-red-500/30">
+                            <Lock className="w-8 h-8" />
+                          </div>
+                          <h4 className="text-xl md:text-2xl font-black mb-2 text-white">
+                            Subscribe to Unlock
+                          </h4>
+                          <p className="text-xs md:text-sm text-zinc-300 mb-6 max-w-xs mx-auto leading-relaxed">
+                            Join for KES {creatorPrice.toLocaleString()}/month to
+                            unlock all exclusive posts and media from {creator.name}
+                            .
+                          </p>
+                          <button
+                            onClick={() => setIsSubscribeOpen(true)}
+                            className="w-full max-w-xs flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-black px-6 py-3.5 rounded-xl transition-all shadow-[0_0_25px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 text-sm uppercase tracking-wider cursor-pointer"
+                          >
+                            Unlock Full Content
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between bg-black/60 text-zinc-400 text-xs font-bold">
+                    <div className="flex items-center gap-1.5 text-zinc-300">
+                      <Lock className="w-3.5 h-3.5 text-red-500" />
+                      {isSubscribed
+                        ? "Unlocked with VIP Subscription"
+                        : "Subscribers Only"}
+                    </div>
+                    <button
+                      onClick={handleShare}
+                      className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <Share className="w-3.5 h-3.5" /> Share
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 

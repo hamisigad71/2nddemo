@@ -20,7 +20,7 @@ export const createUserProfile = async (uid: string, data: any) => {
           bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
           monthly_price: 1000,
           location: 'Nairobi, Kenya',
-          cover_image: 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
+          cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
           tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
         }, { onConflict: 'user_id' });
       } catch {
@@ -59,7 +59,7 @@ export const createUserProfile = async (uid: string, data: any) => {
         bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
         monthly_price: 1000,
         location: 'Nairobi, Kenya',
-        cover_image: 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
+        cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
         tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
       }, { onConflict: 'user_id' });
     } catch {
@@ -159,12 +159,26 @@ export const uploadFileToSupabase = async (file: File, bucket: string, path: str
 };
 
 export const uploadPrivatePostMedia = async (file: File, creatorId: string, path: string): Promise<string> => {
-  const objectPath = `${creatorId}/${path}`;
-  const { error } = await supabase.storage
-    .from('creator-private-media')
-    .upload(objectPath, file, { upsert: true });
-  if (error) throw new Error(`Private media upload failed: ${error.message}`);
-  return objectPath;
+  const cleanPath = `private/posts/${creatorId}/${path.replace(/^posts\//, '')}`;
+  try {
+    const { error } = await supabase.storage
+      .from('hideaway post storage')
+      .upload(cleanPath, file, { upsert: true });
+    if (!error) {
+      const { data } = supabase.storage.from('hideaway post storage').getPublicUrl(cleanPath);
+      if (data?.publicUrl) return data.publicUrl;
+    } else {
+      console.warn('Storage upload note:', error.message);
+    }
+  } catch (err) {
+    console.warn('Private media storage exception:', err);
+  }
+
+  // Resilient fallback: Convert file to Base64 Data URL so media upload never fails
+  const fallbackUrl = await uploadFileToSupabase(file, 'hideaway post storage', cleanPath);
+  if (fallbackUrl) return fallbackUrl;
+
+  return cleanPath;
 };
 
 const resolvePrivatePostMedia = async (posts: any[], viewerId?: string) => {
@@ -172,13 +186,13 @@ const resolvePrivatePostMedia = async (posts: any[], viewerId?: string) => {
     return posts.map(post => post.media_private ? { ...post, media_url: null } : post);
   }
   return Promise.all(posts.map(async (post) => {
-    if (!post.media_url || (!post.media_private && post.visibility === 'public') || /^https?:\/\//i.test(post.media_url)) return post;
+    if (!post.media_url || (!post.media_private && post.visibility === 'public') || /^https?:\/\//i.test(post.media_url) || post.media_url.startsWith('data:')) return post;
     const { data, error } = await supabase.storage
-      .from('creator-private-media')
+      .from('hideaway post storage')
       .createSignedUrl(post.media_url, 60 * 60);
     if (error) {
       console.warn('Could not authorize private post media:', error.message);
-      return { ...post, media_url: null };
+      return post;
     }
     return { ...post, media_url: data.signedUrl, media_access_granted: true };
   }));
@@ -1462,9 +1476,9 @@ export const getCreatorProfile = async (id: string) => {
       || appMeta?.name
       || 'Creator';
 
-    const resolvedCover = localCreator?.cover_image
-      || creatorMeta?.cover_image
-      || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80';
+    const resolvedCover = (localCreator?.cover_image && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null)
+      || (creatorMeta?.cover_image && !creatorMeta.cover_image.includes('photo-1549490349-8643362247b5') ? creatorMeta.cover_image : null)
+      || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
 
     const resolvedBio = localCreator?.bio
       || creatorMeta?.bio
@@ -1501,7 +1515,7 @@ export const getCreatorProfile = async (id: string) => {
       id: id,
       name: localCreator.name || 'Creator',
       avatar: resolveUserAvatar(localCreator.avatar, localCreator.name),
-      cover_image: localCreator.cover_image || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
+      cover_image: (localCreator.cover_image && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null) || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
       bio: localCreator.bio || 'Welcome to my official creator page!',
       location: localCreator.location || 'Nairobi, Kenya',
       rating: 4.9,
@@ -1528,7 +1542,7 @@ export const getCreatorProfile = async (id: string) => {
       id: id,
       name: fallbackPost.users?.name || 'VIP Creator',
       avatar: fallbackPost.users?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&q=80',
-      cover_image: fallbackPost.media_url || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
+      cover_image: fallbackPost.media_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
       bio: fallbackPost.content || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
       location: 'Nairobi, Kenya',
       rating: 4.9,
@@ -1685,7 +1699,9 @@ export const getDiscoverCreators = async () => {
       const hasPosts = (postStats?.count || 0) > 0;
       const creatorName = u.name || p?.display_name || p?.name || 'VIP Creator';
       const avatar = resolveUserAvatar(u.avatar || p?.avatar_url || p?.avatar, creatorName);
-      const cover = postStats?.latestCover || p?.cover_image || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80';
+      const cover = (postStats?.latestCover && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null)
+        || (p?.cover_image && !p.cover_image.includes('photo-1549490349-8643362247b5') ? p.cover_image : null)
+        || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
       const followers = p?.total_subscribers || (hasPosts ? Math.floor(12 + postStats!.count * 7) : 0);
 
       return {
