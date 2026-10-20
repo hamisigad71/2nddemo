@@ -4,6 +4,74 @@ import { useAuth } from '../../context/AuthContext';
 import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 
+const DISPOSABLE_OR_DUMMY_DOMAINS = new Set([
+  'test.com', 'example.com', 'dummy.com', 'fake.com', 'invalid.com', 'none.com',
+  'mailinator.com', 'tempmail.com', 'temp-mail.org', '10minutemail.com',
+  'guerrillamail.com', 'yopmail.com', 'trashmail.com', 'fakeinbox.com',
+  'throwawaymail.com', 'getnada.com', 'maildrop.cc', 'sharklasers.com',
+  'dispostable.com', 'mailnesia.com', 'tempmailaddress.com', 'burnermail.io',
+]);
+
+const DOMAIN_TYPOS: Record<string, string> = {
+  'gmial.com': 'gmail.com',
+  'gamil.com': 'gmail.com',
+  'gmal.com': 'gmail.com',
+  'gnail.com': 'gmail.com',
+  'gmail.co': 'gmail.com',
+  'gmail.con': 'gmail.com',
+  'yaho.com': 'yahoo.com',
+  'yahooo.com': 'yahoo.com',
+  'outlok.com': 'outlook.com',
+  'hotmial.com': 'hotmail.com',
+};
+
+function validateEmailAddress(rawEmail: string): string | null {
+  const trimmed = rawEmail.trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@([^\s@]+\.[a-zA-Z]{2,})$/;
+  const match = trimmed.match(emailRegex);
+  if (!match) {
+    return 'Please enter a valid email address (e.g. name@gmail.com).';
+  }
+
+  const domain = match[1];
+  if (DOMAIN_TYPOS[domain]) {
+    return `This email domain looks misspelled ("@${domain}"). Did you mean "@${DOMAIN_TYPOS[domain]}"? Please use a real email address.`;
+  }
+
+  if (DISPOSABLE_OR_DUMMY_DOMAINS.has(domain)) {
+    return 'Dummy or temporary email addresses are not allowed. Please enter a real, active email address.';
+  }
+
+  return null;
+}
+
+function formatSignupErrorMessage(err: any, email: string): string {
+  const raw = String(err?.message || err || '').trim();
+  const lower = raw.toLowerCase();
+
+  if (
+    lower.includes('error sending confirmation email') ||
+    lower.includes('error sending confirmation mail') ||
+    lower.includes('unable to validate email') ||
+    lower.includes('invalid email') ||
+    lower.includes('mailbox unavailable') ||
+    lower.includes('recipient') ||
+    lower.includes('undeliverable')
+  ) {
+    return `We could not deliver a verification code to "${email.trim()}". This email address does not exist or cannot receive mail — please use a real, active email address.`;
+  }
+
+  if (lower.includes('already registered') || lower.includes('already exists')) {
+    return `An account with ${email.trim()} already exists. Please log in with your password.`;
+  }
+
+  if (lower.includes('rate limit') || lower.includes('too many requests')) {
+    return 'Too many verification attempts. Please wait a minute and try again with a valid email address.';
+  }
+
+  return raw || 'Registration failed. Please check your details and use a real email address.';
+}
+
 const Signup = () => {
   const [accountType, setAccountType] = useState('creator'); // 'subscriber' or 'creator'
   const { user, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, verifyOtp } = useAuth();
@@ -53,15 +121,23 @@ const Signup = () => {
       setError("Please fill out all fields.");
       return;
     }
+
+    const emailError = validateEmailAddress(email);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+
     try {
       setError('');
       setLoading(true);
+      const cleanEmail = email.trim();
       const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
-      const result: any = await signUpWithEmail(email, password, `${firstName} ${lastName}`, fullPhone, accountType);
+      const result: any = await signUpWithEmail(cleanEmail, password, `${firstName} ${lastName}`, fullPhone, accountType);
       
       // If user already exists in Supabase
       if (result?.isExistingUser) {
-        setError(`An account with ${email} already exists. Please log in with your password.`);
+        setError(`An account with ${cleanEmail} already exists. Please log in with your password.`);
         return;
       }
 
@@ -75,7 +151,7 @@ const Signup = () => {
       // Move to confirmation / OTP step
       setOtpStep(true);
     } catch (err: any) {
-      setError('Registration failed: ' + (err?.message || err));
+      setError(formatSignupErrorMessage(err, email));
     } finally {
       setLoading(false);
     }
@@ -121,12 +197,12 @@ const Signup = () => {
     try {
       setError('');
       const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
-      await signUpWithEmail(email, password, `${firstName} ${lastName}`, fullPhone, accountType);
+      await signUpWithEmail(email.trim(), password, `${firstName} ${lastName}`, fullPhone, accountType);
       toast.success('Code resent', {
-        description: `A new verification code was sent to ${email}.`
+        description: `A new verification code was sent to ${email.trim()}.`
       });
     } catch (err: any) {
-      setError('Failed to resend code: ' + (err?.message || err));
+      setError(formatSignupErrorMessage(err, email));
     }
   };
   
