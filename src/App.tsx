@@ -170,8 +170,6 @@ const AppRoutes = () => {
   );
 };
 
-import FloatingNav from "./components/FloatingNav";
-
 function App() {
   return (
     <BrowserRouter>
@@ -179,7 +177,6 @@ function App() {
         <ToastProvider>
           <AuthProvider>
             <AppRoutes />
-            <FloatingNav />
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
