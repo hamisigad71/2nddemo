@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase';
 import { getEscorts } from '../../lib/mockData';
 import FeedImage from '../../components/FeedImage';
 import { resolveUserAvatar } from '../../lib/avatar';
+import LiveNowTray from '../../components/LiveNowTray';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -461,13 +462,18 @@ const UserDashboard = () => {
 
   return (
     <UserLayout>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-zinc-100 mb-1">
           Your Feed
         </h1>
         <p className="text-zinc-500 text-sm">
           Latest posts from creators you subscribe to
         </p>
+      </div>
+
+      {/* Live Broadcasts Stories Tray */}
+      <div className="max-w-xl mx-auto mb-8">
+        <LiveNowTray />
       </div>
 
       <div className="max-w-xl mx-auto flex flex-col gap-5">

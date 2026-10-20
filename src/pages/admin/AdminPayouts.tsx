@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Search, Wallet, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Search, Wallet, Loader2, Copy, Phone } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-import { getAdminPayouts } from '../../lib/db';
+import { getAdminPayouts, updateAdminPayoutStatus } from '../../lib/db';
+import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 
 const statusStyles: Record<string, string> = {
@@ -21,27 +22,66 @@ const AdminPayouts = () => {
   const [search, setSearch] = useState('');
   const [payouts, setPayouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const loadPayouts = async () => {
+  const loadPayouts = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await getAdminPayouts();
       setPayouts(data || []);
     } catch (err) {
       console.error('Failed to load payouts:', err);
       setPayouts([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadPayouts();
+
+    const handleUpdate = () => loadPayouts(true);
+    window.addEventListener('payouts_updated', handleUpdate);
+    window.addEventListener('wallet_updated', handleUpdate);
+
+    const channel = supabase
+      .channel('admin_payouts_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        () => loadPayouts(true)
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('payouts_updated', handleUpdate);
+      window.removeEventListener('wallet_updated', handleUpdate);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleAction = (id: string, action: 'approved' | 'rejected') => {
-    setPayouts(prev => prev.map(p => p.id === id ? { ...p, status: action } : p));
-    toast.success(`Payout ${id} marked as ${action}`);
+  const handleAction = async (payout: any, action: 'approved' | 'rejected') => {
+    try {
+      setProcessingId(payout.id);
+      const rawAmount = payout.rawAmount || parseInt(String(payout.amount).replace(/\D/g, ''), 10) || 0;
+      await updateAdminPayoutStatus(payout.id, payout.creatorId || '', rawAmount, payout.phone || 'M-Pesa', action);
+      setPayouts(prev => prev.map(p => p.id === payout.id ? { ...p, status: action } : p));
+      if (action === 'approved') {
+        toast.success(`Approved ${payout.amount} payout to ${payout.creator} (${payout.phone})! Creator notified.`);
+      } else {
+        toast.info(`Declined payout ${payout.id}. ${payout.amount} has been restored to ${payout.creator}'s wallet.`);
+      }
+    } catch (err) {
+      console.error('Error updating payout:', err);
+      toast.error('Failed to update payout status');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const copyPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone);
+    toast.success(`Copied M-Pesa number: ${phone}`);
   };
 
   const filtered = payouts.filter(p => {
@@ -155,9 +195,22 @@ const AdminPayouts = () => {
                       <td className="px-6 py-4 text-zinc-400 text-xs font-mono">{p.id}</td>
                       <td className="px-6 py-4 font-black text-red-500 text-sm">{p.amount}</td>
                       <td className="px-6 py-4">
-                        <div>
-                          <div className="text-white text-xs font-bold">{p.method}</div>
-                          <div className="text-zinc-500 text-[11px]">{p.phone}</div>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="text-white text-xs font-bold">{p.method}</div>
+                            <div className="text-emerald-400 font-mono text-xs flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3" /> {p.phone}
+                            </div>
+                          </div>
+                          {p.phone && p.phone !== 'Not provided' && (
+                            <button
+                              onClick={() => copyPhone(p.phone)}
+                              title="Copy M-Pesa number"
+                              className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -169,17 +222,23 @@ const AdminPayouts = () => {
                       <td className="px-6 py-4 pr-8 text-right">
                         {p.status === 'pending' ? (
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => handleAction(p.id, 'approved')}
-                              className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
-                              <CheckCircle className="w-3.5 h-3.5" /> Approve
+                            <button
+                              disabled={processingId === p.id}
+                              onClick={() => handleAction(p, 'approved')}
+                              className="px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              {processingId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />} Mark Paid
                             </button>
-                            <button onClick={() => handleAction(p.id, 'rejected')}
-                              className="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5">
+                            <button
+                              disabled={processingId === p.id}
+                              onClick={() => handleAction(p, 'rejected')}
+                              className="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+                            >
                               <XCircle className="w-3.5 h-3.5" /> Reject
                             </button>
                           </div>
                         ) : (
-                          <span className="text-zinc-600 text-xs font-medium italic">{p.status === 'approved' ? 'Paid Out' : 'Rejected'}</span>
+                          <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider">{p.status === 'approved' ? 'Paid Out ✓' : 'Refunded to Wallet'}</span>
                         )}
                       </td>
                     </tr>

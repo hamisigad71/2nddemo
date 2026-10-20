@@ -1,72 +1,73 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, CheckCircle2, MapPin, Lock } from 'lucide-react';
+import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
-import { resolveUserAvatar } from '../../lib/avatar';
-
-const mockCreators = [
-  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "12k", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg" },
-  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "9.5k", price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg" },
-  { id: 'creator-chef', name: "Chef Kamau", handle: "@chefkamau", category: "Culinary", location: "Nairobi, Kenya", subs: "8.5k", price: "KES 1k/mo", avatar: "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg", cover: "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg" },
-  { id: 'creator-betty', name: "Betty Vlog", handle: "@betty", category: "Vlogger", location: "Nakuru", subs: "3k", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c7/63/a1/c763a17c42705d2b6b981adc1130ed91.jpg", cover: "https://i.pinimg.com/736x/c7/63/a1/c763a17c42705d2b6b981adc1130ed91.jpg" },
-  { id: 'creator-wanjiku', name: "Wanjiku Tech", handle: "@wanjiku", category: "Education", location: "Nairobi", subs: "24k", price: "KES 300/mo", avatar: "https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg", cover: "https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg" },
-  { id: 'creator-grace', name: "Grace Style", handle: "@grace", category: "Fashion", location: "Nairobi", subs: "32k", price: "KES 1.5k/mo", avatar: "https://i.pinimg.com/736x/80/78/c3/8078c38f0cb612302707c7429e3ecf59.jpg", cover: "https://i.pinimg.com/736x/80/78/c3/8078c38f0cb612302707c7429e3ecf59.jpg" },
-  { id: 'creator-fit', name: "Fit Guru", handle: "@fitguru", category: "Health", location: "Eldoret", subs: "18k", price: "KES 700/mo", avatar: "https://i.pinimg.com/736x/f6/b6/de/f6b6de8523e31a9f04f60ca66639c42f.jpg", cover: "https://i.pinimg.com/736x/f6/b6/de/f6b6de8523e31a9f04f60ca66639c42f.jpg" },
-  { id: 'creator-odc', name: "ODC Music", handle: "@odcmusic", category: "Entertainment", location: "Kisumu", subs: "45k", price: "KES 1k/mo", avatar: "https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg", cover: "https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg" },
-];
+import { getDiscoverCreators, HARDCODED_DISCOVER_CREATORS } from '../../lib/db';
+import LiveNowTray from '../../components/LiveNowTray';
 
 const Discover = () => {
   const [activeTab, setActiveTab] = useState('trending');
   const [search, setSearch] = useState('');
-  const [creators, setCreators] = useState<any[]>(mockCreators);
+  const [creators, setCreators] = useState<any[]>(HARDCODED_DISCOVER_CREATORS);
+  const [loading, setLoading] = useState(false);
+
+  const fetchCreators = async () => {
+    try {
+      const data = await getDiscoverCreators();
+      setCreators(data);
+    } catch (err) {
+      console.error('Failed to load discover creators:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchLiveCreators = async () => {
-      try {
-        const { data: dbCreators } = await supabase
-          .from('users')
-          .select('uid, name, avatar, role')
-          .eq('role', 'creator');
+    fetchCreators();
 
-        if (dbCreators && dbCreators.length > 0) {
-          const uids = dbCreators.map(u => u.uid);
-          const { data: profiles } = await supabase
-            .from('creator_profiles')
-            .select('*')
-            .in('user_id', uids);
+    const handleUpdate = () => fetchCreators();
+    window.addEventListener('posts_updated', handleUpdate);
 
-          const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+    // Real-time listener for newly registered creators or new posts
+    const channel = supabase
+      .channel('discover_creators_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+        fetchCreators();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        fetchCreators();
+      })
+      .subscribe();
 
-          const formatted = dbCreators.map(u => {
-            const p = profileMap.get(u.uid);
-            return {
-              id: u.uid,
-              name: u.name || p?.display_name || 'Creator',
-              handle: `@${(u.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
-              category: p?.niche || (p?.tags && p.tags[0]) || 'VIP Creator',
-              location: p?.location || 'Nairobi, Kenya',
-              subs: `${p?.total_subscribers || 0}`,
-              price: `KES ${(p?.monthly_price || 1000).toLocaleString()}/mo`,
-              avatar: resolveUserAvatar(u.avatar || p?.avatar_url, u.name),
-              cover: p?.cover_image || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
-            };
-          });
-
-          // Prepend live real creators ahead of showcase profiles
-          setCreators([...formatted, ...mockCreators]);
-        }
-      } catch (err) {
-        console.error('Failed to load live creators:', err);
-      }
+    return () => {
+      window.removeEventListener('posts_updated', handleUpdate);
+      supabase.removeChannel(channel);
     };
-    fetchLiveCreators();
   }, []);
   
-  const filtered = creators.filter(c => 
+  // Tab-based sorting
+  const sorted = [...creators].sort((a, b) => {
+    if (activeTab === 'new') {
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    }
+    if (activeTab === 'popular') {
+      const subsA = parseInt(String(a.subs).replace(/\D/g, ''), 10) || 0;
+      const subsB = parseInt(String(b.subs).replace(/\D/g, ''), 10) || 0;
+      return subsB - subsA;
+    }
+    // 'trending' (default): Creators with real feed posts first, then highest postsCount & subs
+    if (a.hasPosts !== b.hasPosts) {
+      return a.hasPosts ? -1 : 1;
+    }
+    return (b.postsCount || 0) - (a.postsCount || 0);
+  });
+
+  const filtered = sorted.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
     c.handle.toLowerCase().includes(search.toLowerCase()) ||
-    c.category.toLowerCase().includes(search.toLowerCase())
+    c.category.toLowerCase().includes(search.toLowerCase()) ||
+    c.location.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -104,61 +105,98 @@ const Discover = () => {
         </div>
       </div>
       
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
-        <h1 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-6 capitalize">{activeTab} Creators</h1>
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-           {filtered.map((creator, i) => (
-             <Link 
-               to={creator.id ? `/creator/${creator.id}` : "/checkout"} 
-               state={{ creator }} 
-               key={creator.id || i} 
-               className="group relative flex flex-col aspect-[3/4] sm:aspect-[4/5] bg-muted border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
-             >
-                {/* Full Background Cover */}
-                <img src={creator.cover} alt="cover" className="absolute inset-0 w-full h-full object-cover object-top opacity-90 group-hover:scale-110 group-hover:blur-[2px] transition-all duration-500" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent" />
-                
-                {/* Lock Overlay on Hover */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/20 backdrop-blur-sm pointer-events-none">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-2xl shadow-primary/40 transform scale-75 group-hover:scale-100 transition-transform duration-500 mb-2">
-                    <Lock className="w-5 h-5 sm:w-7 sm:h-7" />
-                  </div>
-                  <span className="font-bold text-white text-xs sm:text-sm drop-shadow-md">View Profile</span>
-                </div>
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8 pb-24 md:pb-8 space-y-8">
+        {/* Live Broadcasts Carousel */}
+        <LiveNowTray />
 
-                {/* Permanent Lock Badge */}
-                <div className="absolute top-3 right-3 z-30 bg-black/50 backdrop-blur-md p-1.5 sm:p-2 rounded-full border border-white/10 shadow-sm">
-                  <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-white/90" />
-                </div>
-                
-                {/* Info Container Placed over Gradient */}
-                <div className="relative z-10 px-3 pb-3 sm:px-5 sm:pb-5 pt-10 mt-auto flex flex-col text-white transition-transform duration-300 group-hover:translate-y-2 group-hover:opacity-40">
-                  {/* Avatar & Category */}
-                  <div className="flex items-end justify-between mb-2 sm:mb-3">
-                    <img src={resolveUserAvatar(creator.avatar, creator.name)} alt="avatar" className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-primary/50 shadow-md object-cover bg-background" loading="lazy" />
-                    <div className="text-[10px] sm:text-xs font-semibold text-secondary uppercase tracking-wider backdrop-blur-sm bg-black/30 px-2 py-0.5 rounded border border-white/10">{creator.category}</div>
+        <div>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-3xl font-bold capitalize">{activeTab} Creators</h1>
+            <span className="text-xs text-muted-foreground font-semibold">
+              {filtered.length} verified creators
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <span className="text-sm font-medium">Loading feed creators...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground space-y-2">
+              <p className="font-bold text-lg text-white">No creators found</p>
+              <p className="text-sm">Try searching with a different name or category.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+             {filtered.map((creator, i) => (
+               <Link 
+                 to={`/creator/${creator.id}`} 
+                 state={{ creator }} 
+                 key={creator.id || i} 
+                 className="group relative flex flex-col aspect-[3/4] sm:aspect-[4/5] bg-muted border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+               >
+                  {/* Full Background Cover */}
+                  <img src={creator.cover} alt="cover" className="absolute inset-0 w-full h-full object-cover object-top opacity-90 group-hover:scale-110 group-hover:blur-[2px] transition-all duration-500" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent" />
+                  
+                  {/* Lock Overlay on Hover */}
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/20 backdrop-blur-sm pointer-events-none">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-2xl shadow-primary/40 transform scale-75 group-hover:scale-100 transition-transform duration-500 mb-2">
+                      <Lock className="w-5 h-5 sm:w-7 sm:h-7" />
+                    </div>
+                    <span className="font-bold text-white text-xs sm:text-sm drop-shadow-md">View Profile</span>
+                  </div>
+
+                  {/* Top Badges (Active Feed Badge & Lock) */}
+                  <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none">
+                    {creator.hasPosts ? (
+                      <span className="bg-red-600/90 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
+                        <Flame className="w-3 h-3 text-yellow-300" /> Active Feed
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <div className="bg-black/50 backdrop-blur-md p-1.5 sm:p-2 rounded-full border border-white/10 shadow-sm">
+                      <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-white/90" />
+                    </div>
                   </div>
                   
-                  {/* Name & Handle */}
-                  <h3 className="text-sm sm:text-xl font-bold flex items-center gap-1 text-white truncate w-full shadow-sm">
-                    <span className="truncate">{creator.name}</span>
-                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white fill-blue-500 shrink-0 drop-shadow-md" />
-                  </h3>
-                  <p className="text-[10px] sm:text-sm text-gray-300 font-medium truncate drop-shadow-sm">{creator.handle}</p>
-                  
-                  {/* Location */}
-                  <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-300 mt-1 sm:mt-2 truncate drop-shadow-sm">
-                    <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{creator.location}</span>
+                  {/* Info Container Placed over Gradient */}
+                  <div className="relative z-10 px-3 pb-3 sm:px-5 sm:pb-5 pt-10 mt-auto flex flex-col text-white transition-transform duration-300 group-hover:translate-y-2 group-hover:opacity-40">
+                    {/* Avatar & Category */}
+                    <div className="flex items-end justify-between mb-2 sm:mb-3">
+                      <img src={creator.avatar} alt="avatar" className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-primary/50 shadow-md object-cover bg-background" loading="lazy" />
+                      <div className="text-[10px] sm:text-xs font-semibold text-secondary uppercase tracking-wider backdrop-blur-sm bg-black/30 px-2 py-0.5 rounded border border-white/10">{creator.category}</div>
+                    </div>
+                    
+                    {/* Name & Handle */}
+                    <h3 className="text-sm sm:text-xl font-bold flex items-center gap-1 text-white truncate w-full shadow-sm">
+                      <span className="truncate">{creator.name}</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white fill-blue-500 shrink-0 drop-shadow-md" />
+                    </h3>
+                    <p className="text-[10px] sm:text-sm text-gray-300 font-medium truncate drop-shadow-sm">{creator.handle}</p>
+                    
+                    {/* Location */}
+                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-300 mt-1 sm:mt-2 truncate drop-shadow-sm">
+                      <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{creator.location}</span>
+                    </div>
+                    
+                    {/* Stats & Price Bottom bar */}
+                    <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/20 flex flex-row items-center justify-between mt-auto gap-1">
+                      <div className="text-[10px] sm:text-xs font-medium text-gray-300 drop-shadow-sm flex items-center gap-1.5">
+                        <span>{creator.subs}</span>
+                        {creator.postsCount > 0 && (
+                          <span className="text-zinc-400">• {creator.postsCount} posts</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] sm:text-sm font-black text-primary drop-shadow-sm">{creator.price}</div>
+                    </div>
                   </div>
-                  
-                  {/* Stats & Price Bottom bar */}
-                  <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/20 flex flex-row items-center justify-between mt-auto gap-1">
-                    <div className="text-[10px] sm:text-sm font-medium text-gray-300 drop-shadow-sm">{creator.subs} followers</div>
-                    <div className="text-[11px] sm:text-sm font-black text-primary drop-shadow-sm">{creator.price}</div>
-                  </div>
-                </div>
-             </Link>
-           ))}
+               </Link>
+             ))}
+          </div>
+          )}
         </div>
       </main>
     </div>

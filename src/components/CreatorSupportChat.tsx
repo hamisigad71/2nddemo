@@ -10,7 +10,7 @@ import {
   Headphones
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface ChatMessage {
   id: string;
@@ -90,10 +90,10 @@ Your request will trigger an immediate B2C disbursement to your registered phone
     return {
       reply: `The Gents DollHouse operates on a simple, transparent revenue split:
 
-• You keep 85% of all earnings.
-• Platform maintenance fee is 15%.
+• You keep 70% of all earnings (Tips, Subscriptions, and PPV Unlocks).
+• Platform fee is 30%.
 
-This covers payment gateway fees, M-Pesa B2C disbursement charges, video streaming bandwidth, and VIP moderation. There are zero hidden fees.`,
+This covers payment gateway settlement, M-Pesa disbursement charges, video streaming bandwidth, and VIP moderation. There are zero hidden fees.`,
       action: {
         label: 'Check analytics',
         url: '/analytics',
@@ -109,7 +109,7 @@ This covers payment gateway fees, M-Pesa B2C disbursement charges, video streami
 • Upload your media in the Create Post or Media Vault section.
 • Toggle "Locked Content" and set your price in KES.
 • Fans unlock your post instantly using M-Pesa.
-• Your 85% cut reflects in your available balance the instant the fan unlocks it.`,
+• Your 70% cut reflects in your available balance the instant the fan unlocks it.`,
       action: {
         label: 'Create PPV post',
         url: '/create',
@@ -133,7 +133,7 @@ A dedicated partner manager reviews all creator priority tickets 24/7. If you ha
 
 I can assist you with:
 • Payout hours and M-Pesa withdrawal processing times
-• Commission rates and revenue breakdown (you keep 85%)
+• Commission rates and revenue breakdown (you keep 70%)
 • Setting up Pay-Per-View video locks
 • Verifying your creator badge and profile visibility
 
@@ -143,8 +143,10 @@ Please select one of the suggested topics below or type your question.`,
 
 export const CreatorSupportChat: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -248,41 +250,56 @@ I'm your dedicated representative for any questions regarding M-Pesa payout hour
     setMessages(initial);
   };
 
+  // Don't render on public auth or admin routes to prevent clutter
+  if (['/login', '/signup', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <>
-      {/* Floating Concierge Launcher Pill */}
-      {!isOpen && (
-        <aside aria-label="Creator live support" className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[9999]">
-          <button
-            onClick={() => {
-              setIsOpen(true);
-              setIsMinimized(false);
-            }}
-            className="group flex items-center gap-3 bg-[#111218] hover:bg-[#161722] text-white border border-rose-500/30 hover:border-rose-500/60 px-4 py-2.5 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.85)] ring-1 ring-rose-500/20 transition-all hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-            title="Chat with Creator Support Representative"
-          >
-            <div className="relative">
+      {/* Sleek Compact Floating Concierge Bubble Launcher */}
+      {!isOpen && !isDismissed && (
+        <aside aria-label="Creator live support" className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[9999] flex items-center gap-2 group">
+          {/* Tooltip on hover (desktop only) */}
+          <div className="hidden lg:group-hover:flex items-center gap-2 bg-[#14151d] border border-rose-500/40 text-white text-xs px-3.5 py-2 rounded-2xl shadow-2xl animate-fade-in pointer-events-none transition-all">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold">Live Creator Support</span>
+            <span className="text-[10px] text-zinc-400">· Online</span>
+          </div>
+
+          {/* Compact Circular Trigger Button */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setIsOpen(true);
+                setIsMinimized(false);
+              }}
+              className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#111218] hover:bg-[#181926] text-white border-2 border-rose-500/50 hover:border-rose-500 p-1 shadow-[0_10px_35px_rgba(0,0,0,0.85)] ring-2 ring-rose-500/20 transition-all hover:scale-105 active:scale-95 flex items-center justify-center relative focus-visible:outline-none"
+              title="Chat with Creator Support Representative"
+            >
               <img 
                 src={REPRESENTATIVE.avatar} 
                 alt="" 
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-rose-500/50" 
+                className="w-full h-full rounded-full object-cover" 
               />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#111218] animate-pulse" />
-            </div>
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#111218] animate-pulse" />
+              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 border border-[#111218] flex items-center justify-center text-white text-[10px] shadow-sm">
+                <MessageCircle className="w-2.5 h-2.5" />
+              </div>
+            </button>
 
-            <div className="flex flex-col text-left">
-              <span className="text-xs font-bold tracking-tight text-white group-hover:text-rose-400 transition-colors">
-                Live Creator Support
-              </span>
-              <span className="text-[10px] text-zinc-400 font-medium">
-                Payout questions & help
-              </span>
-            </div>
-
-            <div className="w-7 h-7 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 ml-1">
-              <MessageCircle className="w-3.5 h-3.5" />
-            </div>
-          </button>
+            {/* Quick Dismiss 'X' on hover */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDismissed(true);
+              }}
+              className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+              title="Hide support button"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
         </aside>
       )}
 

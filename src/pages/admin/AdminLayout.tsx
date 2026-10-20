@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, DollarSign,
@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { getAdminPayouts } from '../../lib/db';
+import { supabase } from '../../lib/supabase';
+import { toast } from '../../context/ToastContext';
 
 interface AdminNavItem {
   label: string;
@@ -33,10 +36,50 @@ const navItems: AdminNavItem[] = [
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [open, setOpen] = useState(false);
+  const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { logout, user } = useAuth();
+
+  useEffect(() => {
+    const checkPendingPayouts = async () => {
+      try {
+        const list = await getAdminPayouts();
+        const pending = list.filter((p: any) => p.status === 'pending').length;
+        setPendingPayoutsCount(pending);
+      } catch {}
+    };
+    checkPendingPayouts();
+
+    window.addEventListener('payouts_updated', checkPendingPayouts);
+    window.addEventListener('wallet_updated', checkPendingPayouts);
+
+    const channel = supabase
+      .channel('admin_layout_payouts_watch')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'transactions' },
+        (payload: any) => {
+          if (payload.new?.type === 'payout') {
+            toast.info(`New Creator Withdrawal Request: KES ${Number(payload.new.amount || 0).toLocaleString()}!`);
+            checkPendingPayouts();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'transactions' },
+        () => checkPendingPayouts()
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('payouts_updated', checkPendingPayouts);
+      window.removeEventListener('wallet_updated', checkPendingPayouts);
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -58,6 +101,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto no-scrollbar custom-scrollbar">
         {navItems.map(({ label, icon: Icon, path, badge, isNew }) => {
           const active = location.pathname === path;
+          const computedBadge = path === '/admin/payouts' && pendingPayoutsCount > 0 ? pendingPayoutsCount : badge;
           return (
             <Link
               key={path}
@@ -71,21 +115,21 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             >
               <Icon className={`w-[18px] h-[18px] shrink-0 transition-colors ${active ? 'text-white' : 'text-zinc-500 group-hover:text-red-400'}`} />
               <span className="flex-1">{label}</span>
-              {isNew && !active && (
+              {isNew && !active && !computedBadge && (
                 <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
                   New
                 </span>
               )}
-              {isNew && active && (
+              {isNew && active && !computedBadge && (
                 <span className="bg-white/20 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
                   New
                 </span>
               )}
-              {badge && (
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full min-w-[20px] text-center leading-none ${active ? 'bg-white text-red-600' : 'bg-red-600 text-white'}`}>
-                  {badge}
+              {computedBadge ? (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full min-w-[20px] text-center leading-none ${active ? 'bg-white text-red-600' : 'bg-red-600 text-white animate-pulse'}`}>
+                  {computedBadge}
                 </span>
-              )}
+              ) : null}
               {active && <ChevronRight className="w-4 h-4 opacity-60" />}
             </Link>
           );
@@ -148,10 +192,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 rounded-xl hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors group">
+            <Link
+              to="/admin/payouts"
+              title={pendingPayoutsCount > 0 ? `${pendingPayoutsCount} pending withdrawal requests` : 'Payout notifications'}
+              className="relative p-2 rounded-xl hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors group"
+            >
               <Bell className="w-5 h-5 group-hover:text-white transition-colors" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0d0e12]" />
-            </button>
+              {pendingPayoutsCount > 0 ? (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-[#0d0e12] animate-pulse">
+                  {pendingPayoutsCount}
+                </span>
+              ) : (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0d0e12]" />
+              )}
+            </Link>
             <div className="flex items-center gap-3 pl-4 border-l border-zinc-800">
               <div className="w-9 h-9 rounded-full border-2 border-red-500/20 bg-red-600/10 flex items-center justify-center text-red-500 flex-shrink-0">
                 <User className="w-4 h-4" />

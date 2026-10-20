@@ -3,7 +3,7 @@ import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
 import { resolveUserAvatar, getDefaultAvatar } from './avatar';
 
-const PLATFORM_FEE = 0.15;
+export const PLATFORM_FEE = 0.30;
 
 // ========================
 // 1. USERS
@@ -614,6 +614,14 @@ export const getPostsByCreator = async (creatorId: string, viewerId?: string) =>
   } catch {}
 
   dbPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  
+  if (dbPosts.length === 0) {
+    const fallbackMatches = FALLBACK_POSTS.filter(p => p.creator_id === creatorId);
+    if (fallbackMatches.length > 0) {
+      return fallbackMatches;
+    }
+  }
+
   return resolvePrivatePostMedia(await enrichPostsWithUsers(dbPosts), viewerId);
 };
 
@@ -903,7 +911,7 @@ export const processPayment = async (
   referenceId?: string,
   postId?: string
 ) => {
-  const platformFee = grossAmount * PLATFORM_FEE;
+  const platformFee = Math.round(grossAmount * PLATFORM_FEE);
   const netAmount = grossAmount - platformFee;
 
   let tx: any = {
@@ -978,7 +986,7 @@ export const processPayment = async (
     if (type === 'tip') {
       await createNotification(toCreatorId, {
         title: 'New Tip Received! 💰',
-        message: `${fanName} tipped you KES ${grossAmount.toLocaleString()}!`,
+        message: `${fanName} tipped you KES ${grossAmount.toLocaleString()}! KES ${netAmount.toLocaleString()} (after 30% platform fee) has been credited to your wallet.`,
         type: 'tip',
         link: '/wallet',
         action_label: 'View Wallet',
@@ -988,11 +996,11 @@ export const processPayment = async (
     } else if (type === 'ppv') {
       await createNotification(toCreatorId, {
         title: 'PPV Content Unlocked! 🔓',
-        message: `${fanName} unlocked your Pay-Per-View content for KES ${grossAmount.toLocaleString()}.`,
+        message: `${fanName} unlocked your Pay-Per-View content for KES ${grossAmount.toLocaleString()}. KES ${netAmount.toLocaleString()} (after 30% platform fee) has been credited to your wallet.`,
         type: 'ppv',
-        link: '/vault',
-        action_label: 'View Vault',
-        action_url: '/vault',
+        link: '/wallet',
+        action_label: 'View Wallet',
+        action_url: '/wallet',
         badge: 'PPV Unlock'
       });
     }
@@ -1033,17 +1041,47 @@ export const processPayment = async (
     console.warn('Could not dispatch subscriber payment receipt notification:', fanNotifErr);
   }
 
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('wallet_updated', { detail: { creatorId: toCreatorId } }));
+  }
+
   return tx;
 };
 
 export const getCreatorTransactions = async (creatorId: string) => {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('to_creator_id', creatorId)
-    .order('created_at', { ascending: false });
-  if (error) console.error('getCreatorTransactions error:', error.message);
-  return data || [];
+  let remoteTxs: any[] = [];
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('to_creator_id', creatorId)
+      .order('created_at', { ascending: false });
+    if (error) console.error('getCreatorTransactions error:', error.message);
+    if (data) remoteTxs = data;
+  } catch (err) {
+    console.error('getCreatorTransactions exception:', err);
+  }
+
+  let localTxs: any[] = [];
+  if (typeof window !== 'undefined') {
+    try {
+      const list = JSON.parse(localStorage.getItem('tgd_all_transactions') || '[]');
+      localTxs = list.filter((t: any) => t.to_creator_id === creatorId);
+    } catch {}
+  }
+
+  const seen = new Set<string>();
+  const merged: any[] = [];
+  for (const item of [...remoteTxs, ...localTxs]) {
+    const key = item.id || `${item.type}_${item.created_at}_${item.gross_amount}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+
+  merged.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  return merged;
 };
 
 // ========================
@@ -1126,14 +1164,15 @@ export const subscribeToCreator = async (
     let fanName = 'A subscriber';
     const { data: fanUser } = await supabase.from('users').select('name').eq('uid', fanId).maybeSingle();
     if (fanUser?.name) fanName = fanUser.name;
+    const netCredit = Math.round(price * (1 - PLATFORM_FEE));
 
     await createNotification(creatorId, {
       title: 'New VIP Subscriber! 👑',
-      message: `${fanName} subscribed to your ${tierName} (${durationDays} days) for KES ${price.toLocaleString()}!`,
+      message: `${fanName} subscribed to your ${tierName} (${durationDays} days) for KES ${price.toLocaleString()}! KES ${netCredit.toLocaleString()} (after 30% platform fee) has been credited to your wallet.`,
       type: 'subscription',
-      link: '/fans',
-      action_label: 'View Fans',
-      action_url: '/fans',
+      link: '/wallet',
+      action_label: 'View Wallet',
+      action_url: '/wallet',
       badge: 'VIP Fan'
     });
   } catch (err) {
@@ -1482,7 +1521,301 @@ export const getCreatorProfile = async (id: string) => {
   const escortFallback = getEscorts().find(e => e.id === id);
   if (escortFallback) return escortFallback;
 
+  // Fallback to mock feed creator if matches FALLBACK_POSTS
+  const fallbackPost = FALLBACK_POSTS.find(p => p.creator_id === id);
+  if (fallbackPost) {
+    return {
+      id: id,
+      name: fallbackPost.users?.name || 'VIP Creator',
+      avatar: fallbackPost.users?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&q=80',
+      cover_image: fallbackPost.media_url || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80',
+      bio: fallbackPost.content || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
+      location: 'Nairobi, Kenya',
+      rating: 4.9,
+      isVerified: true,
+      isOnline: true,
+      price_hr: fallbackPost.price || 1000,
+      age: 23,
+      services: ['VIP Content', 'Exclusive Photos', 'Direct Chat'],
+      gallery: [fallbackPost.media_url],
+      promo_discount: 50,
+      promo_active: true,
+      isEscort: false,
+    };
+  }
+
+  // Fallback to user hardcoded discover creator
+  const hardcodedMatch = HARDCODED_DISCOVER_CREATORS.find(c => c.id === id);
+  if (hardcodedMatch) {
+    return {
+      id: hardcodedMatch.id,
+      name: hardcodedMatch.name,
+      avatar: hardcodedMatch.avatar,
+      cover_image: hardcodedMatch.cover,
+      bio: `Welcome to my official creator page! Follow my exclusive posts, photos, and direct VIP chat.`,
+      location: hardcodedMatch.location,
+      rating: 4.9,
+      isVerified: true,
+      isOnline: true,
+      price_hr: parseInt(String(hardcodedMatch.price).replace(/\D/g, ''), 10) || 1000,
+      age: 24,
+      services: [hardcodedMatch.category, 'VIP Access', 'Direct Chat'],
+      gallery: [hardcodedMatch.cover],
+      promo_discount: 50,
+      promo_active: true,
+      isEscort: false,
+    };
+  }
+
   return null;
+};
+
+export const HARDCODED_DISCOVER_CREATORS = [
+  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "12k followers", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
+  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "9.5k followers", price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
+  { id: 'creator-chef', name: "Chef Kamau", handle: "@chefkamau", category: "Culinary", location: "Nairobi, Kenya", subs: "8.5k followers", price: "KES 1k/mo", avatar: "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg", cover: "https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-17T08:00:00Z' },
+  { id: 'creator-betty', name: "Betty Vlog", handle: "@betty", category: "Vlogger", location: "Nakuru", subs: "3k followers", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c7/63/a1/c763a17c42705d2b6b981adc1130ed91.jpg", cover: "https://i.pinimg.com/736x/c7/63/a1/c763a17c42705d2b6b981adc1130ed91.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-17T07:00:00Z' },
+  { id: 'creator-wanjiku', name: "Wanjiku Tech", handle: "@wanjiku", category: "Education", location: "Nairobi", subs: "24k followers", price: "KES 300/mo", avatar: "https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg", cover: "https://i.pinimg.com/736x/db/33/3a/db333afb2e79acfef7592a14cd8ad983.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-16T12:00:00Z' },
+  { id: 'creator-grace', name: "Grace Style", handle: "@grace", category: "Fashion", location: "Nairobi", subs: "32k followers", price: "KES 1.5k/mo", avatar: "https://i.pinimg.com/736x/80/78/c3/8078c38f0cb612302707c7429e3ecf59.jpg", cover: "https://i.pinimg.com/736x/80/78/c3/8078c38f0cb612302707c7429e3ecf59.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-16T10:00:00Z' },
+  { id: 'creator-fit', name: "Fit Guru", handle: "@fitguru", category: "Health", location: "Eldoret", subs: "18k followers", price: "KES 700/mo", avatar: "https://i.pinimg.com/736x/f6/b6/de/f6b6de8523e31a9f04f60ca66639c42f.jpg", cover: "https://i.pinimg.com/736x/f6/b6/de/f6b6de8523e31a9f04f60ca66639c42f.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-15T09:00:00Z' },
+  { id: 'creator-odc', name: "ODC Music", handle: "@odcmusic", category: "Entertainment", location: "Kisumu", subs: "45k followers", price: "KES 1k/mo", avatar: "https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg", cover: "https://i.pinimg.com/736x/3d/8e/1e/3d8e1ed6cd529d4119275ff9f7428390.jpg", hasPosts: false, postsCount: 0, createdAt: '2026-10-15T08:00:00Z' },
+];
+
+export const getDiscoverCreators = async () => {
+  try {
+    // 1. Fetch all posts to identify creators who have actually posted on the feeds
+    let allPosts: any[] = [];
+    try {
+      const { data: dbPosts } = await supabase
+        .from('posts')
+        .select('id, creator_id, media_url, is_locked, price, created_at, status')
+        .order('created_at', { ascending: false });
+      if (dbPosts) allPosts = [...dbPosts];
+    } catch {}
+
+    try {
+      const localPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+      for (const lp of localPosts) {
+        if (!allPosts.find(p => p.id === lp.id)) allPosts.push(lp);
+      }
+    } catch {}
+
+    // Map creator_id -> post stats
+    const postsByCreator = new Map<string, { count: number; latestCover: string; latestDate: string }>();
+    allPosts.forEach(p => {
+      if (!p.creator_id) return;
+      const existing = postsByCreator.get(p.creator_id);
+      if (!existing) {
+        postsByCreator.set(p.creator_id, {
+          count: 1,
+          latestCover: p.media_url || '',
+          latestDate: p.created_at || new Date().toISOString()
+        });
+      } else {
+        existing.count += 1;
+        if (!existing.latestCover && p.media_url) {
+          existing.latestCover = p.media_url;
+        }
+      }
+    });
+
+    // 2. Fetch all real creator accounts from 'users' table
+    let creatorUsers: any[] = [];
+    try {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('uid, name, email, avatar, role, phone, created_at')
+        .in('role', ['creator', 'pending_creator', 'escort']);
+      if (usersData) creatorUsers = [...usersData];
+    } catch {}
+
+    // Also fetch any users who might have posted even if role is not strictly creator
+    const creatorUserIds = new Set(creatorUsers.map(u => u.uid));
+    const postingUidsToFetch = Array.from(postsByCreator.keys()).filter(id => !creatorUserIds.has(id) && !id.startsWith('creator-') && !id.startsWith('escort-'));
+    if (postingUidsToFetch.length > 0) {
+      try {
+        const { data: postingUsers } = await supabase
+          .from('users')
+          .select('uid, name, email, avatar, role, phone, created_at')
+          .in('uid', postingUidsToFetch);
+        if (postingUsers) {
+          postingUsers.forEach(u => {
+            if (!creatorUserIds.has(u.uid)) {
+              creatorUsers.push(u);
+              creatorUserIds.add(u.uid);
+            }
+          });
+        }
+      } catch {}
+    }
+
+    // 3. Fetch creator profiles for metadata (pricing, bio, tags, cover)
+    const allUids = creatorUsers.map(u => u.uid);
+    const profileMap = new Map<string, any>();
+    if (allUids.length > 0) {
+      try {
+        const { data: profiles } = await supabase
+          .from('creator_profiles')
+          .select('*')
+          .in('user_id', allUids);
+        if (profiles) {
+          profiles.forEach(p => profileMap.set(p.user_id, p));
+        }
+      } catch {}
+    }
+
+    // Also check local storage cached creator profiles
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('tgd_creator_profile_')) {
+          const uid = key.replace('tgd_creator_profile_', '');
+          const localProf = JSON.parse(localStorage.getItem(key) || '{}');
+          if (!profileMap.has(uid)) {
+            profileMap.set(uid, localProf);
+          }
+        }
+      }
+    } catch {}
+
+    // Format all real creators
+    const realCreators = creatorUsers.map(u => {
+      const p = profileMap.get(u.uid);
+      const postStats = postsByCreator.get(u.uid);
+      const hasPosts = (postStats?.count || 0) > 0;
+      const creatorName = u.name || p?.display_name || p?.name || 'VIP Creator';
+      const avatar = resolveUserAvatar(u.avatar || p?.avatar_url || p?.avatar, creatorName);
+      const cover = postStats?.latestCover || p?.cover_image || 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=1600&q=80';
+      const followers = p?.total_subscribers || (hasPosts ? Math.floor(12 + postStats!.count * 7) : 0);
+
+      return {
+        id: u.uid,
+        name: creatorName,
+        handle: `@${creatorName.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+        category: p?.niche || (p?.tags && p.tags[0]) || (hasPosts ? 'Active Feed Creator' : 'VIP Creator'),
+        location: p?.location || 'Nairobi, Kenya',
+        subs: `${followers} followers`,
+        price: `KES ${(p?.monthly_price || 1000).toLocaleString()}/mo`,
+        avatar,
+        cover,
+        hasPosts,
+        postsCount: postStats?.count || 0,
+        createdAt: postStats?.latestDate || u.created_at || new Date().toISOString()
+      };
+    });
+
+    // 4. Showcase feed creators who actually have posts in mockPosts.ts
+    const showcaseFeedCreators = [
+      {
+        id: 'creator-wairimu',
+        name: 'Wairimu K.',
+        handle: '@wairimu',
+        category: 'Fashion & VIP Glamour',
+        location: 'Nairobi, Kenya',
+        subs: '1.2k followers',
+        price: 'KES 1,000/mo',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&q=80',
+        cover: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80',
+        hasPosts: true,
+        postsCount: 1,
+        createdAt: '2026-10-18T10:00:00Z'
+      },
+      {
+        id: 'creator-chebet',
+        name: 'Faith Chebet',
+        handle: '@chebet',
+        category: 'Fitness & Wellness',
+        location: 'Nairobi, Kenya',
+        subs: '940 followers',
+        price: 'KES 750/mo',
+        avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&q=80',
+        cover: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80',
+        hasPosts: true,
+        postsCount: 1,
+        createdAt: '2026-10-18T09:00:00Z'
+      },
+      {
+        id: 'creator-chloe',
+        name: 'Chloe Monet',
+        handle: '@chloe',
+        category: 'Private Shows & Dance',
+        location: 'Mombasa, Kenya',
+        subs: '2.5k followers',
+        price: 'KES 1,500/mo',
+        avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80',
+        cover: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
+        hasPosts: true,
+        postsCount: 1,
+        createdAt: '2026-10-17T08:00:00Z'
+      },
+      {
+        id: 'creator-amina',
+        name: 'Amina Kimani',
+        handle: '@aminak',
+        category: 'Luxury Lifestyle & Travel',
+        location: 'Nairobi, Kenya',
+        subs: '3.1k followers',
+        price: 'KES 1,200/mo',
+        avatar: 'https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg',
+        cover: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80',
+        hasPosts: true,
+        postsCount: 1,
+        createdAt: '2026-10-17T07:00:00Z'
+      },
+      {
+        id: 'creator-vanessa',
+        name: 'Vanessa Blue',
+        handle: '@vanessa',
+        category: 'Sensual Arts & VIP Previews',
+        location: 'Nakuru, Kenya',
+        subs: '1.8k followers',
+        price: 'KES 900/mo',
+        avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&q=80',
+        cover: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80',
+        hasPosts: true,
+        postsCount: 1,
+        createdAt: '2026-10-16T12:00:00Z'
+      },
+      {
+        id: 'creator-stacy',
+        name: 'Stacy W.',
+        handle: '@stacyw',
+        category: 'Nightlife & Backstage',
+        location: 'Nairobi, Kenya',
+        subs: '1.4k followers',
+        price: 'KES 800/mo',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
+        cover: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80',
+        hasPosts: true,
+        postsCount: 1,
+        createdAt: '2026-10-16T10:00:00Z'
+      }
+    ];
+
+    // Merge: Real registered creators first, sorted by hasPosts and post count, followed by user's hardcoded creators & showcase
+    const existingIds = new Set(realCreators.map(c => c.id));
+    const combined = [...realCreators];
+
+    // Ensure all hardcoded creators from Discover are 100% preserved
+    HARDCODED_DISCOVER_CREATORS.forEach(hc => {
+      if (!existingIds.has(hc.id)) {
+        combined.push(hc);
+        existingIds.add(hc.id);
+      }
+    });
+
+    showcaseFeedCreators.forEach(sc => {
+      if (!existingIds.has(sc.id)) {
+        combined.push(sc);
+        existingIds.add(sc.id);
+      }
+    });
+
+    return combined;
+  } catch (err) {
+    console.error('getDiscoverCreators error:', err);
+    return [];
+  }
 };
 
 export const getCreatorDashboardStats = async (creatorId: string) => {
@@ -1545,10 +1878,14 @@ export const getAdminOverviewStats = async () => {
     const { count: fansCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['subscriber', 'fan']);
     const { count: pendingEscortApps } = await supabase.from('escort_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
     
-    // Sum transactions for total revenue
-    const { data: txs } = await supabase.from('transactions').select('gross_amount, platform_fee, status, created_at').eq('status', 'completed');
+    // Sum transactions for total revenue (exclude payout/withdrawal rows)
+    const { data: txs } = await supabase
+      .from('transactions')
+      .select('gross_amount, platform_fee, status, created_at, type')
+      .eq('status', 'completed')
+      .neq('type', 'payout');
     const totalRevenue = (txs || []).reduce((sum, t) => sum + (t.gross_amount || 0), 0);
-    const platformFees = (txs || []).reduce((sum, t) => sum + (t.platform_fee || 0), 0) || (totalRevenue * PLATFORM_FEE);
+    const platformFees = (txs || []).reduce((sum, t) => sum + (t.platform_fee || 0), 0) || Math.round(totalRevenue * PLATFORM_FEE);
 
     // Calculate revenue trend for past 7 days
     const dayCounts = [0, 0, 0, 0, 0, 0, 0];
@@ -1647,8 +1984,9 @@ export const getAdminUsers = async () => {
 
     const { data: txs } = await supabase
       .from('transactions')
-      .select('from_user_id, gross_amount')
-      .eq('status', 'completed');
+      .select('from_user_id, gross_amount, type')
+      .eq('status', 'completed')
+      .neq('type', 'payout');
 
     const spentMap = new Map<string, number>();
     (txs || []).forEach(t => {
@@ -1694,41 +2032,315 @@ export const updateUserStatus = async (userId: string, newStatus: 'active' | 'ba
   }
 };
 
+export const requestCreatorPayout = async (
+  creatorId: string,
+  amount: number,
+  phone: string,
+  method: string = 'M-Pesa'
+) => {
+  if (!creatorId || amount <= 0) {
+    throw new Error('Please enter a valid withdrawal amount.');
+  }
+
+  const cleanPhone = phone.trim() || 'Not specified';
+  const refString = `${method} | ${cleanPhone}`;
+
+  let creatorName = 'Creator';
+  let creatorEmail = '';
+  try {
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('name, email, phone')
+      .eq('uid', creatorId)
+      .maybeSingle();
+    if (userRow?.name) creatorName = userRow.name;
+    if (userRow?.email) creatorEmail = userRow.email;
+  } catch {}
+
+  let payoutTx: any = {
+    id: `payout_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    type: 'payout',
+    from_user_id: creatorId,
+    to_creator_id: creatorId,
+    gross_amount: amount,
+    platform_fee: 0,
+    net_amount: amount,
+    status: 'pending',
+    reference_id: refString,
+    created_at: new Date().toISOString(),
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert({
+        type: 'payout',
+        from_user_id: creatorId,
+        to_creator_id: creatorId,
+        gross_amount: amount,
+        platform_fee: 0,
+        net_amount: amount,
+        status: 'pending',
+        reference_id: refString,
+      })
+      .select()
+      .maybeSingle();
+
+    if (data) {
+      payoutTx = data;
+    }
+    if (error) {
+      console.warn('Supabase payout insert notice:', error.message);
+    }
+  } catch (err) {
+    console.warn('Supabase payout insert exception:', err);
+  }
+
+  // Save in local transactions cache
+  if (typeof window !== 'undefined') {
+    try {
+      const localKey = 'tgd_all_transactions';
+      const list = JSON.parse(localStorage.getItem(localKey) || '[]');
+      localStorage.setItem(localKey, JSON.stringify([payoutTx, ...list]));
+    } catch {}
+  }
+
+  // Notify Creator of pending withdrawal
+  try {
+    await createNotification(creatorId, {
+      title: 'Withdrawal Request Submitted ⏳',
+      message: `Your withdrawal request of KES ${amount.toLocaleString()} via ${method} (${cleanPhone}) has been sent to Admin for processing.`,
+      type: 'system',
+      link: '/wallet',
+      action_label: 'View Wallet',
+      action_url: '/wallet',
+      badge: 'Payout Pending',
+    });
+  } catch {}
+
+  // Notify all Admin users in Supabase
+  try {
+    const { data: admins } = await supabase
+      .from('users')
+      .select('uid')
+      .eq('role', 'admin');
+
+    const adminIds = new Set<string>((admins || []).map((a: any) => a.uid).filter(Boolean));
+    for (const adminId of adminIds) {
+      await createNotification(adminId, {
+        title: 'Creator Withdrawal Request! 💸',
+        message: `${creatorName}${creatorEmail ? ` (${creatorEmail})` : ''} requested to withdraw KES ${amount.toLocaleString()} via ${method} to ${cleanPhone}.`,
+        type: 'system',
+        link: '/admin/payouts',
+        action_label: 'Review Payout',
+        action_url: '/admin/payouts',
+        badge: 'Payout Request',
+      });
+    }
+  } catch (err) {
+    console.warn('Admin notification error:', err);
+  }
+
+  // Log in Admin Audit Log so Admin sees it in Overview & Audit Log
+  try {
+    await logAdminAction({
+      admin: creatorName,
+      action: 'Requested Withdrawal',
+      target: `${creatorName} (${cleanPhone})`,
+      details: `Requested payout of KES ${amount.toLocaleString()} via ${method} to ${cleanPhone}`,
+      type: 'payout',
+      ip: 'Creator Wallet',
+    });
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('payouts_updated'));
+    window.dispatchEvent(new CustomEvent('wallet_updated', { detail: { creatorId } }));
+  }
+
+  return payoutTx;
+};
+
 export const getAdminPayouts = async () => {
   try {
-    const { data: profiles, error } = await supabase
-      .from('creator_profiles')
+    let remotePayouts: any[] = [];
+    const { data: payoutTxs, error } = await supabase
+      .from('transactions')
       .select('*')
-      .order('total_earnings', { ascending: false });
+      .eq('type', 'payout')
+      .order('created_at', { ascending: false });
 
-    if (error || !profiles) return [];
-
-    const userIds = profiles.map(p => p.user_id).filter(Boolean);
-    const userMap = new Map<string, any>();
-    if (userIds.length > 0) {
-      const { data: users } = await supabase.from('users').select('uid, name, email, phone, avatar').in('uid', userIds);
-      (users || []).forEach(u => userMap.set(u.uid, u));
+    if (!error && payoutTxs) {
+      remotePayouts = payoutTxs;
     }
 
-    return profiles.map((p, idx) => {
-      const u = userMap.get(p.user_id);
-      const earnings = p.total_earnings || 0;
+    let localPayouts: any[] = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const list = JSON.parse(localStorage.getItem('tgd_all_transactions') || '[]');
+        localPayouts = list.filter((t: any) => t.type === 'payout' || t.type === 'withdrawal');
+      } catch {}
+    }
+
+    const seen = new Set<string>();
+    const allPayoutTxs: any[] = [];
+    for (const item of [...remotePayouts, ...localPayouts]) {
+      const key = item.id || `${item.to_creator_id}_${item.created_at}_${item.net_amount}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        allPayoutTxs.push(item);
+      }
+    }
+
+    allPayoutTxs.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+
+    if (allPayoutTxs.length === 0) return [];
+
+    const creatorIds = Array.from(new Set(allPayoutTxs.map(t => t.to_creator_id || t.from_user_id).filter(Boolean)));
+    const userMap = new Map<string, any>();
+    const profileMap = new Map<string, any>();
+
+    if (creatorIds.length > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('uid, name, email, phone, avatar')
+        .in('uid', creatorIds);
+      (users || []).forEach(u => userMap.set(u.uid, u));
+
+      const { data: profiles } = await supabase
+        .from('creator_profiles')
+        .select('user_id, display_name, avatar_url, avatar, total_earnings')
+        .in('user_id', creatorIds);
+      (profiles || []).forEach(p => profileMap.set(p.user_id, p));
+    }
+
+    return allPayoutTxs.map((tx) => {
+      const cid = tx.to_creator_id || tx.from_user_id;
+      const u = userMap.get(cid);
+      const p = profileMap.get(cid);
+      const rawAmount = Number(tx.net_amount || tx.gross_amount || 0);
+
+      let method = 'M-Pesa';
+      let phone = u?.phone || 'Not provided';
+      if (tx.reference_id && typeof tx.reference_id === 'string') {
+        if (tx.reference_id.includes('|')) {
+          const parts = tx.reference_id.split('|').map((s: string) => s.trim());
+          if (parts[0]) method = parts[0];
+          if (parts[1]) phone = parts[1];
+        } else {
+          phone = tx.reference_id;
+        }
+      }
+
+      const rawStatus = String(tx.status || 'pending').toLowerCase();
+      const mappedStatus =
+        rawStatus === 'completed' || rawStatus === 'approved'
+          ? 'approved'
+          : rawStatus === 'rejected' || rawStatus === 'failed'
+            ? 'rejected'
+            : 'pending';
+
+      const displayName = u?.name || p?.display_name || 'Creator';
+
       return {
-        id: `PAY${String(idx + 1).padStart(3, '0')}`,
-        creatorId: p.user_id,
-        creator: u?.name || p.display_name || 'Creator',
-        email: u?.email || 'creator@dollhouse.ke',
-        amount: `KES ${earnings.toLocaleString()}`,
-        method: 'M-Pesa',
-        phone: u?.phone || '07XX XXX XXX',
-        status: earnings > 0 ? 'approved' : 'pending',
-        requested: new Date().toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' }),
-        img: resolveUserAvatar(p.avatar_url || p.avatar || u?.avatar, u?.name || p.display_name)
+        id: tx.id,
+        creatorId: cid,
+        creator: displayName,
+        email: u?.email || 'No email',
+        amount: `KES ${rawAmount.toLocaleString()}`,
+        rawAmount,
+        method,
+        phone,
+        status: mappedStatus,
+        requested: tx.created_at
+          ? new Date(tx.created_at).toLocaleDateString('en-KE', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : 'Recent',
+        img: resolveUserAvatar(u?.avatar || p?.avatar_url || p?.avatar, displayName),
       };
     });
   } catch (err) {
     console.error('Error fetching admin payouts:', err);
     return [];
+  }
+};
+
+export const updateAdminPayoutStatus = async (
+  payoutId: string,
+  creatorId: string,
+  amount: number,
+  phone: string,
+  action: 'approved' | 'rejected'
+) => {
+  const dbStatus = action === 'approved' ? 'completed' : 'rejected';
+
+  try {
+    await supabase
+      .from('transactions')
+      .update({ status: dbStatus })
+      .eq('id', payoutId);
+  } catch (err) {
+    console.warn('Error updating payout status in Supabase:', err);
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const localKey = 'tgd_all_transactions';
+      const list = JSON.parse(localStorage.getItem(localKey) || '[]');
+      const updated = list.map((t: any) =>
+        t.id === payoutId ? { ...t, status: dbStatus } : t
+      );
+      localStorage.setItem(localKey, JSON.stringify(updated));
+    } catch {}
+  }
+
+  // Send notification to Creator
+  if (creatorId) {
+    try {
+      if (action === 'approved') {
+        await createNotification(creatorId, {
+          title: 'Payout Sent to Your M-Pesa! 💸',
+          message: `Your withdrawal of KES ${amount.toLocaleString()} has been approved by Admin and sent to ${phone}.`,
+          type: 'system',
+          link: '/wallet',
+          action_label: 'View Wallet',
+          action_url: '/wallet',
+          badge: 'Paid Out',
+        });
+      } else {
+        await createNotification(creatorId, {
+          title: 'Withdrawal Request Declined',
+          message: `Your withdrawal request of KES ${amount.toLocaleString()} was declined by Admin. The funds have been restored to your available wallet balance.`,
+          type: 'warning',
+          link: '/wallet',
+          action_label: 'View Wallet',
+          action_url: '/wallet',
+          badge: 'Returned',
+        });
+      }
+    } catch {}
+  }
+
+  // Log Admin Audit Action
+  try {
+    await logAdminAction({
+      admin: 'Admin',
+      action: action === 'approved' ? 'Approved Creator Payout' : 'Rejected Creator Payout',
+      target: `${phone} (KES ${amount.toLocaleString()})`,
+      details: `${action === 'approved' ? 'Disbursed' : 'Declined'} withdrawal of KES ${amount.toLocaleString()} (${payoutId})`,
+      type: action === 'approved' ? 'payout' : 'reject',
+      ip: 'Admin Portal',
+    });
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('payouts_updated'));
+    window.dispatchEvent(new CustomEvent('wallet_updated', { detail: { creatorId } }));
   }
 };
 
@@ -2003,7 +2615,7 @@ export interface PlatformSettings {
 
 export const getPlatformSettings = async (): Promise<PlatformSettings> => {
   const defaults: PlatformSettings = {
-    platformFee: '15',
+    platformFee: '30',
     minPayout: '1000',
     announcement: '',
     emailAlerts: true,

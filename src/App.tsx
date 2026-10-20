@@ -53,6 +53,8 @@ import PaymentMethods from "./pages/user/PaymentMethods";
 import UserSettings from "./pages/user/UserSettings";
 import EscortsPage from "./pages/user/EscortsPage";
 import UserWallet from "./pages/user/UserWallet";
+import LiveStudio from "./pages/creator/LiveStudio";
+import LiveRoom from "./pages/user/LiveRoom";
 import InstallAppPrompt from "./components/InstallAppPrompt";
 import CreatorSupportChat from "./components/CreatorSupportChat";
 
@@ -107,11 +109,14 @@ const AppRoutes = () => {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/creator/:id" element={<CreatorProfile />} />
+            <Route path="/live/:id" element={<LiveRoom />} />
             
             {/* Protected Routes */ }
             <Route element={<ProtectedRoute />}>
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/dashboard" element={<CreatorDashboard />} />
+              <Route path="/creator/live" element={<LiveStudio />} />
+              <Route path="/live-studio" element={<LiveStudio />} />
               <Route path="/create-post" element={<CreatePost />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/vault" element={<MediaVault />} />

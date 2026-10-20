@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake, Download } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake, Download, Radio, Headphones } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
@@ -13,6 +13,7 @@ interface CreatorLayoutProps {
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
+  { name: 'Go Live Studio', path: '/creator/live', icon: Radio, isLive: true },
   { name: 'My Feed', path: '/feed', icon: Rss },
   { name: 'Creator Playbook', path: '/guide', icon: BookOpen },
   { name: 'Analytics', path: '/analytics', icon: LineChart },
@@ -182,6 +183,11 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                 )}
                 <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'} shrink-0`} />
                 <span className="text-[15px]">{item.name}</span>
+                {(item as any).isLive && (
+                  <span className="ml-auto bg-red-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                    Live
+                  </span>
+                )}
                 {item.name === 'Notifications' && unreadNotifs > 0 && (
                   <span className="ml-auto bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
                     {unreadNotifs}
@@ -223,6 +229,22 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                <LogOut className="w-4.5 h-4.5" />
              </button>
            </div>
+
+           {/* Live Support Concierge Shortcut */}
+           <button 
+             type="button"
+             onClick={() => {
+               setIsMobileMenuOpen(false);
+               window.dispatchEvent(new CustomEvent('open_creator_support'));
+             }} 
+             className="flex items-center justify-between px-3.5 py-2 rounded-xl transition-all text-xs font-semibold text-zinc-300 bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 w-full active:scale-95 group mb-1.5"
+           >
+             <div className="flex items-center gap-2.5">
+               <Headphones className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
+               <span>Live Support Help</span>
+             </div>
+             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+           </button>
 
            {/* Install Mobile App Shortcut */}
            <button 
