@@ -36,22 +36,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Handle the redirect post-login hook
+      // Ensure user profile exists in public.users on sign-in
       if (event === 'SIGNED_IN' && session?.user) {
         const storedRole = localStorage.getItem('pendingAuthRole');
-        if (storedRole) {
-          try {
-            await createUserProfile(session.user.id, {
-              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
-              email: session.user.email,
-              avatar: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null,
-              role: storedRole
-            });
-          } catch (err) {
-            console.error('Error creating profile after OAuth sign-in:', err);
-          }
-          localStorage.removeItem('pendingAuthRole');
+        const metadata = session.user.user_metadata || {};
+        const role = storedRole || metadata.role || 'subscriber';
+        const name = metadata.full_name || metadata.name || session.user.email?.split('@')[0] || 'User';
+        const phone = metadata.phone || '';
+        const avatar = metadata.avatar_url || metadata.picture || null;
+
+        try {
+          await createUserProfile(session.user.id, {
+            name,
+            email: session.user.email,
+            avatar,
+            phone,
+            role
+          });
+        } catch (err) {
+          console.error('Error ensuring profile after sign-in:', err);
         }
+        if (storedRole) localStorage.removeItem('pendingAuthRole');
       }
     });
 

@@ -65,51 +65,70 @@
 }
 
 /* ── Light Mode Surface & Card Rules Across All Components ── */
-.light {
-  /* 1. Global Card and Container Backgrounds */
-  .bg-zinc-950,
-  .bg-zinc-900,
-  .bg-black,
-  .bg-\[\#0A0A0C\],
-  .bg-\[\#100F12\],
-  .bg-\[\#0D0E12\],
-  .bg-\[\#19171B\],
-  .bg-\[\#111115\],
-  .bg-\[\#1b0809\]\/90 {
+html.light, .light {
+  /* 1. Global Card and Container Backgrounds: universal matching for all dark hex & zinc cards */
+  [class*="bg-[#0"]:not([class*="bg-[#1877F2]"]):not([class*="fixed"]):not([class*="absolute inset-0 bg-gradient"]):not([class*="from-"]):not([class*="to-"]),
+  [class*="bg-[#1"]:not([class*="bg-[#1877F2]"]):not([class*="fixed"]):not([class*="absolute inset-0 bg-gradient"]):not([class*="from-"]):not([class*="to-"]),
+  [class*="bg-[#2"]:not([class*="bg-[#1877F2]"]):not([class*="fixed"]):not([class*="absolute inset-0 bg-gradient"]):not([class*="from-"]):not([class*="to-"]),
+  .bg-zinc-950:not([class*="fixed"]):not([class*="absolute inset-0"]):not(video),
+  .bg-zinc-900:not([class*="fixed"]):not([class*="absolute inset-0"]):not(video):not(button.bg-primary):not([class*="bg-red-"]):not([class*="bg-emerald-"]),
+  .bg-zinc-850,
+  .bg-black:not([class*="fixed"]):not([class*="absolute inset-0"]):not([class*="bg-black/"]):not(video):not([class*="backdrop-blur"]) {
     background-color: var(--card) !important;
     color: var(--card-fg) !important;
   }
 
   /* 2. Semi-transparent backdrop cards & overlays */
-  .bg-zinc-900\/60,
-  .bg-zinc-950\/60,
-  .bg-zinc-900\/90,
-  .bg-zinc-950\/90,
-  .bg-\[\#0D0E12\]\/90,
-  .bg-\[\#0D0E12\]\/95,
-  .bg-\[\#100F12\]\/95,
-  .bg-zinc-900\/80,
-  .bg-zinc-950\/80 {
-    background-color: color-mix(in srgb, var(--card) 95%, transparent) !important;
+  [class*="bg-zinc-900/"]:not([class*="fixed"]):not([class*="absolute inset-0"]),
+  [class*="bg-zinc-950/"]:not([class*="fixed"]):not([class*="absolute inset-0"]),
+  [class*="bg-[#0D0E12]/"],
+  [class*="bg-[#0d0e12]/"],
+  [class*="bg-[#100F12]/"],
+  [class*="bg-[#14151B]/"],
+  [class*="bg-[#1b0809]/"] {
+    background-color: var(--card) !important;
     color: var(--card-fg) !important;
   }
 
-  /* 3. Borders */
-  .border-white\/\[0\.06\],
-  .border-white\/\[0\.08\],
-  .border-white\/\[0\.09\],
-  .border-white\/5,
-  .border-white\/10,
-  .border-white\/15,
-  .border-white\/20,
-  .border-white\/30,
-  .border-zinc-800,
-  .border-zinc-700 {
+  /* 3. Inactive pill/tab buttons */
+  button[class*="bg-[#"]:not(.bg-primary):not([class*="bg-red-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]),
+  button.bg-zinc-800:not(.bg-primary):not([class*="bg-red-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]),
+  button.bg-zinc-900:not(.bg-primary):not([class*="bg-red-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]) {
+    background-color: var(--muted) !important;
+    color: var(--muted-fg) !important;
     border-color: var(--border) !important;
   }
 
-  /* 4. Text contrast for light theme */
-  .text-white:not(.bg-primary *, .bg-red-600 *, .bg-red-500 *, .bg-emerald-500 *, .bg-emerald-600 *, .bg-blue-600 *, .btn-solid *),
+  button[class*="bg-[#"]:not(.bg-primary):not([class*="bg-red-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]):hover,
+  button.bg-zinc-800:not(.bg-primary):not([class*="bg-red-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]):hover,
+  button.bg-zinc-900:not(.bg-primary):not([class*="bg-red-"]):not([class*="bg-emerald-"]):not([class*="bg-blue-"]):hover {
+    background-color: var(--card) !important;
+    color: var(--fg) !important;
+  }
+
+  /* 4. Active dark buttons in light mode (e.g. bg-zinc-800 text-white) */
+  button.bg-zinc-800.text-white,
+  button.bg-zinc-900.text-white {
+    background-color: hsl(240 10% 12%) !important;
+    color: #ffffff !important;
+    border-color: hsl(240 10% 12%) !important;
+  }
+
+  /* 5. Borders */
+  [class*="border-white/"],
+  [class*="border-white\\["],
+  [class*="border-zinc-8"],
+  [class*="border-zinc-7"],
+  [class*="border-zinc-9"],
+  [class*="divide-zinc-8"],
+  [class*="divide-zinc-7"],
+  [class*="divide-white/"],
+  [class*="divide-white\\["] {
+    border-color: var(--border) !important;
+  }
+
+  /* 6. Text contrast for light theme */
+  .text-white:not(.bg-primary *, .bg-red-600 *, .bg-red-500 *, .bg-emerald-500 *, .bg-emerald-600 *, .bg-blue-600 *, .btn-solid *, [class*="bg-red-"] *, [class*="bg-emerald-"] *),
   .text-zinc-100,
   .text-zinc-200,
   .text-zinc-300 {
@@ -121,19 +140,27 @@
     color: var(--muted-fg) !important;
   }
 
-  /* 5. Inputs in light mode */
-  input:not([type="checkbox"]):not([type="radio"]),
+  /* 7. Inputs and Textareas in light mode */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([class*="bg-red"]),
   textarea,
   select {
-    color: var(--fg);
+    background-color: var(--card) !important;
+    border-color: var(--border) !important;
+    color: var(--fg) !important;
   }
 
-  /* 6. Keep buttons with red / primary backgrounds readable */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted-fg) !important;
+  }
+
+  /* 8. Keep buttons with red / primary / status backgrounds readable */
   .bg-primary,
   .bg-red-600,
   .bg-red-500,
   .bg-emerald-500,
-  .bg-emerald-600 {
+  .bg-emerald-600,
+  .bg-blue-600 {
     color: #ffffff !important;
     * {
       color: inherit;

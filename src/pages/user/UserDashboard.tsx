@@ -24,6 +24,8 @@ interface Comment {
 
 // ─── Feed Post Component ──────────────────────────────────────────────────────
 
+const feedProfileResolutionCache = new Map<string, { name: string; avatar: string | null }>();
+
 const FeedPost = ({ post, currentUserId, priority = false }: { post: any; currentUserId: string; priority?: boolean }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
@@ -47,26 +49,37 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
   const escort = getEscorts().find(e => e.id === post.creator_id);
 
   // Dynamic async resolution state if post initially loaded with generic "Creator"
-  const [resolvedProfile, setResolvedProfile] = useState<{ name: string; avatar: string | null } | null>(null);
+  const [resolvedProfile, setResolvedProfile] = useState<{ name: string; avatar: string | null } | null>(() => {
+    return (post.creator_id && feedProfileResolutionCache.get(post.creator_id)) || null;
+  });
 
   useEffect(() => {
     const currentName = creator?.name || localProfile?.name || localProfile?.display_name || escort?.name;
     if (currentName && currentName !== 'Creator') return;
 
     if (!post.creator_id) return;
+
+    const cached = feedProfileResolutionCache.get(post.creator_id);
+    if (cached) {
+      setResolvedProfile(cached);
+      return;
+    }
+
     let isMounted = true;
     getCreatorProfile(post.creator_id).then((prof) => {
       if (isMounted && prof && prof.name && prof.name !== 'Creator') {
-        setResolvedProfile({
+        const resolvedData = {
           name: prof.name,
           avatar: prof.avatar || null,
-        });
+        };
+        feedProfileResolutionCache.set(post.creator_id, resolvedData);
+        setResolvedProfile(resolvedData);
 
         // Also fix the local cache in tgd_all_posts so future renders keep the real creator name
         try {
-          const cached = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+          const cachedPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
           let changed = false;
-          const updated = cached.map((p: any) => {
+          const updated = cachedPosts.map((p: any) => {
             if (p.id === post.id && (!p.users?.name || p.users.name === 'Creator')) {
               changed = true;
               return {
@@ -236,40 +249,51 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
 
         {/* Media */}
         {(post.media_url || shouldLockMedia) && (
-          <div className="relative bg-black overflow-hidden group">
-            {post.media_url ? (
+          <div className="relative bg-black overflow-hidden group select-none min-h-[320px] sm:min-h-[400px] flex items-center justify-center">
+            {shouldLockMedia ? (
+              <>
+                {/* Safe ambient backdrop using creator avatar/cover only, never secret locked media */}
+                <div 
+                  className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-20 scale-125 pointer-events-none"
+                  style={{ backgroundImage: `url(${avatarUrl})` }}
+                />
+                <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm pointer-events-none" />
+
+                {/* Secure Locked Paywall Card - raw media tag is completely unmounted */}
+                <div className="relative z-30 flex flex-col items-center justify-center p-4 text-center max-w-[300px] w-full">
+                  <div className="backdrop-blur-md bg-black/85 border border-white/15 rounded-2xl px-6 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col items-center w-full">
+                    <div className="w-12 h-12 rounded-2xl bg-black/90 border border-red-500/50 flex items-center justify-center mb-3 shadow-lg text-red-500">
+                      <Lock className="w-6 h-6" />
+                    </div>
+
+                    <p className="text-white font-black text-sm tracking-tight mb-1">
+                      {isPpvPost ? 'Pay-Per-View Content' : 'Subscribers Only'}
+                    </p>
+                    <p className="text-zinc-400 text-xs mb-4 leading-relaxed">
+                      {isPpvPost 
+                        ? `Unlock this exclusive post for KES ${post.price || 0}.` 
+                        : 'Join this creator’s VIP subscription to unlock all posts.'}
+                    </p>
+
+                    <button 
+                      onClick={() => isPpvPost ? navigate(profileRoute) : setIsSubscribeOpen(true)}
+                      className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs tracking-wider uppercase py-2.5 px-6 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-600/30 cursor-pointer"
+                    >
+                      {isPpvPost ? `Unlock for KES ${post.price || 0}` : 'Subscribe to Unlock'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : post.media_url ? (
               <FeedImage
                 src={post.media_url}
                 alt="post"
                 priority={priority}
-                isLocked={shouldLockMedia}
+                isLocked={false}
               />
             ) : (
               <div className="w-full min-h-[320px] sm:min-h-[400px] bg-zinc-900 flex items-center justify-center">
                 <Lock className="w-8 h-8 text-zinc-600" />
-              </div>
-            )}
-            {shouldLockMedia && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-4 text-center bg-black/30 backdrop-blur-[2px]">
-                <div className="backdrop-blur-md bg-black/80 border border-white/15 rounded-2xl px-6 py-5 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col items-center max-w-[280px] w-full">
-                  <div className="w-12 h-12 rounded-2xl bg-black/90 border border-red-500/50 flex items-center justify-center mb-3 shadow-lg text-red-500">
-                    <span className="text-xl">🔒</span>
-                  </div>
-
-                  <p className="text-white font-black text-sm tracking-tight mb-0.5">
-                    {isPpvPost ? 'Pay-Per-View Post' : 'Subscribers Only'}
-                  </p>
-                  <p className="text-zinc-400 text-[11px] mb-4">
-                    {isPpvPost ? `Unlock for KES ${post.price || 0} from the creator profile.` : 'Included with an active subscription.'}
-                  </p>
-
-                  <button 
-                    onClick={() => isPpvPost ? navigate(profileRoute) : setIsSubscribeOpen(true)}
-                    className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs tracking-wider uppercase py-2.5 px-6 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-600/30 cursor-pointer"
-                  >
-                    {isPpvPost ? 'View Unlock Options' : 'Subscribe'}
-                  </button>
-                </div>
               </div>
             )}
           </div>

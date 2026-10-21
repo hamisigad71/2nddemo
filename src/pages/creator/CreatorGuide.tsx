@@ -3,8 +3,8 @@ import { Target, DollarSign, Users, Zap, Rocket, ShieldCheck, PlayCircle, CheckC
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 
-const surface = 'bg-[#121318]';
-const borderUniform = 'border border-white/[0.06]';
+const surface = 'bg-card';
+const borderUniform = 'border border-border';
 const hoverLift = 'hover:-translate-y-0.5 transition-all duration-200';
 
 const CreatorGuide = () => {
@@ -111,23 +111,23 @@ const CreatorGuide = () => {
             <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
             Creator Academy
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight leading-tight">
             Creator Playbook
           </h1>
-          <p className="text-zinc-400 text-sm leading-relaxed max-w-xl">
+          <p className="text-muted-foreground text-sm leading-relaxed max-w-xl">
             Essential strategies to optimize your profile, increase subscribers, manage M-Pesa payouts, and grow your monthly earnings.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Link 
               to="/edit-profile" 
-              className={`bg-red-600 hover:bg-red-500 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2`}
+              className={`bg-red-600 hover:bg-red-500 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm`}
             >
               <ShieldCheck className="w-4 h-4" /> Verify account to earn
             </Link>
             <Link 
               to="/create-post" 
-              className={`${surface} ${borderUniform} hover:border-white/10 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2`}
+              className={`${surface} ${borderUniform} hover:bg-muted text-foreground font-semibold text-xs px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2`}
             >
               <PlayCircle className="w-4 h-4 text-red-500" /> Create post
             </Link>
@@ -135,7 +135,7 @@ const CreatorGuide = () => {
         </header>
 
         {/* Stats Row */}
-        <div className={`${surface} ${borderUniform} rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0 sm:divide-x sm:divide-white/[0.06]`}>
+        <div className={`${surface} ${borderUniform} rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0 sm:divide-x sm:divide-border shadow-sm`}>
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
@@ -143,7 +143,7 @@ const CreatorGuide = () => {
                 <div className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
                   <Icon className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-medium text-zinc-300">{stat.label}</span>
+                <span className="text-sm font-medium text-foreground">{stat.label}</span>
               </div>
             );
           })}
@@ -157,8 +157,8 @@ const CreatorGuide = () => {
               onClick={() => setActiveCategory(cat.id)}
               className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                 activeCategory === cat.id
-                  ? 'bg-red-600 text-white'
-                  : `${surface} text-zinc-400 ${borderUniform} hover:text-white hover:border-white/10`
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : `${surface} text-muted-foreground ${borderUniform} hover:text-foreground hover:bg-muted`
               }`}
             >
               {cat.label}
@@ -173,7 +173,7 @@ const CreatorGuide = () => {
             return (
               <article 
                 key={guide.id}
-                className={`${surface} ${borderUniform} rounded-xl p-5 flex flex-col justify-between ${hoverLift} hover:border-white/10 group`}
+                className={`${surface} ${borderUniform} rounded-xl p-5 flex flex-col justify-between ${hoverLift} hover:border-red-500/40 group shadow-sm`}
               >
                 <div>
                   {/* Card top bar */}
@@ -182,28 +182,28 @@ const CreatorGuide = () => {
                       <IconComponent className="w-[18px] h-[18px]" />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-medium text-zinc-500">
+                      <span className="text-[11px] font-medium text-muted-foreground">
                         {guide.readTime}
                       </span>
-                      <span className="text-[11px] font-semibold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md">
+                      <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md">
                         {guide.level}
                       </span>
                     </div>
                   </div>
 
                   {/* Title & summary */}
-                  <h3 className="text-[15px] font-semibold text-white leading-snug mb-1.5">
+                  <h3 className="text-[15px] font-semibold text-foreground leading-snug mb-1.5">
                     {guide.title}
                   </h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                  <p className="text-xs text-muted-foreground leading-relaxed mb-4">
                     {guide.summary}
                   </p>
 
                   {/* Key actions */}
                   <div className="space-y-2 mb-4">
-                    <div className="text-[11px] font-semibold text-zinc-500 mb-1">Key actions</div>
+                    <div className="text-[11px] font-semibold text-muted-foreground mb-1">Key actions</div>
                     {guide.keyTakeaways.map((takeaway, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-zinc-300">
+                      <div key={idx} className="flex items-start gap-2 text-xs text-foreground">
                         <CheckCircle2 className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
                         <span>{takeaway}</span>
                       </div>
@@ -212,9 +212,9 @@ const CreatorGuide = () => {
                 </div>
 
                 {/* Card footer */}
-                <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-zinc-500">Guide</span>
-                  <button className="text-xs font-semibold text-zinc-400 group-hover:text-red-500 flex items-center gap-1 transition-colors">
+                <div className="pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-muted-foreground">Guide</span>
+                  <button className="text-xs font-semibold text-muted-foreground group-hover:text-red-500 flex items-center gap-1 transition-colors">
                     Read details <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -224,19 +224,19 @@ const CreatorGuide = () => {
         </div>
 
         {/* Footer Support */}
-        <div className={`${surface} ${borderUniform} rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4`}>
+        <div className={`${surface} ${borderUniform} rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm`}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
               <HelpCircle className="w-[18px] h-[18px]" />
             </div>
             <div>
-              <h4 className="font-semibold text-white text-sm">Need help or profile guidance?</h4>
-              <p className="text-xs text-zinc-400">Contact platform support for 1-on-1 creator assistance.</p>
+              <h4 className="font-semibold text-foreground text-sm">Need help or profile guidance?</h4>
+              <p className="text-xs text-muted-foreground">Contact platform support for 1-on-1 creator assistance.</p>
             </div>
           </div>
           <Link
             to="/messages"
-            className={`w-full sm:w-auto text-center ${surface} ${borderUniform} hover:border-white/10 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap`}
+            className={`w-full sm:w-auto text-center ${surface} ${borderUniform} hover:bg-muted text-foreground font-semibold text-xs px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap`}
           >
             Support chat
           </Link>

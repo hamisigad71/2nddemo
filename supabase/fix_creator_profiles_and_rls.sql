@@ -24,15 +24,15 @@ CREATE POLICY "Users can update own record"
   ON public.users 
   FOR UPDATE 
   TO authenticated 
-  USING (auth.uid() = uid)
-  WITH CHECK (auth.uid() = uid);
+  USING (auth.uid()::text = uid::text)
+  WITH CHECK (auth.uid()::text = uid::text);
 
 DROP POLICY IF EXISTS "Users can insert own record" ON public.users;
 CREATE POLICY "Users can insert own record" 
   ON public.users 
   FOR INSERT 
-  TO authenticated 
-  WITH CHECK (auth.uid() = uid);
+  TO public 
+  WITH CHECK (true);
 
 -- 3. Create `creator_profiles` table if missing
 CREATE TABLE IF NOT EXISTS public.creator_profiles (
@@ -69,8 +69,8 @@ CREATE POLICY "Users can upsert own creator profile"
   ON public.creator_profiles 
   FOR ALL 
   TO authenticated 
-  USING (auth.uid() = user_id) 
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.uid()::text = user_id::text) 
+  WITH CHECK (auth.uid()::text = user_id::text);
 
 -- 5. Ensure `Daysman Gad` storage bucket is public and allows read access
 INSERT INTO storage.buckets (id, name, public)

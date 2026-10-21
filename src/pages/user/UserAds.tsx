@@ -94,30 +94,30 @@ const UserAds: React.FC = () => {
     <UserLayout>
       <div className="max-w-6xl mx-auto space-y-8 pb-16">
         {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800/80 pb-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 bg-red-600/10 border border-red-500/20 px-2.5 py-0.5 rounded-full">
                 Curated Partner Deals
               </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+            <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
               VIP Perks & Privileges
             </h1>
-            <p className="text-sm text-zinc-400 font-medium mt-1.5 max-w-xl leading-relaxed">
+            <p className="text-sm text-muted-foreground font-medium mt-1.5 max-w-xl leading-relaxed">
               Exclusive sponsor hospitality, private table reservations, and luxury retreats reserved exclusively for The Gents DollHouse members.
             </p>
           </div>
 
           {/* Search Input */}
           <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search partner perks..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0D0E12] border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500/80 transition-colors"
+              className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-red-500/80 transition-colors"
             />
           </div>
         </div>
@@ -132,8 +132,8 @@ const UserAds: React.FC = () => {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                   isActive
-                    ? 'bg-zinc-800 text-white border border-zinc-700 shadow-sm'
-                    : 'bg-[#0D0E12] text-zinc-400 hover:text-white border border-zinc-800/80 hover:border-zinc-700'
+                    ? 'bg-foreground text-background border border-foreground shadow-sm'
+                    : 'bg-card text-muted-foreground hover:text-foreground border border-border hover:border-border/80'
                 }`}
               >
                 {cat.label}
@@ -143,14 +143,14 @@ const UserAds: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="p-16 text-center text-zinc-500 font-bold text-sm">
+          <div className="p-16 text-center text-muted-foreground font-bold text-sm">
             Loading partner privileges...
           </div>
         ) : filteredAds.length === 0 ? (
-          <div className="p-16 text-center bg-[#0D0E12] border border-zinc-800/80 rounded-3xl">
-            <Megaphone className="w-10 h-10 mx-auto text-zinc-700 mb-3" />
-            <p className="font-bold text-white text-base">No active partner offers in this category</p>
-            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+          <div className="p-16 text-center bg-card border border-border rounded-3xl shadow-sm">
+            <Megaphone className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <p className="font-bold text-foreground text-base">No active partner offers in this category</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
               Check back soon as new verified sponsor privileges and dining discounts are added regularly.
             </p>
           </div>
@@ -158,17 +158,17 @@ const UserAds: React.FC = () => {
           <>
             {/* Featured Hero Card */}
             {featuredAd && (
-              <div className="relative rounded-3xl overflow-hidden border border-zinc-800 bg-[#0D0E12] shadow-2xl group">
+              <div className="relative rounded-3xl overflow-hidden border border-border bg-card shadow-sm hover:shadow-md transition-all group">
                 <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[380px]">
                   {/* Image Column */}
-                  <div className="lg:col-span-7 relative h-64 lg:h-auto overflow-hidden bg-zinc-900">
+                  <div className="lg:col-span-7 relative h-64 lg:h-auto overflow-hidden bg-muted">
                     <img
                       src={featuredAd.image_url}
                       alt={featuredAd.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0D0E12] via-transparent to-black/40 lg:hidden" />
-                    <div className="hidden lg:block absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0D0E12]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 lg:hidden" />
+                    <div className="hidden lg:block absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/60" />
 
                     {/* Top Tag */}
                     <div className="absolute top-4 left-4 flex items-center gap-2">
@@ -192,28 +192,28 @@ const UserAds: React.FC = () => {
                   <div className="lg:col-span-5 p-6 lg:p-8 flex flex-col justify-between space-y-6">
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-red-400 uppercase tracking-wider">
+                        <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
                           Featured Partner Deal
                         </span>
-                        <span className="text-zinc-600">·</span>
-                        <span className="text-[11px] font-medium text-zinc-500 flex items-center gap-1">
+                        <span className="text-muted-foreground">·</span>
+                        <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" /> Limited Time
                         </span>
                       </div>
 
-                      <h2 className="text-2xl lg:text-3xl font-black text-white leading-tight">
+                      <h2 className="text-2xl lg:text-3xl font-black text-foreground leading-tight">
                         {featuredAd.title}
                       </h2>
 
-                      <p className="text-xs lg:text-sm text-zinc-400 font-medium leading-relaxed">
+                      <p className="text-xs lg:text-sm text-muted-foreground font-medium leading-relaxed">
                         {featuredAd.description}
                       </p>
                     </div>
 
-                    <div className="pt-4 border-t border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div className="pt-4 border-t border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-zinc-500 block">Privilege Status</span>
-                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Privilege Status</span>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                           <ShieldCheck className="w-3.5 h-3.5" /> Verified Patron Offer
                         </span>
                       </div>
@@ -234,7 +234,7 @@ const UserAds: React.FC = () => {
             {/* Remaining Deals Grid */}
             {remainingAds.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-lg font-black text-white tracking-tight">
+                <h3 className="text-lg font-black text-foreground tracking-tight">
                   More Exclusive Privileges
                 </h3>
 
@@ -242,24 +242,24 @@ const UserAds: React.FC = () => {
                   {remainingAds.map(ad => (
                     <div
                       key={ad.id}
-                      className="bg-[#0D0E12] border border-zinc-800/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-zinc-700 transition-all duration-300 group shadow-lg"
+                      className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col justify-between hover:border-border/80 transition-all duration-300 group shadow-sm hover:shadow-md"
                     >
                       {/* Banner Image */}
                       <div>
-                        <div className="h-48 w-full relative bg-zinc-900 overflow-hidden">
+                        <div className="h-48 w-full relative bg-muted overflow-hidden">
                           <img
                             src={ad.image_url}
                             alt={ad.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#0D0E12] via-transparent to-black/50" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
 
                           {/* Top Tag */}
                           <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
                             <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-white border border-white/10">
                               {ad.sponsor_name}
                             </span>
-                            <span className="text-[10px] font-bold text-zinc-300 bg-zinc-900/80 px-2 py-0.5 rounded border border-white/10">
+                            <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10">
                               {ad.badge || 'VIP'}
                             </span>
                           </div>
@@ -276,10 +276,10 @@ const UserAds: React.FC = () => {
 
                         {/* Text */}
                         <div className="p-5 space-y-2.5">
-                          <h4 className="text-base font-bold text-white group-hover:text-red-400 transition-colors line-clamp-1">
+                          <h4 className="text-base font-bold text-foreground group-hover:text-red-500 transition-colors line-clamp-1">
                             {ad.title}
                           </h4>
-                          <p className="text-xs text-zinc-400 font-medium leading-relaxed line-clamp-2">
+                          <p className="text-xs text-muted-foreground font-medium leading-relaxed line-clamp-2">
                             {ad.description}
                           </p>
                         </div>
@@ -289,7 +289,7 @@ const UserAds: React.FC = () => {
                       <div className="p-5 pt-0">
                         <button
                           onClick={() => handleClaimClick(ad)}
-                          className="w-full flex items-center justify-center gap-2 bg-[#14151B] hover:bg-red-600 border border-zinc-800 hover:border-red-500 text-zinc-300 hover:text-white font-bold py-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer active:scale-95"
+                          className="w-full flex items-center justify-center gap-2 bg-muted hover:bg-red-600 border border-border hover:border-red-500 text-foreground hover:text-white font-bold py-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer active:scale-95"
                         >
                           <span>{ad.cta_text || 'Claim Offer'}</span>
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -306,15 +306,15 @@ const UserAds: React.FC = () => {
         {/* Modal: Claim Privilege Voucher */}
         {selectedAdForClaim && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-[#0D0E12] border border-zinc-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="bg-card border border-border rounded-3xl w-full max-w-md overflow-hidden shadow-2xl text-foreground">
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-5 border-b border-zinc-800">
+              <div className="flex items-center justify-between p-5 border-b border-border">
                 <span className="text-xs font-black uppercase tracking-wider text-red-500">
                   Exclusive Privilege Voucher
                 </span>
                 <button
                   onClick={() => setSelectedAdForClaim(null)}
-                  className="p-1.5 text-zinc-400 hover:text-white rounded-lg cursor-pointer"
+                  className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -323,24 +323,24 @@ const UserAds: React.FC = () => {
               {/* Modal Body */}
               <div className="p-6 space-y-5">
                 <div className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {selectedAdForClaim.sponsor_name}
                   </span>
-                  <h3 className="text-xl font-black text-white">
+                  <h3 className="text-xl font-black text-foreground">
                     {selectedAdForClaim.title}
                   </h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     {selectedAdForClaim.description}
                   </p>
                 </div>
 
                 {/* Voucher Code Box */}
-                <div className="bg-[#14151B] border border-zinc-800 rounded-2xl p-4 text-center space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
+                <div className="bg-muted/40 border border-border rounded-2xl p-4 text-center space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
                     Your Digital Access Code
                   </span>
                   <div className="flex items-center justify-center gap-3">
-                    <span className="text-lg font-mono font-black tracking-widest text-red-400">
+                    <span className="text-lg font-mono font-black tracking-widest text-red-600 dark:text-red-400">
                       {generateVoucherCode(selectedAdForClaim.sponsor_name, selectedAdForClaim.id)}
                     </span>
                     <button
@@ -349,24 +349,24 @@ const UserAds: React.FC = () => {
                           generateVoucherCode(selectedAdForClaim.sponsor_name, selectedAdForClaim.id)
                         )
                       }
-                      className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg transition-all cursor-pointer"
+                      className="p-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg border border-border transition-all cursor-pointer"
                       title="Copy Voucher Code"
                     >
-                      {copiedCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copiedCode ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-[10px] text-zinc-500">
+                  <p className="text-[10px] text-muted-foreground">
                     Quote this code or show your screen to claim your perk.
                   </p>
                 </div>
 
                 {/* Instructions */}
-                <div className="space-y-2 text-xs text-zinc-400 bg-zinc-900/40 p-3.5 rounded-xl border border-zinc-800/60">
-                  <div className="font-bold text-white flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="space-y-2 text-xs text-muted-foreground bg-muted/30 p-3.5 rounded-xl border border-border">
+                  <div className="font-bold text-foreground flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     How to redeem:
                   </div>
-                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-zinc-400">
+                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-muted-foreground">
                     <li>Copy your digital voucher code above.</li>
                     <li>Click below to visit the official partner concierge.</li>
                     <li>Enter code during checkout or show code upon arrival.</li>

@@ -65,8 +65,8 @@ const Automations: React.FC = () => {
     <CreatorLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-1 text-white">Automations</h1>
-          <p className="text-zinc-400 text-sm">Configure instant welcome messages and bots for new subscribers.</p>
+          <h1 className="text-3xl font-bold mb-1 text-foreground">Automations</h1>
+          <p className="text-muted-foreground text-sm">Configure instant welcome messages and bots for new subscribers.</p>
         </div>
         <button
           onClick={handleSave}
@@ -83,22 +83,22 @@ const Automations: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-[#0D0E12] border border-zinc-800 rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-6 mb-6">
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between border-b border-border pb-6 mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500">
               <Bot className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Welcome Message</h2>
-              <p className="text-xs text-zinc-400">Sent automatically when a fan completes a VIP subscription.</p>
+              <h2 className="text-lg font-bold text-foreground">Welcome Message</h2>
+              <p className="text-xs text-muted-foreground">Sent automatically when a fan completes a VIP subscription.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
             className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
-              settings.enabled ? 'bg-red-600' : 'bg-zinc-800'
+              settings.enabled ? 'bg-red-600' : 'bg-muted border border-border'
             }`}
           >
             <div
@@ -111,32 +111,32 @@ const Automations: React.FC = () => {
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-bold mb-2 text-white">Welcome Message Text</label>
+            <label className="block text-sm font-bold mb-2 text-foreground">Welcome Message Text</label>
             <textarea
               rows={4}
               value={settings.messageText}
               onChange={e => setSettings(prev => ({ ...prev, messageText: e.target.value }))}
               placeholder="Enter your personal welcome greeting for subscribers..."
               disabled={!settings.enabled}
-              className="w-full bg-zinc-950 border border-zinc-800 px-4 py-3 rounded-xl text-white text-sm focus:outline-none focus:border-red-500/80 resize-none disabled:opacity-40 transition-colors"
+              className="w-full bg-background border border-border px-4 py-3 rounded-xl text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:border-red-500/80 resize-none disabled:opacity-40 transition-colors"
             />
-            <p className="text-xs text-zinc-500 mt-1.5">
+            <p className="text-xs text-muted-foreground mt-1.5">
               This message appears in the subscriber's private chat immediately upon payment approval.
             </p>
           </div>
 
-          <div className="pt-2 border-t border-zinc-800">
+          <div className="pt-2 border-t border-border">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <label className="block text-sm font-bold text-white">Attach Paid Welcome PPV</label>
-                <p className="text-xs text-zinc-400">Lock an exclusive greeting clip or photoset behind a PPV unlock fee.</p>
+                <label className="block text-sm font-bold text-foreground">Attach Paid Welcome PPV</label>
+                <p className="text-xs text-muted-foreground">Lock an exclusive greeting clip or photoset behind a PPV unlock fee.</p>
               </div>
               <button
                 type="button"
                 disabled={!settings.enabled}
                 onClick={() => setSettings(prev => ({ ...prev, hasPpv: !prev.hasPpv }))}
                 className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors disabled:opacity-40 ${
-                  settings.hasPpv ? 'bg-red-600' : 'bg-zinc-800'
+                  settings.hasPpv ? 'bg-red-600' : 'bg-muted border border-border'
                 }`}
               >
                 <div
@@ -148,24 +148,24 @@ const Automations: React.FC = () => {
             </div>
 
             {settings.hasPpv && (
-              <div className="animate-in fade-in duration-300 bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-3">
-                <label className="block text-xs font-bold text-zinc-300">PPV Unlock Price (KES)</label>
+              <div className="animate-in fade-in duration-300 bg-muted/40 p-4 rounded-xl border border-border space-y-3">
+                <label className="block text-xs font-bold text-foreground">PPV Unlock Price (KES)</label>
                 <div className="relative max-w-xs">
-                  <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="number"
                     min="100"
                     step="50"
                     value={settings.ppvPrice}
                     onChange={e => setSettings(prev => ({ ...prev, ppvPrice: Number(e.target.value) || 0 }))}
-                    className="w-full bg-[#0D0E12] border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-red-500/80"
+                    className="w-full bg-background border border-border rounded-xl pl-9 pr-4 py-2 text-sm text-foreground focus:outline-none focus:border-red-500/80"
                   />
                 </div>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-2 pt-2 text-xs text-emerald-400">
+          <div className="flex items-center gap-2 pt-2 text-xs text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
             <span>Automations engine is connected to real-time subscription events.</span>
           </div>

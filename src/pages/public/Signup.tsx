@@ -51,25 +51,30 @@ function formatSignupErrorMessage(err: any, email: string): string {
 
   if (
     lower.includes('error sending confirmation email') ||
-    lower.includes('error sending confirmation mail') ||
+    lower.includes('error sending confirmation mail')
+  ) {
+    return `Supabase email delivery rate limit reached for "${email.trim()}". Supabase's free built-in email service only allows 3 emails per hour. To fix this: sign up with Google above, or turn off "Confirm email" in your Supabase Dashboard (Authentication → Providers → Email) for instant registration.`;
+  }
+
+  if (
     lower.includes('unable to validate email') ||
     lower.includes('invalid email') ||
     lower.includes('mailbox unavailable') ||
     lower.includes('recipient') ||
     lower.includes('undeliverable')
   ) {
-    return `We could not deliver a verification code to "${email.trim()}". This email address does not exist or cannot receive mail — please use a real, active email address.`;
+    return `We could not deliver a verification code to "${email.trim()}". Please double-check your email address.`;
   }
 
   if (lower.includes('already registered') || lower.includes('already exists')) {
     return `An account with ${email.trim()} already exists. Please log in with your password.`;
   }
 
-  if (lower.includes('rate limit') || lower.includes('too many requests')) {
-    return 'Too many verification attempts. Please wait a minute and try again with a valid email address.';
+  if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('over_email_send_rate_limit')) {
+    return 'Too many email attempts in the last hour (Supabase limit). Please wait a few minutes, use Google Sign-In, or log in if you already have an account.';
   }
 
-  return raw || 'Registration failed. Please check your details and use a real email address.';
+  return raw || 'Registration failed. Please check your details and try again.';
 }
 
 const Signup = () => {

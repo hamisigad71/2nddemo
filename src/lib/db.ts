@@ -355,6 +355,19 @@ export const createPost = async (
 
   creatorName = creatorName || 'Creator';
 
+  // Proactively ensure creator exists in public.users before inserting post
+  try {
+    const { data: userExists } = await supabase.from('users').select('uid').eq('uid', creatorId).maybeSingle();
+    if (!userExists) {
+      await createUserProfile(creatorId, {
+        name: creatorName,
+        role: 'creator',
+      });
+    }
+  } catch (profErr) {
+    console.warn('Profile check before post insert note:', profErr);
+  }
+
   const dbRecord: any = {
     creator_id: creatorId,
     content,
@@ -362,21 +375,38 @@ export const createPost = async (
     media_type: mediaType,
     is_locked: isLocked,
     price: isLocked ? price : 0,
+    visibility,
+    status,
   };
 
   let insertedId = newPostId;
 
-  // 1. Try Supabase insert with valid table schema columns only
+  // 1. Try Supabase insert with full fields, fallback without visibility/status if columns not present
   try {
-    const { data, error } = await supabase.from('posts').insert(dbRecord).select().maybeSingle();
+    let { data, error } = await supabase.from('posts').insert(dbRecord).select().maybeSingle();
+    if (error && (error.message.includes('column') || error.code === '42703')) {
+      const basicRecord = {
+        creator_id: creatorId,
+        content,
+        media_url: mediaUrl,
+        media_type: mediaType,
+        is_locked: isLocked,
+        price: isLocked ? price : 0,
+      };
+      const retry = await supabase.from('posts').insert(basicRecord).select().maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
     if (data?.id) {
       insertedId = data.id;
     }
     if (error) {
       console.warn('Supabase post insert note:', error.message);
+      throw error;
     }
-  } catch (err) {
+  } catch (err: any) {
     console.warn('Supabase post insert error:', err);
+    throw err;
   }
 
   const postObj: any = {
@@ -932,7 +962,13 @@ export const deletePost = async (postId: string) => {
       }
       storagePath = storagePath.split('?')[0].replace(/^\/+/, '');
 
-      if (storagePath.startsWith('posts/') || storagePath.startsWith('private/posts/')) {
+      // Remove from Daysman Gad storage (safe-guarding profile avatars and covers)
+      if (
+        storagePath &&
+        !storagePath.startsWith('avatars/') &&
+        !storagePath.startsWith('covers/') &&
+        !storagePath.startsWith('kyc/')
+      ) {
         await supabase.storage.from('Daysman Gad').remove([storagePath]);
       }
     } catch (storageError: any) {
@@ -1891,18 +1927,28 @@ export const getDiscoverCreators = async () => {
     }
 
     // 3. Fetch creator profiles for metadata (pricing, bio, tags, cover)
-    const allUids = creatorUsers.map(u => u.uid);
     const profileMap = new Map<string, any>();
-    if (allUids.length > 0) {
-      try {
-        const { data: profiles } = await supabase
-          .from('creator_profiles')
-          .select('*')
-          .in('user_id', allUids);
-        if (profiles) {
-          profiles.forEach(p => profileMap.set(p.user_id, p));
-        }
-      } catch {}
+    try {
+      const { data: profiles } = await supabase
+        .from('creator_profiles')
+        .select('*');
+      if (profiles && profiles.length > 0) {
+        profiles.forEach(p => {
+          profileMap.set(p.user_id, p);
+          if (!creatorUserIds.has(p.user_id)) {
+            creatorUsers.push({
+              uid: p.user_id,
+              name: p.display_name || p.name || 'VIP Creator',
+              avatar: p.avatar_url || p.avatar || null,
+              role: 'creator',
+              created_at: p.created_at || new Date().toISOString()
+            });
+            creatorUserIds.add(p.user_id);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Could not fetch all creator_profiles:', err);
     }
 
     // Also check local storage cached creator profiles
@@ -3929,11 +3975,15 @@ export const getPlatformAds = async (
     }
     const { data, error } = await query;
     if (!error && data && data.length > 0) {
-      const merged = data as PlatformAd[];
+      const remoteAds = data as PlatformAd[];
+      const local = getStoredAds();
+      const localOnly = local.filter(l => !remoteAds.some(r => r.id === l.id));
+      const combined = [...remoteAds, ...localOnly];
+      const filtered = includeInactive ? combined : combined.filter(a => a.status === 'active');
       if (audience && audience !== 'all') {
-        return merged.filter(ad => ad.target_audience === 'all' || ad.target_audience === audience);
+        return filtered.filter(ad => ad.target_audience === 'all' || ad.target_audience === audience);
       }
-      return merged;
+      return filtered;
     }
   } catch (err) {
     console.warn('Supabase platform_ads query failed, using stored local ads:', err);
@@ -3948,6 +3998,17 @@ export const getPlatformAds = async (
   return filtered;
 };
 
+const generateAdUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 /**
  * Create a new platform ad by Admin
  */
@@ -3956,14 +4017,21 @@ export const createPlatformAd = async (
 ): Promise<PlatformAd> => {
   const newAd: PlatformAd = {
     ...ad,
-    id: `ad-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: generateAdUUID(),
     impressions: 0,
     clicks: 0,
     created_at: new Date().toISOString(),
   };
 
   try {
-    await supabase.from('platform_ads').insert([newAd]);
+    const { data, error } = await supabase.from('platform_ads').insert([newAd]).select().maybeSingle();
+    if (error) {
+      console.warn('Supabase create ad failed:', error);
+    } else if (data) {
+      const current = getStoredAds();
+      saveStoredAds([data as PlatformAd, ...current.filter(a => a.id !== data.id)]);
+      return data as PlatformAd;
+    }
   } catch (err) {
     console.warn('Supabase create ad failed, writing to local cache:', err);
   }

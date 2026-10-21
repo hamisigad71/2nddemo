@@ -152,31 +152,31 @@ const CreatorAds: React.FC = () => {
               placeholder="Search sponsorships..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0D0E12] border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500/80 transition-colors"
+              className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-red-500/80 transition-colors"
             />
           </div>
         </div>
 
         {/* Highlight Stats Strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Available Campaigns</span>
-            <span className="text-xl font-black text-white mt-1 block">{ads.length} Brand Deals</span>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Available Campaigns</span>
+            <span className="text-xl font-black text-foreground mt-1 block">{ads.length} Brand Deals</span>
           </div>
 
-          <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Max Opportunity</span>
-            <span className="text-xl font-black text-emerald-400 mt-1 block">KES 75,000+</span>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Max Opportunity</span>
+            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">KES 75,000+</span>
           </div>
 
-          <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Studio Grants</span>
-            <span className="text-xl font-black text-rose-400 mt-1 block">100% Free Access</span>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Studio Grants</span>
+            <span className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 block">100% Free Access</span>
           </div>
 
-          <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Your Applications</span>
-            <span className="text-xl font-black text-white mt-1 block">{applications.length} Submitted</span>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Your Applications</span>
+            <span className="text-xl font-black text-foreground mt-1 block">{applications.length} Submitted</span>
           </div>
         </div>
 
@@ -190,8 +190,8 @@ const CreatorAds: React.FC = () => {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                   isActive
-                    ? 'bg-zinc-800 text-white border border-zinc-700 shadow-sm'
-                    : 'bg-[#0D0E12] text-zinc-400 hover:text-white border border-zinc-800/80 hover:border-zinc-700'
+                    ? 'bg-foreground text-background border border-foreground shadow-sm'
+                    : 'bg-card text-muted-foreground hover:text-foreground border border-border hover:border-border/80'
                 }`}
               >
                 {cat.label}
@@ -201,14 +201,14 @@ const CreatorAds: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="p-16 text-center text-zinc-500 font-bold text-sm">
+          <div className="p-16 text-center text-muted-foreground font-bold text-sm">
             Loading creator campaigns...
           </div>
         ) : filteredAds.length === 0 ? (
-          <div className="p-16 text-center bg-[#0D0E12] border border-zinc-800/80 rounded-3xl">
-            <Handshake className="w-10 h-10 mx-auto text-zinc-700 mb-3" />
-            <p className="font-bold text-white text-base">No brand deals found in this category</p>
-            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+          <div className="p-16 text-center bg-card border border-border rounded-3xl shadow-sm">
+            <Handshake className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <p className="font-bold text-foreground text-base">No brand deals found in this category</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
               Platform admins are curating new paid fashion shoots and studio sponsorships. Check back shortly.
             </p>
           </div>
@@ -220,17 +220,17 @@ const CreatorAds: React.FC = () => {
               return (
                 <div
                   key={ad.id}
-                  className="bg-[#0D0E12] border border-zinc-800/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-zinc-700 transition-all duration-300 group shadow-lg"
+                  className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col justify-between hover:border-border/80 transition-all duration-300 group shadow-sm hover:shadow-md"
                 >
                   {/* Banner Image */}
                   <div>
-                    <div className="h-48 w-full relative bg-zinc-900 overflow-hidden">
+                    <div className="h-48 w-full relative bg-muted overflow-hidden">
                       <img
                         src={ad.image_url}
                         alt={ad.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0D0E12] via-transparent to-black/50" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
 
                       {/* Sponsor & Badge */}
                       <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
@@ -256,7 +256,7 @@ const CreatorAds: React.FC = () => {
 
                     {/* Content */}
                     <div className="p-5 space-y-3">
-                      <h3 className="text-base font-bold text-white group-hover:text-red-400 transition-colors line-clamp-1">
+                      <h3 className="text-base font-bold text-foreground group-hover:text-red-500 transition-colors line-clamp-1">
                         {ad.title}
                       </h3>
 
@@ -267,14 +267,14 @@ const CreatorAds: React.FC = () => {
                       {/* Deliverables Pills */}
                       {ad.requirements && ad.requirements.length > 0 && (
                         <div className="space-y-1.5 pt-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
                             Campaign Deliverables:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {ad.requirements.map((req, idx) => (
                               <span
                                 key={idx}
-                                className="text-[10px] font-semibold text-zinc-300 bg-[#14151B] border border-zinc-800 px-2 py-0.5 rounded-md"
+                                className="text-[10px] font-semibold text-foreground bg-muted border border-border px-2 py-0.5 rounded-md"
                               >
                                 {req}
                               </span>
@@ -288,7 +288,7 @@ const CreatorAds: React.FC = () => {
                   {/* Action Button */}
                   <div className="p-5 pt-0">
                     {applied ? (
-                      <div className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold py-2.5 rounded-xl text-xs">
+                      <div className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold py-2.5 rounded-xl text-xs">
                         <Check className="w-3.5 h-3.5" />
                         <span>Application Submitted</span>
                       </div>
@@ -311,21 +311,21 @@ const CreatorAds: React.FC = () => {
         {/* Modal: Creator Application */}
         {selectedAdForApplication && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-[#0D0E12] border border-zinc-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
               {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-zinc-800">
+              <div className="flex items-center justify-between p-5 border-b border-border">
                 <div className="flex items-center gap-2">
                   <span className="p-1.5 bg-red-600/10 text-red-500 rounded-lg border border-red-500/20">
                     <Handshake className="w-4 h-4" />
                   </span>
                   <div>
-                    <h3 className="text-base font-black text-white">Brand Deal Application</h3>
-                    <p className="text-xs text-zinc-400">Direct proposal to {selectedAdForApplication.sponsor_name}</p>
+                    <h3 className="text-base font-black text-foreground">Brand Deal Application</h3>
+                    <p className="text-xs text-muted-foreground">Direct proposal to {selectedAdForApplication.sponsor_name}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedAdForApplication(null)}
-                  className="p-1.5 text-zinc-400 hover:text-white rounded-lg cursor-pointer"
+                  className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -334,37 +334,37 @@ const CreatorAds: React.FC = () => {
               {/* Form */}
               <form onSubmit={handleApplicationSubmit} className="p-6 space-y-4">
                 {/* Campaign Summary Card */}
-                <div className="bg-[#14151B] border border-zinc-800/80 rounded-2xl p-4 space-y-2">
+                <div className="bg-muted/40 border border-border rounded-2xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                       {selectedAdForApplication.sponsor_name}
                     </span>
                     {selectedAdForApplication.perk_value && (
-                      <span className="text-xs font-black text-emerald-400">
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
                         {selectedAdForApplication.perk_value}
                       </span>
                     )}
                   </div>
-                  <h4 className="text-sm font-bold text-white">
+                  <h4 className="text-sm font-bold text-foreground">
                     {selectedAdForApplication.title}
                   </h4>
                 </div>
 
                 {/* Creator Details Preview */}
-                <div className="grid grid-cols-2 gap-3 text-xs bg-zinc-900/30 p-3 rounded-xl border border-zinc-800/60">
+                <div className="grid grid-cols-2 gap-3 text-xs bg-muted/30 p-3 rounded-xl border border-border">
                   <div>
-                    <span className="text-[10px] text-zinc-500 block">Applicant</span>
-                    <span className="font-bold text-white">{creatorName}</span>
+                    <span className="text-[10px] text-muted-foreground block">Applicant</span>
+                    <span className="font-bold text-foreground">{creatorName}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-zinc-500 block">Channel Handle</span>
-                    <span className="font-bold text-red-400">{creatorHandle}</span>
+                    <span className="text-[10px] text-muted-foreground block">Channel Handle</span>
+                    <span className="font-bold text-red-500">{creatorHandle}</span>
                   </div>
                 </div>
 
                 {/* Pitch / Message */}
                 <div>
-                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">
+                  <label className="text-xs font-bold text-foreground block mb-1.5">
                     Proposal Note / Availability
                   </label>
                   <textarea
@@ -372,21 +372,21 @@ const CreatorAds: React.FC = () => {
                     placeholder="Tell the brand why you are a great fit, your preferred dates, or links to your best content..."
                     value={pitchText}
                     onChange={e => setPitchText(e.target.value)}
-                    className="w-full bg-[#14151B] border border-zinc-800 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-colors resize-none"
+                    className="w-full bg-background border border-border rounded-xl p-3 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-red-500 transition-colors resize-none"
                   />
                 </div>
 
                 {/* Guidelines acknowledgement */}
-                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
                   By submitting this application, you agree to fulfill the agreed deliverables if selected. Platform administrators review and notify creators within 24-48 hours.
                 </p>
 
                 {/* Submit Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
                   <button
                     type="button"
                     onClick={() => setSelectedAdForApplication(null)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white transition-all cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                   >
                     Cancel
                   </button>
