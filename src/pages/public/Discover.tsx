@@ -139,7 +139,7 @@ const Discover = () => {
                >
                   {/* Full Background Cover */}
                   <img 
-                    src={creator.cover} 
+                    src={creator.cover && !/\.(mp4|webm|mov|m4v)/i.test(creator.cover) ? creator.cover : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"} 
                     alt="cover" 
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";

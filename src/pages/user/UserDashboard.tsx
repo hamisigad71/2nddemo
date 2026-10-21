@@ -5,7 +5,7 @@ import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, Che
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
-import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getStoredCreatorProfile } from '../../lib/db';
+import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getStoredCreatorProfile, getCreatorProfile } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { getEscorts } from '../../lib/mockData';
 import FeedImage from '../../components/FeedImage';
@@ -45,10 +45,69 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
   const creator = post.users;
   const localProfile = getStoredCreatorProfile(post.creator_id);
   const escort = getEscorts().find(e => e.id === post.creator_id);
-  
-  const creatorName = creator?.name || localProfile?.name || localProfile?.display_name || escort?.name || 'Creator';
-  const avatarUrl = resolveUserAvatar(creator?.avatar || localProfile?.avatar || localProfile?.avatar_url || escort?.avatar, creatorName);
-  const creatorHandle = escort ? `@${escort.name.replace(/\s+/g, '').toLowerCase()}` : `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`;
+
+  // Dynamic async resolution state if post initially loaded with generic "Creator"
+  const [resolvedProfile, setResolvedProfile] = useState<{ name: string; avatar: string | null } | null>(null);
+
+  useEffect(() => {
+    const currentName = creator?.name || localProfile?.name || localProfile?.display_name || escort?.name;
+    if (currentName && currentName !== 'Creator') return;
+
+    if (!post.creator_id) return;
+    let isMounted = true;
+    getCreatorProfile(post.creator_id).then((prof) => {
+      if (isMounted && prof && prof.name && prof.name !== 'Creator') {
+        setResolvedProfile({
+          name: prof.name,
+          avatar: prof.avatar || null,
+        });
+
+        // Also fix the local cache in tgd_all_posts so future renders keep the real creator name
+        try {
+          const cached = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+          let changed = false;
+          const updated = cached.map((p: any) => {
+            if (p.id === post.id && (!p.users?.name || p.users.name === 'Creator')) {
+              changed = true;
+              return {
+                ...p,
+                users: {
+                  ...p.users,
+                  name: prof.name,
+                  avatar: prof.avatar || p.users?.avatar || null,
+                }
+              };
+            }
+            return p;
+          });
+          if (changed) {
+            localStorage.setItem('tgd_all_posts', JSON.stringify(updated));
+          }
+        } catch {}
+      }
+    }).catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [post.creator_id, post.id, creator?.name, localProfile?.name, escort?.name]);
+
+  const creatorName = (resolvedProfile?.name && resolvedProfile.name !== 'Creator' ? resolvedProfile.name : null)
+    || (creator?.name && creator.name !== 'Creator' ? creator.name : null)
+    || (localProfile?.name && localProfile.name !== 'Creator' ? localProfile.name : null)
+    || localProfile?.display_name
+    || escort?.name
+    || 'Creator';
+
+  const avatarUrl = resolveUserAvatar(
+    resolvedProfile?.avatar || creator?.avatar || localProfile?.avatar || localProfile?.avatar_url || escort?.avatar,
+    creatorName
+  );
+
+  const creatorHandle = escort
+    ? `@${escort.name.replace(/\s+/g, '').toLowerCase()}`
+    : `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`;
+
   const profileRoute = `/creator/${post.creator_id || escort?.id || 'escort-1'}`;
   const isPpvPost = post.visibility === 'ppv' || post.is_locked;
   const shouldLockMedia = !post.media_access_granted && (isPpvPost || post.visibility === 'subscribers');

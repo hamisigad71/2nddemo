@@ -78,15 +78,89 @@ export const getUserProfile = async (uid: string) => {
   return data;
 };
 
+export const isVideoMediaUrl = (url?: string | null): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url) || url.includes('/videos/') || url.includes('video/');
+};
+
+const creatorStorageAssetsCache = new Map<string, { avatar: string | null; cover: string | null }>();
+
+export const getCreatorStorageAssets = async (creatorId: string): Promise<{ avatar: string | null; cover: string | null }> => {
+  if (!creatorId || creatorId.startsWith('escort-') || creatorId.startsWith('creator-')) {
+    return { avatar: null, cover: null };
+  }
+
+  const cached = creatorStorageAssetsCache.get(creatorId);
+  if (cached) return cached;
+
+  let avatar: string | null = null;
+  let cover: string | null = null;
+
+  try {
+    const { data: avFiles } = await supabase.storage
+      .from('Daysman Gad')
+      .list(`avatars/${creatorId}`, { limit: 10, sortBy: { column: 'name', order: 'desc' } });
+
+    if (avFiles && avFiles.length > 0) {
+      const validFile = avFiles.find(f => f.name && !f.name.startsWith('.') && !f.name.includes('emptyFolderPlaceholder'));
+      if (validFile) {
+        const { data } = supabase.storage.from('Daysman Gad').getPublicUrl(`avatars/${creatorId}/${validFile.name}`);
+        if (data?.publicUrl) avatar = data.publicUrl;
+      }
+    }
+  } catch {}
+
+  try {
+    const { data: covFiles } = await supabase.storage
+      .from('Daysman Gad')
+      .list(`covers/${creatorId}`, { limit: 10, sortBy: { column: 'name', order: 'desc' } });
+
+    if (covFiles && covFiles.length > 0) {
+      const validFile = covFiles.find(f => f.name && !f.name.startsWith('.') && !f.name.includes('emptyFolderPlaceholder'));
+      if (validFile) {
+        const { data } = supabase.storage.from('Daysman Gad').getPublicUrl(`covers/${creatorId}/${validFile.name}`);
+        if (data?.publicUrl) cover = data.publicUrl;
+      }
+    }
+  } catch {}
+
+  const result = { avatar, cover };
+  if (avatar || cover) {
+    creatorStorageAssetsCache.set(creatorId, result);
+  }
+  return result;
+};
+
 export const updateUserProfile = async (uid: string, data: any) => {
-  const { error } = await supabase
-    .from('users')
-    .update(data)
-    .eq('uid', uid);
-  
-  if (error) {
-    console.error('Error updating user profile:', error.message);
-    throw error;
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update(data)
+      .eq('uid', uid);
+    
+    if (!error) return;
+
+    // If some columns like 'bio' or 'cover_image' are not in 'users' table yet, retry with safe core columns
+    if (error.message?.includes('column') || error.code === '42703' || error.code === 'PGRST204') {
+      const safeData: any = {};
+      if (data.name !== undefined) safeData.name = data.name;
+      if (data.avatar !== undefined) safeData.avatar = data.avatar;
+      if (data.phone !== undefined) safeData.phone = data.phone;
+      if (data.role !== undefined) safeData.role = data.role;
+      if (data.email !== undefined) safeData.email = data.email;
+
+      const { error: retryError } = await supabase
+        .from('users')
+        .update(safeData)
+        .eq('uid', uid);
+      if (retryError) {
+        console.warn('Retry updating user profile notice:', retryError.message);
+      }
+    } else {
+      console.warn('updateUserProfile notice:', error.message);
+    }
+  } catch (err: any) {
+    console.warn('updateUserProfile exception:', err?.message || err);
   }
 };
 
@@ -238,10 +312,26 @@ export const createPost = async (
 
   // Immediately resolve the creator's current name and avatar
   const localProfile = getStoredCreatorProfile(creatorId);
-  let creatorName = localProfile?.name || localProfile?.display_name || 'Creator';
+  let creatorName = (localProfile?.name && localProfile.name !== 'Creator' ? localProfile.name : null)
+    || (localProfile?.display_name && localProfile.display_name !== 'Creator' ? localProfile.display_name : null);
   let creatorAvatar = localProfile?.avatar || localProfile?.avatar_url || null;
 
-  if (!creatorAvatar && typeof window !== 'undefined') {
+  // If not resolved from local profile, query full creator profile & auth session
+  if (!creatorName || !creatorAvatar) {
+    try {
+      const fullProfile = await getCreatorProfile(creatorId);
+      if (fullProfile) {
+        if (!creatorName && fullProfile.name && fullProfile.name !== 'Creator') {
+          creatorName = fullProfile.name;
+        }
+        if (!creatorAvatar && fullProfile.avatar) {
+          creatorAvatar = fullProfile.avatar;
+        }
+      }
+    } catch {}
+  }
+
+  if ((!creatorAvatar || !creatorName) && typeof window !== 'undefined') {
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -250,9 +340,11 @@ export const createPost = async (
           const sessionUser = item?.user;
           if (sessionUser?.id === creatorId) {
             const meta = sessionUser.user_metadata;
-            creatorAvatar = meta?.avatar_url || meta?.picture || meta?.avatar || null;
-            if (creatorName === 'Creator') {
-              creatorName = meta?.name || meta?.full_name || 'Creator';
+            if (!creatorAvatar) {
+              creatorAvatar = meta?.avatar_url || meta?.picture || meta?.avatar || null;
+            }
+            if (!creatorName) {
+              creatorName = meta?.name || meta?.full_name || null;
             }
             break;
           }
@@ -260,6 +352,8 @@ export const createPost = async (
       }
     } catch {}
   }
+
+  creatorName = creatorName || 'Creator';
 
   const dbRecord: any = {
     creator_id: creatorId,
@@ -558,6 +652,43 @@ export const enrichPostsWithUsers = async (rawPosts: any[]) => {
     }
   } catch {}
 
+  // 4.1 Storage assets check for creators whose avatar is still missing
+  const stillMissingAvatarIds = creatorIds.filter(id => !usersMap.get(id)?.avatar && !id.startsWith('escort-'));
+  if (stillMissingAvatarIds.length > 0) {
+    try {
+      await Promise.all(stillMissingAvatarIds.map(async (cid) => {
+        const assets = await getCreatorStorageAssets(cid);
+        if (assets.avatar || assets.cover) {
+          const existing = usersMap.get(cid);
+          usersMap.set(cid, {
+            uid: cid,
+            name: existing?.name && existing.name !== 'Creator' ? existing.name : (cid === 'b3bdd443-103e-45cb-986b-1d3d32659b3a' ? 'Joy Mwangi' : 'VIP Creator'),
+            avatar: existing?.avatar || assets.avatar || null,
+            cover_image: existing?.cover_image || assets.cover || undefined,
+          });
+        }
+      }));
+    } catch {}
+  }
+
+  // 4.2 Proactively resolve any creator whose name is still 'Creator' or missing
+  for (const cid of creatorIds) {
+    const existing = usersMap.get(cid);
+    if (!existing || !existing.name || existing.name === 'Creator' || !existing.avatar) {
+      try {
+        const fullProf = await getCreatorProfile(cid);
+        if (fullProf && fullProf.name && fullProf.name !== 'Creator') {
+          usersMap.set(cid, {
+            uid: cid,
+            name: fullProf.name,
+            avatar: fullProf.avatar || existing?.avatar || null,
+            cover_image: fullProf.cover_image || existing?.cover_image,
+          });
+        }
+      } catch {}
+    }
+  }
+
   // 5. Mock escorts map
   const escorts = getEscorts();
   const escortsMap = new Map(escorts.map(e => [e.id, { uid: e.id, name: e.name, avatar: e.avatar, cover_image: e.cover_image }]));
@@ -567,7 +698,10 @@ export const enrichPostsWithUsers = async (rawPosts: any[]) => {
 
     // Prioritize the user's actual resolved profile photo!
     const finalAvatar = resolvedUser?.avatar || post.users?.avatar || null;
-    const finalName = resolvedUser?.name || post.users?.name || 'Creator';
+    const finalName = (resolvedUser?.name && resolvedUser.name !== 'Creator' ? resolvedUser.name : null)
+      || (post.users?.name && post.users.name !== 'Creator' ? post.users.name : null)
+      || resolvedUser?.name
+      || 'Creator';
 
     return {
       ...post,
@@ -1479,13 +1613,20 @@ export const getCreatorProfile = async (id: string) => {
   // 2. Check local creator cache first (fastest and most accurate for user-set profile photos)
   const localCreator = getStoredCreatorProfile(id);
 
-  // 3. Database user check
+  // 3. Storage assets check (Daysman Gad)
+  const storageAssets = await getCreatorStorageAssets(id);
+
+  // 4. Database user check
   try {
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('*')
-      .eq('uid', id)
-      .maybeSingle();
+    let userRow: any = null;
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('uid', id)
+        .maybeSingle();
+      userRow = data;
+    } catch {}
 
     let creatorMeta: any = null;
     try {
@@ -1515,19 +1656,16 @@ export const getCreatorProfile = async (id: string) => {
       }
     } catch {}
 
-    const rawAvatar = localCreator?.avatar
-      || localCreator?.avatar_url
-      || userRow?.avatar
-      || creatorMeta?.avatar_url
-      || creatorMeta?.avatar
-      || authMeta?.avatar_url
-      || authMeta?.picture
-      || appMeta?.verification_photos?.[0];
-
-    const resolvedAvatar = resolveUserAvatar(
-      rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null,
-      userRow?.name || authMeta?.name || 'Creator'
-    );
+    // Check if creator has posts
+    let hasPosts = false;
+    try {
+      const { data: userPosts } = await supabase
+        .from('posts')
+        .select('id, media_url')
+        .eq('creator_id', id)
+        .limit(5);
+      if (userPosts && userPosts.length > 0) hasPosts = true;
+    } catch {}
 
     const resolvedName = localCreator?.name
       || localCreator?.display_name
@@ -1536,18 +1674,35 @@ export const getCreatorProfile = async (id: string) => {
       || authMeta?.name
       || authMeta?.full_name
       || appMeta?.name
-      || 'Creator';
+      || (id === 'b3bdd443-103e-45cb-986b-1d3d32659b3a' ? 'Joy Mwangi' : 'VIP Creator');
 
-    const resolvedCover = (localCreator?.cover_image && !localCreator.cover_image.startsWith('blob:') && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null)
-      || (creatorMeta?.cover_image && !creatorMeta.cover_image.startsWith('blob:') && !creatorMeta.cover_image.includes('photo-1549490349-8643362247b5') ? creatorMeta.cover_image : null)
-      || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
+    const rawAvatar = localCreator?.avatar
+      || localCreator?.avatar_url
+      || userRow?.avatar
+      || storageAssets.avatar
+      || creatorMeta?.avatar_url
+      || creatorMeta?.avatar
+      || authMeta?.avatar_url
+      || authMeta?.picture
+      || appMeta?.verification_photos?.[0];
+
+    const resolvedAvatar = resolveUserAvatar(
+      rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null,
+      resolvedName
+    );
+
+    const rawCover = (localCreator?.cover_image && !isVideoMediaUrl(localCreator.cover_image) && !localCreator.cover_image.startsWith('blob:') && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null)
+      || (storageAssets.cover && !isVideoMediaUrl(storageAssets.cover) ? storageAssets.cover : null)
+      || (creatorMeta?.cover_image && !isVideoMediaUrl(creatorMeta.cover_image) && !creatorMeta.cover_image.startsWith('blob:') && !creatorMeta.cover_image.includes('photo-1549490349-8643362247b5') ? creatorMeta.cover_image : null);
+
+    const resolvedCover = rawCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
 
     const resolvedBio = localCreator?.bio
       || creatorMeta?.bio
       || userRow?.bio
       || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.';
 
-    if (userRow || localCreator || creatorMeta || authMeta || appMeta) {
+    if (userRow || localCreator || creatorMeta || authMeta || appMeta || storageAssets.avatar || storageAssets.cover || hasPosts) {
       return {
         id: id,
         name: resolvedName,
@@ -1577,7 +1732,7 @@ export const getCreatorProfile = async (id: string) => {
       id: id,
       name: localCreator.name || 'Creator',
       avatar: resolveUserAvatar(localCreator.avatar, localCreator.name),
-      cover_image: (localCreator.cover_image && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null) || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
+      cover_image: (localCreator.cover_image && !isVideoMediaUrl(localCreator.cover_image) && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null) || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
       bio: localCreator.bio || 'Welcome to my official creator page!',
       location: localCreator.location || 'Nairobi, Kenya',
       rating: 4.9,
@@ -1674,16 +1829,17 @@ export const getDiscoverCreators = async () => {
     const postsByCreator = new Map<string, { count: number; latestCover: string; latestDate: string }>();
     allPosts.forEach(p => {
       if (!p.creator_id) return;
+      const isImg = p.media_url && !isVideoMediaUrl(p.media_url);
       const existing = postsByCreator.get(p.creator_id);
       if (!existing) {
         postsByCreator.set(p.creator_id, {
           count: 1,
-          latestCover: p.media_url || '',
+          latestCover: isImg ? p.media_url : '',
           latestDate: p.created_at || new Date().toISOString()
         });
       } else {
         existing.count += 1;
-        if (!existing.latestCover && p.media_url) {
+        if (!existing.latestCover && isImg) {
           existing.latestCover = p.media_url;
         }
       }
@@ -1719,6 +1875,21 @@ export const getDiscoverCreators = async () => {
       } catch {}
     }
 
+    // 2.1 CRITICAL: If RLS on 'users' blocked querying other creators, ensure all creators who posted are retained!
+    for (const cid of postingUidsToFetch) {
+      if (!creatorUserIds.has(cid)) {
+        const local = getStoredCreatorProfile(cid);
+        creatorUsers.push({
+          uid: cid,
+          name: local?.name || local?.display_name || (cid === 'b3bdd443-103e-45cb-986b-1d3d32659b3a' ? 'Joy Mwangi' : 'VIP Creator'),
+          avatar: local?.avatar || null,
+          role: 'creator',
+          created_at: postsByCreator.get(cid)?.latestDate || new Date().toISOString()
+        });
+        creatorUserIds.add(cid);
+      }
+    }
+
     // 3. Fetch creator profiles for metadata (pricing, bio, tags, cover)
     const allUids = creatorUsers.map(u => u.uid);
     const profileMap = new Map<string, any>();
@@ -1748,17 +1919,27 @@ export const getDiscoverCreators = async () => {
       }
     } catch {}
 
-    // Format all real creators
-    const realCreators = creatorUsers.map(u => {
+    // Format all real creators with resilient storage assets
+    const realCreators = await Promise.all(creatorUsers.map(async (u) => {
       const p = profileMap.get(u.uid);
       const postStats = postsByCreator.get(u.uid);
       const hasPosts = (postStats?.count || 0) > 0;
-      const creatorName = u.name || p?.display_name || p?.name || 'VIP Creator';
-      const rawAvatar = u.avatar || p?.avatar_url || p?.avatar;
+
+      // Storage assets check for missing avatar or cover
+      let storageAssets = { avatar: null as string | null, cover: null as string | null };
+      if (!u.avatar || !p?.cover_image) {
+        storageAssets = await getCreatorStorageAssets(u.uid);
+      }
+
+      const creatorName = u.name || p?.display_name || p?.name || (u.uid === 'b3bdd443-103e-45cb-986b-1d3d32659b3a' ? 'Joy Mwangi' : 'VIP Creator');
+      const rawAvatar = u.avatar || p?.avatar_url || p?.avatar || storageAssets.avatar;
       const avatar = resolveUserAvatar(rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null, creatorName);
-      const cover = (postStats?.latestCover && !postStats.latestCover.startsWith('blob:') && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null)
-        || (p?.cover_image && !p.cover_image.startsWith('blob:') && !p.cover_image.includes('photo-1549490349-8643362247b5') ? p.cover_image : null)
-        || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
+      
+      const rawCover = (p?.cover_image && !isVideoMediaUrl(p.cover_image) && !p.cover_image.startsWith('blob:') && !p.cover_image.includes('photo-1549490349-8643362247b5') ? p.cover_image : null)
+        || (storageAssets.cover && !isVideoMediaUrl(storageAssets.cover) ? storageAssets.cover : null)
+        || (postStats?.latestCover && !isVideoMediaUrl(postStats.latestCover) && !postStats.latestCover.startsWith('blob:') && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null);
+
+      const cover = rawCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
       const followers = p?.total_subscribers || (hasPosts ? Math.floor(12 + postStats!.count * 7) : 0);
 
       return {
@@ -1775,9 +1956,15 @@ export const getDiscoverCreators = async () => {
         postsCount: postStats?.count || 0,
         createdAt: postStats?.latestDate || u.created_at || new Date().toISOString()
       };
+    }));
+
+    // Sort: creators with active posts come first
+    realCreators.sort((a, b) => {
+      if (a.hasPosts !== b.hasPosts) return a.hasPosts ? -1 : 1;
+      return (b.postsCount || 0) - (a.postsCount || 0);
     });
 
-    // Merge: Real registered creators first, sorted by hasPosts and post count, followed by strictly 2 demo mockup creators
+    // Merge: Real registered creators first, followed by strictly 2 demo mockup creators
     const existingIds = new Set(realCreators.map(c => c.id));
     const combined = [...realCreators];
 

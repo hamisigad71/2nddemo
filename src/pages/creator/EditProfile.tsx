@@ -347,7 +347,8 @@ const EditProfile = () => {
         await updateUserProfile(user.id, {
           ...(profileData.displayName ? { name: profileData.displayName } : {}),
           bio: profileData.bio,
-          ...(finalAvatarUrl ? { avatar: finalAvatarUrl } : {})
+          ...(finalAvatarUrl ? { avatar: finalAvatarUrl } : {}),
+          ...(finalCoverUrl ? { cover_image: finalCoverUrl } : {})
         });
       } catch (e) {
         console.warn('users table update notice:', e);

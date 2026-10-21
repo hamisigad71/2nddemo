@@ -33,6 +33,7 @@ import {
   getPostsByCreator,
   checkUserSubscription,
   deletePost,
+  getUserProfile,
 } from "../../lib/db";
 import { getDefaultAvatar } from "../../lib/avatar";
 import { useAuth } from "../../context/AuthContext";
@@ -49,6 +50,8 @@ export default function CreatorProfile() {
   const { user } = useAuth();
 
   const [creator, setCreator] = useState<any>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  const [previewAsFan, setPreviewAsFan] = useState(false);
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"posts" | "media" | "about">(
@@ -129,8 +132,17 @@ export default function CreatorProfile() {
           setPosts((creatorPosts || []).filter((post: any) => post.status !== "draft"));
         }
 
-        // Check subscription
+        // Check current user profile & role
         if (user?.id) {
+          try {
+            const up = await getUserProfile(user.id);
+            if (isMounted && up) {
+              setCurrentUserProfile(up);
+            }
+          } catch (e) {
+            console.warn("Could not load user profile:", e);
+          }
+
           const sub = await checkUserSubscription(user.id, id);
           if (isMounted && sub) {
             setIsSubscribed(true);
@@ -264,18 +276,25 @@ export default function CreatorProfile() {
   // Check if this is a hardcoded demo/escort profile vs a real registered creator
   const isEscortDemo = Boolean(creator?.isEscort || String(creator?.id || '').startsWith('escort-'));
 
+  // Check if current user is signed up/logged in as a subscriber (role 'user' or 'subscriber')
+  const userRole = currentUserProfile?.role || user?.user_metadata?.role || (typeof window !== 'undefined' ? localStorage.getItem('pendingAuthRole') : null);
+  const isSubscriberUser = userRole === 'user' || userRole === 'subscriber';
+
   // Check if current logged-in user is the owner of this creator profile (or pseudo creator account)
+  // A subscriber must NEVER be treated as a creator owner!
   const isOwner = Boolean(
+    !isSubscriberUser &&
     user?.id && (
       user.id === id ||
       user.id === creator?.id ||
       user.id === creator?.user_id ||
       user.id === creator?.uid ||
-      (user.email && creator?.email && user.email.toLowerCase() === creator.email.toLowerCase()) ||
-      (user.user_metadata?.name && creator?.name && user.user_metadata.name.trim().toLowerCase() === creator.name.trim().toLowerCase()) ||
-      (user.user_metadata?.full_name && creator?.name && user.user_metadata.full_name.trim().toLowerCase() === creator.name.trim().toLowerCase())
+      (user.email && creator?.email && user.email.toLowerCase() === creator.email.toLowerCase())
     )
   );
+
+  // When owner has previewAsFan turned on, view the page as a public subscriber
+  const isOwnerActive = isOwner && !previewAsFan;
 
   const realPostMedia: PPVMediaItem[] = posts
     .filter((p) => p.media_url)
@@ -294,7 +313,7 @@ export default function CreatorProfile() {
           : "Exclusive content",
         price: p.price || 200,
         visibility,
-        isLocked: !isOwner && !p.media_access_granted && !isSubscribed && (
+        isLocked: !isOwnerActive && !p.media_access_granted && !isSubscribed && (
           visibility === "subscribers" ||
           (visibility === "ppv" && !unlockedMediaIds.has(p.id))
         ),
@@ -309,7 +328,7 @@ export default function CreatorProfile() {
       photoCount: 1,
       title: `${creator.name} Gallery Item #${idx + 1}`,
       price: 150,
-      isLocked: !isOwner && !isSubscribed && !unlockedMediaIds.has(`${creator.id}-g-${idx}`),
+      isLocked: !isOwnerActive && !isSubscribed && !unlockedMediaIds.has(`${creator.id}-g-${idx}`),
     }));
 
   const demoMedia: PPVMediaItem[] = isEscortDemo ? [
@@ -381,7 +400,7 @@ export default function CreatorProfile() {
   });
 
   const handleMediaClick = (item: PPVMediaItem) => {
-    if (item.isLocked && !isOwner) {
+    if (item.isLocked && !isOwnerActive) {
       if (item.visibility === "subscribers") {
         setSubscribePrice(creatorPrice);
         setSubscribeDuration(30);
@@ -437,11 +456,39 @@ export default function CreatorProfile() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0C] text-foreground pb-24">
+      {/* Creator Owner Quick Toggle Bar (only visible to the actual creator) */}
+      {isOwner && (
+        <div className="bg-gradient-to-r from-red-950 via-zinc-900 to-black text-white px-4 py-2 text-xs font-bold flex items-center justify-between sticky top-0 z-50 border-b border-red-500/30 backdrop-blur-md shadow-lg">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-red-500 shrink-0" />
+            <span className="text-zinc-200 text-xs">
+              {previewAsFan ? (
+                <span className="text-emerald-400 font-bold">Subscriber Preview Mode (Viewing as a Fan)</span>
+              ) : (
+                <span className="text-red-400 font-bold">Creator Mode (Owner of @{creator.username || creator.name})</span>
+              )}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPreviewAsFan(!previewAsFan)}
+            className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 border cursor-pointer ${
+              previewAsFan
+                ? "bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400 shadow-md"
+                : "bg-red-600/30 hover:bg-red-600/50 text-white border-red-500/40"
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>{previewAsFan ? "Exit Fan Preview" : "👁️ View as Subscriber"}</span>
+          </button>
+        </div>
+      )}
+
       {/* Cover Image & Top Navigation Bar */}
       <div className="h-52 md:h-72 lg:h-80 w-full relative bg-zinc-900 overflow-hidden">
         <img
           src={
-            (creator.cover_image && !creator.cover_image.startsWith("blob:") && !creator.cover_image.includes("photo-1549490349-8643362247b5"))
+            (creator.cover_image && !/\.(mp4|webm|mov|m4v)/i.test(creator.cover_image) && !creator.cover_image.startsWith("blob:") && !creator.cover_image.includes("photo-1549490349-8643362247b5"))
               ? creator.cover_image
               : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"
           }
@@ -471,7 +518,7 @@ export default function CreatorProfile() {
           </div>
 
           <div className="flex items-center gap-2">
-            {isOwner && (
+            {isOwnerActive && (
               <Link
                 to="/dashboard"
                 className="h-10 px-3.5 rounded-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-red-600/30 backdrop-blur-md transition-all cursor-pointer"
@@ -554,7 +601,7 @@ export default function CreatorProfile() {
           </div>
 
           {/* Action Buttons: Creator Owner Controls vs Fan Visitor Actions */}
-          {isOwner ? (
+          {isOwnerActive ? (
             <div className="flex items-center gap-2 w-full md:w-auto pb-1 z-10 flex-wrap">
               <Link
                 to="/create-post"
@@ -610,7 +657,7 @@ export default function CreatorProfile() {
         </div>
 
         {/* ── Creator Owner Management Section (Boss Request: View Dashboard & Upload Content) ── */}
-        {isOwner ? (
+        {isOwnerActive ? (
           <div className="bg-gradient-to-b from-zinc-900/90 via-[#111115]/95 to-black border border-red-500/30 rounded-3xl p-5 md:p-6 mb-8 shadow-2xl relative overflow-hidden">
             {/* Ambient accent glow */}
             <div className="absolute top-0 right-0 w-72 h-72 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -628,9 +675,13 @@ export default function CreatorProfile() {
                   Owner Mode
                 </span>
               </div>
-              <span className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
-                <Eye className="w-3.5 h-3.5 text-emerald-400" /> Public Profile View
-              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewAsFan(true)}
+                className="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 font-bold bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-xl border border-white/15 transition-colors cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5 text-emerald-400" /> View as Subscriber
+              </button>
             </div>
 
             {/* Primary Action Grid: Upload Content & View Dashboard */}
@@ -946,7 +997,7 @@ export default function CreatorProfile() {
                       className="relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 group cursor-pointer shadow-lg hover:border-red-500/50 transition-all select-none"
                     >
                       {/* Delete button for Owner */}
-                      {isOwner && (
+                      {isOwnerActive && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1040,7 +1091,7 @@ export default function CreatorProfile() {
             {posts.length > 0 &&
               posts.map((post: any) => {
                 const isPostLocked =
-                  !isOwner &&
+                  !isOwnerActive &&
                   ((post.visibility === "subscribers" && !isSubscribed && !post.media_access_granted) ||
                   (post.is_locked && !post.media_access_granted && !isSubscribed && !unlockedMediaIds.has(post.id)));
                 return (
@@ -1068,7 +1119,7 @@ export default function CreatorProfile() {
                         </div>
                       </div>
 
-                      {isOwner && (
+                      {isOwnerActive && (
                         <button
                           onClick={() => handleDeletePost(post.id)}
                           disabled={deletingPostId === post.id}
@@ -1154,11 +1205,11 @@ export default function CreatorProfile() {
                 </div>
                 <h3 className="text-xl font-black text-white mb-2">No Posts Yet</h3>
                 <p className="text-zinc-400 text-sm max-w-sm mb-6 leading-relaxed">
-                  {isOwner
+                  {isOwnerActive
                     ? "You haven't uploaded any posts yet. Start sharing exclusive content with your fans now!"
                     : `${creator.name} hasn't published any posts yet. Subscribe to receive instant updates when they drop new content.`}
                 </p>
-                {isOwner ? (
+                {isOwnerActive ? (
                   <Link
                     to="/create-post"
                     className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-extrabold rounded-xl transition-all shadow-lg shadow-red-600/30 text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer"
