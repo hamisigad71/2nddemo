@@ -187,9 +187,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
 
         const cleanName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const fileName = `${Date.now()}_${cleanName}`;
-        mediaUrl = visibility === 'public' && status === 'published'
-          ? await uploadFileToSupabase(fileToUpload, 'Daysman Gad', `posts/${user.id}/${fileName}`)
-          : await uploadPrivatePostMedia(fileToUpload, user.id, `posts/${fileName}`);
+        mediaUrl = await uploadFileToSupabase(fileToUpload, 'Daysman Gad', `posts/${user.id}/${fileName}`);
 
         if (!mediaUrl) {
           setUploadError('Upload failed. Please check your storage settings or connection.');
@@ -197,12 +195,15 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
         }
       }
 
+      const isLocked = visibility === 'ppv' || visibility === 'subscribers';
+      const finalPrice = visibility === 'ppv' ? numericPrice : 0;
+
       await createPost(
         user.id,
         caption,
         mediaUrl,
-        visibility === 'ppv',
-        visibility === 'ppv' ? numericPrice : 0,
+        isLocked,
+        finalPrice,
         mediaType,
         { visibility, status }
       );

@@ -267,8 +267,32 @@ export const createPost = async (
     } catch {}
   }
 
+  const dbRecord: any = {
+    creator_id: creatorId,
+    content,
+    media_url: mediaUrl,
+    media_type: mediaType,
+    is_locked: isLocked,
+    price: isLocked ? price : 0,
+  };
+
+  let insertedId = newPostId;
+
+  // 1. Try Supabase insert with valid table schema columns only
+  try {
+    const { data, error } = await supabase.from('posts').insert(dbRecord).select().maybeSingle();
+    if (data?.id) {
+      insertedId = data.id;
+    }
+    if (error) {
+      console.warn('Supabase post insert note:', error.message);
+    }
+  } catch (err) {
+    console.warn('Supabase post insert error:', err);
+  }
+
   const postObj: any = {
-    id: newPostId,
+    id: insertedId,
     creator_id: creatorId,
     content,
     media_url: mediaUrl,
@@ -287,24 +311,6 @@ export const createPost = async (
       avatar: creatorAvatar,
     }
   };
-
-  // 1. Try Supabase insert
-  try {
-    const { data, error } = await supabase.from('posts').insert(postObj).select().maybeSingle();
-    if (data?.id) postObj.id = data.id;
-    if (!data?.id && (postObj.media_private || postObj.status === 'draft')) {
-      throw new Error('Could not securely save this content: the database did not confirm the new post.');
-    }
-    if (error) {
-      console.warn('Supabase post insert note:', error.message);
-      if (postObj.media_private || postObj.status === 'draft') {
-        throw new Error(`Could not securely save this content: ${error.message}`);
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase post insert error:', err);
-    if (postObj.media_private || postObj.status === 'draft') throw err;
-  }
 
   // 2. Persist to localStorage client cache (tgd_all_posts)
   try {

@@ -19,6 +19,12 @@ import {
   Flame,
   PlayCircle,
   Sparkles,
+  LayoutDashboard,
+  Plus,
+  Edit3,
+  Crown,
+  FolderHeart,
+  Radio,
 } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
@@ -234,10 +240,23 @@ export default function CreatorProfile() {
   // Check if this is a hardcoded demo/escort profile vs a real registered creator
   const isEscortDemo = Boolean(creator?.isEscort || String(creator?.id || '').startsWith('escort-'));
 
+  // Check if current logged-in user is the owner of this creator profile (or pseudo creator account)
+  const isOwner = Boolean(
+    user?.id && (
+      user.id === id ||
+      user.id === creator?.id ||
+      user.id === creator?.user_id ||
+      user.id === creator?.uid ||
+      (user.email && creator?.email && user.email.toLowerCase() === creator.email.toLowerCase()) ||
+      (user.user_metadata?.name && creator?.name && user.user_metadata.name.trim().toLowerCase() === creator.name.trim().toLowerCase()) ||
+      (user.user_metadata?.full_name && creator?.name && user.user_metadata.full_name.trim().toLowerCase() === creator.name.trim().toLowerCase())
+    )
+  );
+
   const realPostMedia: PPVMediaItem[] = posts
     .filter((p) => p.media_url)
     .map((p) => {
-      const visibility = p.visibility || (p.is_locked ? "ppv" : "public");
+      const visibility = p.visibility || (p.is_locked ? (p.price > 0 ? "ppv" : "subscribers") : "public");
       return {
         id: p.id,
         type: (p.media_type === "video" || p.media_url?.includes(".mp4")
@@ -251,7 +270,7 @@ export default function CreatorProfile() {
           : "Exclusive content",
         price: p.price || 200,
         visibility,
-        isLocked: !p.media_access_granted && !isSubscribed && (
+        isLocked: !isOwner && !p.media_access_granted && !isSubscribed && (
           visibility === "subscribers" ||
           (visibility === "ppv" && !unlockedMediaIds.has(p.id))
         ),
@@ -266,7 +285,7 @@ export default function CreatorProfile() {
       photoCount: 1,
       title: `${creator.name} Gallery Item #${idx + 1}`,
       price: 150,
-      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-g-${idx}`),
+      isLocked: !isOwner && !isSubscribed && !unlockedMediaIds.has(`${creator.id}-g-${idx}`),
     }));
 
   const demoMedia: PPVMediaItem[] = isEscortDemo ? [
@@ -338,7 +357,7 @@ export default function CreatorProfile() {
   });
 
   const handleMediaClick = (item: PPVMediaItem) => {
-    if (item.isLocked) {
+    if (item.isLocked && !isOwner) {
       if (item.visibility === "subscribers") {
         setSubscribePrice(creatorPrice);
         setSubscribeDuration(30);

@@ -220,9 +220,9 @@ const CreatorFeed = () => {
                 <div className="flex items-center gap-2">
                   {/* Lock badge */}
                   <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${post.visibility && post.visibility !== 'public' || post.is_locked ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {post.status === 'draft' ? 'Draft' : (post.visibility === 'subscribers'
+                    {post.status === 'draft' ? 'Draft' : ((post.visibility === 'subscribers' || (post.is_locked && (!post.price || post.price === 0)))
                       ? <><Lock className="w-3 h-3" /> Subscribers</>
-                      : post.is_locked || post.visibility === 'ppv'
+                      : (post.is_locked || post.visibility === 'ppv')
                         ? <><Lock className="w-3 h-3" /> KES {post.price}</>
                         : <><Unlock className="w-3 h-3" /> Public</>)}
                   </span>
@@ -299,7 +299,7 @@ const CreatorFeed = () => {
               <div className="flex items-center gap-5 px-5 py-4 border-t border-border mt-4">
                 <PostStats postId={post.id} />
                 <span className="ml-auto text-xs text-muted-foreground font-medium">
-                  {post.status === 'draft' ? 'Draft' : post.visibility === 'subscribers' ? 'Subscribers only' : post.is_locked ? `PPV · KES ${post.price}` : 'Public post'}
+                  {post.status === 'draft' ? 'Draft' : (post.visibility === 'subscribers' || (post.is_locked && (!post.price || post.price === 0))) ? 'Subscribers only' : post.is_locked ? `PPV · KES ${post.price}` : 'Public post'}
                 </span>
               </div>
             </article>
