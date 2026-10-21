@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { UploadCloud, ImagePlus, Loader2, Video, Save } from 'lucide-react';
-import { createPost, uploadFileToSupabase, uploadPrivatePostMedia } from '../lib/db';
+import { createPost, uploadFileToSupabase } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
 interface CreatePostFormProps {
