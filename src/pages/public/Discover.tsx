@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
 import { getDiscoverCreators, HARDCODED_DISCOVER_CREATORS } from '../../lib/db';
+import { getDefaultAvatar } from '../../lib/avatar';
 import LiveNowTray from '../../components/LiveNowTray';
 
 const Discover = () => {
@@ -137,7 +138,15 @@ const Discover = () => {
                  className="group relative flex flex-col aspect-[3/4] sm:aspect-[4/5] bg-muted border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
                >
                   {/* Full Background Cover */}
-                  <img src={creator.cover} alt="cover" className="absolute inset-0 w-full h-full object-cover object-top opacity-90 group-hover:scale-110 group-hover:blur-[2px] transition-all duration-500" loading="lazy" />
+                  <img 
+                    src={creator.cover} 
+                    alt="cover" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
+                    }}
+                    className="absolute inset-0 w-full h-full object-cover object-top opacity-90 group-hover:scale-110 group-hover:blur-[2px] transition-all duration-500" 
+                    loading="lazy" 
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent" />
                   
                   {/* Lock Overlay on Hover */}
@@ -166,7 +175,15 @@ const Discover = () => {
                   <div className="relative z-10 px-3 pb-3 sm:px-5 sm:pb-5 pt-10 mt-auto flex flex-col text-white transition-transform duration-300 group-hover:translate-y-2 group-hover:opacity-40">
                     {/* Avatar & Category */}
                     <div className="flex items-end justify-between mb-2 sm:mb-3">
-                      <img src={creator.avatar} alt="avatar" className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-primary/50 shadow-md object-cover bg-background" loading="lazy" />
+                      <img 
+                        src={creator.avatar} 
+                        alt="avatar" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = getDefaultAvatar(creator.name);
+                        }}
+                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-primary/50 shadow-md object-cover bg-background" 
+                        loading="lazy" 
+                      />
                       <div className="text-[10px] sm:text-xs font-semibold text-secondary uppercase tracking-wider backdrop-blur-sm bg-black/30 px-2 py-0.5 rounded border border-white/10">{creator.category}</div>
                     </div>
                     

@@ -26,11 +26,12 @@ export const getDefaultAvatar = (name?: string | null): string => {
  */
 export const resolveUserAvatar = (avatarUrl?: string | null, name?: string | null): string => {
   if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim()) {
-    // If it's an old hardcoded placeholder from earlier builds, replace with clean default
-    if (avatarUrl.includes('photo-1534528741775-53994a69daeb') || avatarUrl.includes('pravatar.cc')) {
+    const cleanUrl = avatarUrl.trim();
+    // If it's an expired blob URL or old hardcoded placeholder, replace with clean default
+    if (cleanUrl.startsWith('blob:') || cleanUrl.includes('photo-1534528741775-53994a69daeb') || cleanUrl.includes('pravatar.cc')) {
       return getDefaultAvatar(name);
     }
-    return avatarUrl.trim();
+    return cleanUrl;
   }
   return getDefaultAvatar(name);
 };

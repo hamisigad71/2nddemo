@@ -184,8 +184,8 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
                 <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'} shrink-0`} />
                 <span className="text-[15px]">{item.name}</span>
                 {(item as any).isLive && (
-                  <span className="ml-auto bg-red-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-sm animate-pulse">
-                    Live
+                  <span className="ml-auto bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-sm">
+                    Soon
                   </span>
                 )}
                 {item.name === 'Notifications' && unreadNotifs > 0 && (

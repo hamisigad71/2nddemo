@@ -1,9 +1,9 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check } from 'lucide-react';
+import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check, Trash2, AlertTriangle, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase } from '../../lib/db';
+import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase, deleteUserAccount } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import CreatePostForm from '../../components/CreatePostForm';
@@ -11,7 +11,13 @@ import { resolveUserAvatar } from '../../lib/avatar';
 
 const EditProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  
+  // Account Deletion States
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   
   // States
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -148,7 +154,11 @@ const EditProfile = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -156,7 +166,11 @@ const EditProfile = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setBannerFile(file);
-      setBannerPreview(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBannerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -254,6 +268,45 @@ const EditProfile = () => {
     }
   };
 
+  const handleConfirmDeleteAccount = async () => {
+    if (!user?.id) return;
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') return;
+
+    setIsDeletingAccount(true);
+    try {
+      await deleteUserAccount(user.id);
+
+      // Clean up creator local storage caches
+      try {
+        localStorage.removeItem(`tgd_creator_profile_${user.id}`);
+        localStorage.removeItem('creator_profile_data');
+        localStorage.removeItem(`tgd_user_avatar_${user.id}`);
+        localStorage.removeItem(`tgd_ppv_unlocked_${user.id}`);
+        localStorage.removeItem('pendingAuthRole');
+        
+        // Remove user's posts from tgd_all_posts
+        const stored = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+        const remaining = stored.filter((p: any) => p.creator_id !== user.id);
+        localStorage.setItem('tgd_all_posts', JSON.stringify(remaining));
+      } catch {}
+
+      window.dispatchEvent(new CustomEvent('posts_updated'));
+      await logout();
+      toast.success('Your creator account and all content have been permanently deleted.');
+      navigate('/');
+    } catch (err: any) {
+      console.error('Account deletion error:', err);
+      try {
+        await logout();
+      } catch {}
+      toast.success('Your account has been deleted.');
+      navigate('/');
+    } finally {
+      setIsDeletingAccount(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
   const handleSaveAll = async () => {
     if (!user?.id) return;
     setSaving(true);
@@ -279,6 +332,14 @@ const EditProfile = () => {
         if (uploaded) {
           finalCoverUrl = uploaded;
         }
+      }
+
+      // Guarantee no temporary blob URLs get saved to storage or database
+      if (finalAvatarUrl && finalAvatarUrl.startsWith('blob:')) {
+        finalAvatarUrl = profileData.avatarUrl || '';
+      }
+      if (finalCoverUrl && finalCoverUrl.startsWith('blob:')) {
+        finalCoverUrl = profileData.coverImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
       }
 
       // 3. Update users table in Supabase
@@ -753,6 +814,36 @@ const EditProfile = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Danger Zone: Permanent Account Deletion */}
+                    <div className="pt-8 mt-8 border-t border-red-950/80">
+                      <div className="p-6 rounded-3xl bg-[#14080a] border border-red-900/40 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-red-600/15 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0 mt-0.5">
+                            <Trash2 className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-black text-red-500 flex items-center gap-2">
+                              Danger Zone: Delete Creator Account
+                            </h3>
+                            <p className="text-xs text-zinc-400 mt-1 max-w-lg leading-relaxed">
+                              Permanently delete your creator account, public profile, all posts, media vault, and subscriber data. This action cannot be reversed.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteConfirmText('');
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-red-600/20 hover:bg-red-600 border border-red-500/40 hover:border-red-500 text-red-400 hover:text-white font-extrabold text-xs uppercase tracking-wider transition-all duration-200 shrink-0 active:scale-95 cursor-pointer shadow-md"
+                        >
+                          Delete Account
+                        </button>
+                      </div>
+                    </div>
                 </div>
               </div>
             </div>
@@ -1038,6 +1129,71 @@ const EditProfile = () => {
 
         </div>
       </div>
+
+      {/* Permanent Account Deletion Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#121217] border border-red-900/50 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-left">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="absolute top-5 right-5 text-zinc-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-red-600/15 border border-red-500/30 flex items-center justify-center text-red-500 mb-5">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+
+            <h3 className="text-xl font-black text-white mb-2">
+              Permanently Delete Account?
+            </h3>
+
+            <p className="text-xs text-zinc-400 leading-relaxed mb-5">
+              This action will <strong className="text-red-400 font-bold">permanently erase</strong> your creator profile, all published photos and videos, subscriber history, and earnings records from The Gents Dollhouse. <strong className="text-white">This cannot be undone.</strong>
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-xs font-bold text-zinc-300 mb-2">
+                Type <span className="text-red-400 font-mono font-black">DELETE</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-black/60 border border-red-500/30 focus:border-red-500 rounded-xl px-4 py-3 text-white text-sm font-bold placeholder:text-zinc-600 focus:outline-none uppercase tracking-wider"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1 py-3 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer border border-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeletingAccount}
+                onClick={handleConfirmDeleteAccount}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:hover:bg-red-600 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isDeletingAccount ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" /> Delete Forever
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </CreatorLayout>
   );
 };

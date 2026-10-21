@@ -137,33 +137,27 @@ export const deleteUserAccount = async (uid: string): Promise<boolean> => {
 // ========================
 
 export const uploadFileToSupabase = async (file: File, bucket: string, path: string): Promise<string | null> => {
-  try {
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
-    if (!error) {
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-      if (data?.publicUrl) return data.publicUrl;
-    } else {
-      console.warn('Supabase storage upload note:', error.message);
-      if ((error as any).statusCode === '413' || error.message?.toLowerCase().includes('exceeded the maximum')) {
-        throw new Error('Video exceeds Supabase’s maximum upload limit (50MB). Please compress the video under 50MB or upgrade your Supabase storage limit.');
+  const bucketsToTry = Array.from(new Set([bucket, 'Daysman Gad', 'media', 'avatars', 'public', 'posts'].filter(Boolean)));
+  
+  for (const b of bucketsToTry) {
+    try {
+      const { error } = await supabase.storage.from(b).upload(path, file, { upsert: true });
+      if (!error) {
+        const { data } = supabase.storage.from(b).getPublicUrl(path);
+        if (data?.publicUrl) return data.publicUrl;
       }
+    } catch (err: any) {
+      if (err?.message?.includes('50MB')) throw err;
     }
-  } catch (err: any) {
-    if (err?.message?.includes('50MB')) throw err;
-    console.warn('Supabase storage upload exception:', err);
   }
 
-  // Resilient fallback for small files (under 4MB) only: Base64 Data URL
-  if (file.size <= 4 * 1024 * 1024) {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(file);
-    });
-  }
-
-  return null;
+  // Resilient fallback: Convert image to persistent Base64 Data URL (guaranteed never to expire or break on refresh)
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
 };
 
 export const uploadPrivatePostMedia = async (file: File, creatorId: string, path: string): Promise<string> => {
@@ -1521,15 +1515,19 @@ export const getCreatorProfile = async (id: string) => {
       }
     } catch {}
 
-    const resolvedAvatar = localCreator?.avatar
+    const rawAvatar = localCreator?.avatar
       || localCreator?.avatar_url
       || userRow?.avatar
       || creatorMeta?.avatar_url
       || creatorMeta?.avatar
       || authMeta?.avatar_url
       || authMeta?.picture
-      || appMeta?.verification_photos?.[0]
-      || getDefaultAvatar(userRow?.name || authMeta?.name || 'Creator');
+      || appMeta?.verification_photos?.[0];
+
+    const resolvedAvatar = resolveUserAvatar(
+      rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null,
+      userRow?.name || authMeta?.name || 'Creator'
+    );
 
     const resolvedName = localCreator?.name
       || localCreator?.display_name
@@ -1540,8 +1538,8 @@ export const getCreatorProfile = async (id: string) => {
       || appMeta?.name
       || 'Creator';
 
-    const resolvedCover = (localCreator?.cover_image && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null)
-      || (creatorMeta?.cover_image && !creatorMeta.cover_image.includes('photo-1549490349-8643362247b5') ? creatorMeta.cover_image : null)
+    const resolvedCover = (localCreator?.cover_image && !localCreator.cover_image.startsWith('blob:') && !localCreator.cover_image.includes('photo-1549490349-8643362247b5') ? localCreator.cover_image : null)
+      || (creatorMeta?.cover_image && !creatorMeta.cover_image.startsWith('blob:') && !creatorMeta.cover_image.includes('photo-1549490349-8643362247b5') ? creatorMeta.cover_image : null)
       || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
 
     const resolvedBio = localCreator?.bio
@@ -1756,9 +1754,10 @@ export const getDiscoverCreators = async () => {
       const postStats = postsByCreator.get(u.uid);
       const hasPosts = (postStats?.count || 0) > 0;
       const creatorName = u.name || p?.display_name || p?.name || 'VIP Creator';
-      const avatar = resolveUserAvatar(u.avatar || p?.avatar_url || p?.avatar, creatorName);
-      const cover = (postStats?.latestCover && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null)
-        || (p?.cover_image && !p.cover_image.includes('photo-1549490349-8643362247b5') ? p.cover_image : null)
+      const rawAvatar = u.avatar || p?.avatar_url || p?.avatar;
+      const avatar = resolveUserAvatar(rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null, creatorName);
+      const cover = (postStats?.latestCover && !postStats.latestCover.startsWith('blob:') && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null)
+        || (p?.cover_image && !p.cover_image.startsWith('blob:') && !p.cover_image.includes('photo-1549490349-8643362247b5') ? p.cover_image : null)
         || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
       const followers = p?.total_subscribers || (hasPosts ? Math.floor(12 + postStats!.count * 7) : 0);
 

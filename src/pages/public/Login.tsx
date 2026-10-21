@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getUserProfile } from '../../lib/db';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -37,17 +37,21 @@ const Login = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      setError('');
       await signInWithGoogle('subscriber');
-    } catch (err) {
-      setError('Failed to sign in with Google');
+    } catch (err: any) {
+      console.error("Google sign in error:", err);
+      setError(err?.message || 'Failed to sign in with Google. Please ensure Google provider is enabled in Supabase.');
     }
   };
 
   const handleFacebookSignIn = async () => {
     try {
+      setError('');
       await signInWithFacebook('subscriber');
-    } catch (err) {
-      setError('Failed to sign in with Facebook');
+    } catch (err: any) {
+      console.error("Facebook sign in error:", err);
+      setError(err?.message || 'Failed to sign in with Facebook');
     }
   };
 

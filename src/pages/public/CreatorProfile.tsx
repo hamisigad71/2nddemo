@@ -34,6 +34,7 @@ import {
   checkUserSubscription,
   deletePost,
 } from "../../lib/db";
+import { getDefaultAvatar } from "../../lib/avatar";
 import { useAuth } from "../../context/AuthContext";
 import TipModal from "../../components/TipModal";
 import SubscribeModal from "../../components/SubscribeModal";
@@ -77,9 +78,22 @@ export default function CreatorProfile() {
   const [selectedPPVItem, setSelectedPPVItem] = useState<PPVMediaItem | null>(
     null,
   );
-  const [unlockedMediaIds, setUnlockedMediaIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [unlockedMediaIds, setUnlockedMediaIds] = useState<Set<string>>(() => {
+    const combined = new Set<string>();
+    try {
+      const globalStored = localStorage.getItem("tgd_ppv_unlocked_global");
+      if (globalStored) {
+        (JSON.parse(globalStored) as string[]).forEach((id) => combined.add(id));
+      }
+      if (user?.id) {
+        const userStored = localStorage.getItem(`tgd_ppv_unlocked_${user.id}`);
+        if (userStored) {
+          (JSON.parse(userStored) as string[]).forEach((id) => combined.add(id));
+        }
+      }
+    } catch {}
+    return combined;
+  });
 
   // Lightbox for unlocked media
   const [activeLightbox, setActiveLightbox] = useState<{
@@ -87,30 +101,6 @@ export default function CreatorProfile() {
     type: "image" | "video";
     title: string;
   } | null>(null);
-
-  // Load unlocked items from localStorage
-  useEffect(() => {
-    try {
-      const combined = new Set<string>();
-      const globalStored = localStorage.getItem("tgd_ppv_unlocked_global");
-      if (globalStored) {
-        try {
-          (JSON.parse(globalStored) as string[]).forEach((id) => combined.add(id));
-        } catch {}
-      }
-      if (user?.id) {
-        const userStored = localStorage.getItem(`tgd_ppv_unlocked_${user.id}`);
-        if (userStored) {
-          try {
-            (JSON.parse(userStored) as string[]).forEach((id) => combined.add(id));
-          } catch {}
-        }
-      }
-      setUnlockedMediaIds(combined);
-    } catch (e) {
-      console.warn("Error reading unlocked PPV items:", e);
-    }
-  }, [user?.id]);
 
   // Fetch creator profile and subscription status
   useEffect(() => {
@@ -172,7 +162,6 @@ export default function CreatorProfile() {
     try {
       await deletePost(postId);
       setPosts((prev) => prev.filter((p) => p.id !== postId));
-      setMediaItems((prev) => prev.filter((m) => m.id !== postId));
       toast.success("Post deleted successfully");
     } catch (err: any) {
       console.error("Delete post error:", err);
@@ -187,7 +176,6 @@ export default function CreatorProfile() {
       const deletedId = e?.detail?.postId;
       if (deletedId) {
         setPosts((prev) => prev.filter((p) => p.id !== deletedId));
-        setMediaItems((prev) => prev.filter((m) => m.id !== deletedId));
       }
     };
     window.addEventListener("posts_updated", handleUpdate);
@@ -453,11 +441,14 @@ export default function CreatorProfile() {
       <div className="h-52 md:h-72 lg:h-80 w-full relative bg-zinc-900 overflow-hidden">
         <img
           src={
-            (creator.cover_image && !creator.cover_image.includes("photo-1549490349-8643362247b5"))
+            (creator.cover_image && !creator.cover_image.startsWith("blob:") && !creator.cover_image.includes("photo-1549490349-8643362247b5"))
               ? creator.cover_image
               : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"
           }
           alt="Cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
+          }}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-black/40 to-black/60" />
@@ -510,6 +501,9 @@ export default function CreatorProfile() {
               <img
                 src={creator.avatar}
                 alt={creator.name}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = getDefaultAvatar(creator.name);
+                }}
                 className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-[#0A0A0C] object-cover bg-zinc-900 shadow-2xl ring-2 ring-red-500/40"
               />
               <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0A0A0C] shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
@@ -712,7 +706,7 @@ export default function CreatorProfile() {
                   to="/creator/live"
                   className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
                 >
-                  <Radio className="w-3.5 h-3.5 text-red-500" /> Go Live
+                  <Radio className="w-3.5 h-3.5 text-red-500" /> Go Live <span className="text-[9px] text-amber-400 font-black uppercase tracking-wider bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">Soon</span>
                 </Link>
               </div>
             </div>
