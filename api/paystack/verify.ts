@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
 
-    const data = await verifyRes.json();
+    const data: any = await verifyRes.json();
     if (!verifyRes.ok) {
       return res.status(verifyRes.status).json({
         success: false,
