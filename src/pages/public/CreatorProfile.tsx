@@ -25,12 +25,14 @@ import {
   Crown,
   FolderHeart,
   Radio,
+  Trash2,
 } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   getCreatorProfile,
   getPostsByCreator,
   checkUserSubscription,
+  deletePost,
 } from "../../lib/db";
 import { useAuth } from "../../context/AuthContext";
 import TipModal from "../../components/TipModal";
@@ -161,6 +163,40 @@ export default function CreatorProfile() {
       isMounted = false;
     };
   }, [id, user?.id]);
+
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm("Delete this post? It will be permanently removed from all feeds.")) return;
+    setDeletingPostId(postId);
+    try {
+      await deletePost(postId);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      setMediaItems((prev) => prev.filter((m) => m.id !== postId));
+      toast.success("Post deleted successfully");
+    } catch (err: any) {
+      console.error("Delete post error:", err);
+      toast.error(err?.message || "Failed to delete post");
+    } finally {
+      setDeletingPostId(null);
+    }
+  };
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      const deletedId = e?.detail?.postId;
+      if (deletedId) {
+        setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+        setMediaItems((prev) => prev.filter((m) => m.id !== deletedId));
+      }
+    };
+    window.addEventListener("posts_updated", handleUpdate);
+    window.addEventListener("post_deleted", handleUpdate);
+    return () => {
+      window.removeEventListener("posts_updated", handleUpdate);
+      window.removeEventListener("post_deleted", handleUpdate);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -443,7 +479,17 @@ export default function CreatorProfile() {
             </Link>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {isOwner && (
+              <Link
+                to="/dashboard"
+                className="h-10 px-3.5 rounded-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-red-600/30 backdrop-blur-md transition-all cursor-pointer"
+                title="Creator Dashboard"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+            )}
             <button
               onClick={handleShare}
               className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-black/80 transition-colors cursor-pointer"
@@ -513,40 +559,172 @@ export default function CreatorProfile() {
             </div>
           </div>
 
-          {/* Quick Tip / Action Buttons */}
-          <div className="flex items-center gap-2.5 w-full md:w-auto pb-1 z-10 flex-wrap">
-            <button
-              onClick={() => setIsTipOpen(true)}
-              className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
-            >
-              <DollarSign className="w-4 h-4 text-amber-400" /> Send Tip
-            </button>
-            <button
-              type="button"
-              onClick={handleMessageClick}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 border font-bold px-4 py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-95 ${
-                isSubscribed
-                  ? "bg-zinc-900 hover:bg-zinc-800 border-white/10 text-white"
-                  : "bg-zinc-900 hover:bg-zinc-800 border-red-500/40 hover:border-red-500 text-white shadow-sm"
-              }`}
-            >
-              {isSubscribed ? (
-                <>
-                  <MessageCircle className="w-4 h-4 text-emerald-400" />
-                  <span>Message</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4 text-red-500" />
-                  <span>Message </span>
-                </>
-              )}
-            </button>
-          </div>
+          {/* Action Buttons: Creator Owner Controls vs Fan Visitor Actions */}
+          {isOwner ? (
+            <div className="flex items-center gap-2 w-full md:w-auto pb-1 z-10 flex-wrap">
+              <Link
+                to="/create-post"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.4)] text-xs uppercase tracking-wider active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" /> Upload Content
+              </Link>
+              <Link
+                to="/dashboard"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
+              >
+                <LayoutDashboard className="w-4 h-4 text-red-500" /> Dashboard
+              </Link>
+              <Link
+                to="/edit-profile"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-300 hover:text-white font-bold px-3 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
+                title="Edit Profile"
+              >
+                <Edit3 className="w-4 h-4 text-zinc-400" /> Edit Profile
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5 w-full md:w-auto pb-1 z-10 flex-wrap">
+              <button
+                onClick={() => setIsTipOpen(true)}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
+              >
+                <DollarSign className="w-4 h-4 text-amber-400" /> Send Tip
+              </button>
+              <button
+                type="button"
+                onClick={handleMessageClick}
+                className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 border font-bold px-4 py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-95 ${
+                  isSubscribed
+                    ? "bg-zinc-900 hover:bg-zinc-800 border-white/10 text-white"
+                    : "bg-zinc-900 hover:bg-zinc-800 border-red-500/40 hover:border-red-500 text-white shadow-sm"
+                }`}
+              >
+                {isSubscribed ? (
+                  <>
+                    <MessageCircle className="w-4 h-4 text-emerald-400" />
+                    <span>Message</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-red-500" />
+                    <span>Message </span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* ── OnlyFans-Style Subscription Box & Bundles (Screens 1 & 3) ── */}
-        {!isSubscribed && (
+        {/* ── Creator Owner Management Section (Boss Request: View Dashboard & Upload Content) ── */}
+        {isOwner ? (
+          <div className="bg-gradient-to-b from-zinc-900/90 via-[#111115]/95 to-black border border-red-500/30 rounded-3xl p-5 md:p-6 mb-8 shadow-2xl relative overflow-hidden">
+            {/* Ambient accent glow */}
+            <div className="absolute top-0 right-0 w-72 h-72 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header bar */}
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="p-1.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30">
+                  <Crown className="w-4 h-4" />
+                </span>
+                <span className="text-xs font-black uppercase tracking-wider text-white">
+                  Creator Control Hub
+                </span>
+                <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20 uppercase tracking-wider">
+                  Owner Mode
+                </span>
+              </div>
+              <span className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
+                <Eye className="w-3.5 h-3.5 text-emerald-400" /> Public Profile View
+              </span>
+            </div>
+
+            {/* Primary Action Grid: Upload Content & View Dashboard */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {/* 1. Upload Content Button / Card */}
+              <Link
+                to="/create-post"
+                className="group p-4 rounded-2xl bg-gradient-to-br from-red-600/25 via-red-950/30 to-zinc-900/80 border border-red-500/40 hover:border-red-500 transition-all flex items-center justify-between cursor-pointer hover:shadow-[0_4px_24px_rgba(220,38,38,0.3)] active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-red-600/50 group-hover:scale-105 transition-transform shrink-0">
+                    <Plus className="w-6 h-6 stroke-[3]" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-red-400 transition-colors flex items-center gap-1.5">
+                      Upload Content
+                    </h4>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Post photos, videos, or PPV clips
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-extrabold text-red-400 group-hover:translate-x-1 transition-transform px-3 py-1.5 rounded-xl bg-red-500/20 border border-red-500/30">
+                  Upload →
+                </span>
+              </Link>
+
+              {/* 2. View Dashboard Button / Card */}
+              <Link
+                to="/dashboard"
+                className="group p-4 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800/80 border border-white/10 hover:border-white/25 transition-all flex items-center justify-between cursor-pointer active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-800 border border-white/10 flex items-center justify-center text-white shadow group-hover:scale-105 transition-transform shrink-0">
+                    <LayoutDashboard className="w-6 h-6 text-red-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-zinc-200 transition-colors flex items-center gap-1.5">
+                      View Dashboard
+                    </h4>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Earnings, subscribers & analytics
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-extrabold text-zinc-300 group-hover:translate-x-1 transition-transform px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                  Open →
+                </span>
+              </Link>
+            </div>
+
+            {/* Secondary Toolbar: Edit Profile, Vault, Go Live */}
+            <div className="flex items-center justify-between pt-3 border-t border-white/10 flex-wrap gap-2 text-xs">
+              <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
+                <span>Fan Price: <strong className="text-white font-bold">KES {creatorPrice.toLocaleString()}/mo</strong></span>
+                <span>•</span>
+                <span>{posts.length} {posts.length === 1 ? "Post" : "Posts"} published</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  to="/edit-profile"
+                  className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-red-500" /> Edit Profile & Pricing
+                </Link>
+                <Link
+                  to="/vault"
+                  className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                >
+                  <FolderHeart className="w-3.5 h-3.5 text-pink-400" /> Vault
+                </Link>
+                <Link
+                  to="/creator/live"
+                  className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                >
+                  <Radio className="w-3.5 h-3.5 text-red-500" /> Go Live
+                </Link>
+              </div>
+            </div>
+
+            {/* Fan preview explanation */}
+            <div className="mt-3 pt-2 text-center border-t border-white/5">
+              <p className="text-[11px] text-zinc-500">
+                Notice: Visitors and fans see your subscription offer (KES {creatorPrice.toLocaleString()} / 30 days) and tip options in this space.
+              </p>
+            </div>
+          </div>
+        ) : !isSubscribed ? (
           <div className="bg-black/95 border border-white/15 rounded-3xl p-5 md:p-6 mb-8 shadow-2xl">
             {/* Limited Offer Promo Header */}
             <div className="flex items-center justify-between gap-2 mb-3">
@@ -676,7 +854,7 @@ export default function CreatorProfile() {
               )}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* ── Main Tab Row Matching OnlyFans Screenshots (294 POSTS · 279 MEDIA) ── */}
         <div className="flex border-b border-white/15 mb-6">
@@ -773,6 +951,25 @@ export default function CreatorProfile() {
                       onClick={() => handleMediaClick(item)}
                       className="relative aspect-[4/5] sm:aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 group cursor-pointer shadow-lg hover:border-red-500/50 transition-all select-none"
                     >
+                      {/* Delete button for Owner */}
+                      {isOwner && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePost(item.id);
+                          }}
+                          disabled={deletingPostId === item.id}
+                          className="absolute top-2 left-2 z-30 p-1.5 rounded-lg bg-black/80 hover:bg-red-600 text-white transition-colors border border-white/20"
+                          title="Delete media"
+                        >
+                          {deletingPostId === item.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                          )}
+                        </button>
+                      )}
+
                       {/* Thumbnail / Teaser Background */}
                       <img
                         src={item.url}
@@ -849,8 +1046,9 @@ export default function CreatorProfile() {
             {posts.length > 0 &&
               posts.map((post: any) => {
                 const isPostLocked =
-                  (post.visibility === "subscribers" && !isSubscribed && !post.media_access_granted) ||
-                  (post.is_locked && !post.media_access_granted && !isSubscribed && !unlockedMediaIds.has(post.id));
+                  !isOwner &&
+                  ((post.visibility === "subscribers" && !isSubscribed && !post.media_access_granted) ||
+                  (post.is_locked && !post.media_access_granted && !isSubscribed && !unlockedMediaIds.has(post.id)));
                 return (
                   <div
                     key={post.id}
@@ -875,6 +1073,22 @@ export default function CreatorProfile() {
                           </div>
                         </div>
                       </div>
+
+                      {isOwner && (
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          disabled={deletingPostId === post.id}
+                          className="px-3 py-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer border border-transparent hover:border-red-500/20"
+                          title="Delete post"
+                        >
+                          {deletingPostId === post.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                          ) : (
+                            <Trash2 className="w-4 h-4 text-red-400" />
+                          )}
+                          <span className="text-red-400">Delete</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="px-4 pb-3">
@@ -946,15 +1160,29 @@ export default function CreatorProfile() {
                 </div>
                 <h3 className="text-xl font-black text-white mb-2">No Posts Yet</h3>
                 <p className="text-zinc-400 text-sm max-w-sm mb-6 leading-relaxed">
-                  {creator.name} hasn't published any posts yet. Subscribe to receive instant updates when they drop new content.
+                  {isOwner
+                    ? "You haven't uploaded any posts yet. Start sharing exclusive content with your fans now!"
+                    : `${creator.name} hasn't published any posts yet. Subscribe to receive instant updates when they drop new content.`}
                 </p>
-                {user?.id === creator.id && (
+                {isOwner ? (
                   <Link
-                    to="/dashboard"
-                    className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-600/30 text-xs uppercase tracking-wider"
+                    to="/create-post"
+                    className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-extrabold rounded-xl transition-all shadow-lg shadow-red-600/30 text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer"
                   >
-                    Create Your First Post
+                    <Plus className="w-4 h-4 stroke-[3]" /> Upload Your First Post
                   </Link>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSubscribePrice(creatorPrice);
+                      setSubscribeDuration(30);
+                      setSubscribeTierName("VIP Monthly");
+                      setIsSubscribeOpen(true);
+                    }}
+                    className="px-6 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold rounded-xl transition-all text-xs uppercase tracking-wider cursor-pointer"
+                  >
+                    Subscribe for Updates
+                  </button>
                 )}
               </div>
             )}

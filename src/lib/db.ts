@@ -744,27 +744,79 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
 };
 
 export const deletePost = async (postId: string) => {
-  const { data: post, error: lookupError } = await supabase
-    .from('posts')
-    .select('media_url, media_private')
-    .eq('id', postId)
-    .maybeSingle();
-  if (lookupError) throw lookupError;
-  const { error } = await supabase.from('posts').delete().eq('id', postId);
-  if (error) throw error;
-  if (post?.media_private && post.media_url) {
-    const { error: storageError } = await supabase.storage
-      .from('creator-private-media')
-      .remove([post.media_url]);
-    if (storageError) console.warn('Could not remove private media after deleting the post:', storageError.message);
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId);
+  let mediaUrl: string | null = null;
+
+  // 1. Find the media URL before deletion
+  if (isUuid) {
+    try {
+      const { data: post } = await supabase
+        .from('posts')
+        .select('media_url')
+        .eq('id', postId)
+        .maybeSingle();
+      if (post?.media_url) {
+        mediaUrl = post.media_url;
+      }
+    } catch (lookupErr) {
+      console.warn('Post lookup warning before delete:', lookupErr);
+    }
   }
+
+  // Fallback to cache for media URL if needed
   try {
     const cachedPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
-    localStorage.setItem('tgd_all_posts', JSON.stringify(cachedPosts.filter((item: any) => item.id !== postId)));
+    const cached = cachedPosts.find((item: any) => item.id === postId);
+    if (!mediaUrl && cached?.media_url) {
+      mediaUrl = cached.media_url;
+    }
+    // Remove from local cache immediately
+    const filtered = cachedPosts.filter((item: any) => item.id !== postId);
+    localStorage.setItem('tgd_all_posts', JSON.stringify(filtered));
   } catch (cacheError) {
-    console.warn('Could not remove deleted post from local cache:', cacheError);
+    console.warn('Could not update local posts cache on delete:', cacheError);
   }
-  window.dispatchEvent(new CustomEvent('posts_updated', { detail: { postId } }));
+
+  // 2. Delete the post record from Supabase database
+  if (isUuid) {
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', postId);
+      if (error) console.warn('Supabase post delete warning:', error.message);
+    } catch (dbErr) {
+      console.warn('Supabase post delete exception:', dbErr);
+    }
+  }
+
+  // 3. Delete the media asset (video or image) from Daysman Gad storage
+  if (mediaUrl && !mediaUrl.startsWith('data:')) {
+    try {
+      let storagePath = mediaUrl;
+      if (storagePath.includes('/object/public/Daysman%20Gad/')) {
+        storagePath = decodeURIComponent(storagePath.split('/object/public/Daysman%20Gad/')[1]);
+      } else if (storagePath.includes('/object/public/Daysman Gad/')) {
+        storagePath = decodeURIComponent(storagePath.split('/object/public/Daysman Gad/')[1]);
+      } else if (storagePath.includes('/Daysman%20Gad/')) {
+        storagePath = decodeURIComponent(storagePath.split('/Daysman%20Gad/')[1]);
+      } else if (storagePath.includes('/Daysman Gad/')) {
+        storagePath = decodeURIComponent(storagePath.split('/Daysman Gad/')[1]);
+      } else if (storagePath.includes('/hideaway%20post%20storage/')) {
+        storagePath = decodeURIComponent(storagePath.split('/hideaway%20post%20storage/')[1]);
+      }
+      storagePath = storagePath.split('?')[0].replace(/^\/+/, '');
+
+      if (storagePath.startsWith('posts/') || storagePath.startsWith('private/posts/')) {
+        await supabase.storage.from('Daysman Gad').remove([storagePath]);
+      }
+    } catch (storageError: any) {
+      console.warn('Could not delete media file from storage:', storageError?.message);
+    }
+  }
+
+  // 4. Dispatch events across all open tabs/components
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('posts_updated', { detail: { postId, deleted: true } }));
+    window.dispatchEvent(new CustomEvent('post_deleted', { detail: { postId } }));
+  }
 };
 
 // ========================

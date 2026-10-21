@@ -413,16 +413,21 @@ const UserDashboard = () => {
 
   // Realtime & local post updates
   useEffect(() => {
-    const handlePostsUpdated = () => {
+    const handlePostsUpdated = (e: any) => {
+      const deletedId = e?.detail?.postId;
+      if (deletedId) {
+        setPosts(prev => prev.filter(p => p.id !== deletedId));
+      }
       const fanId = user?.id || '';
       getFanFeed(fanId, 0, LIMIT).then(freshPosts => {
-        if (freshPosts && freshPosts.length > 0) {
+        if (freshPosts) {
           setPosts(freshPosts);
         }
       });
     };
 
     window.addEventListener('posts_updated', handlePostsUpdated);
+    window.addEventListener('post_deleted', handlePostsUpdated);
 
     const channel = supabase
       .channel('public:posts')
@@ -439,10 +444,21 @@ const UserDashboard = () => {
           setPosts(prev => [{ ...newPost, users: creator || { name: 'Creator', avatar: null } }, ...prev.filter(p => p.id !== newPost.id)]);
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'posts' },
+        (payload) => {
+          const deletedId = payload.old?.id;
+          if (deletedId) {
+            setPosts(prev => prev.filter(p => p.id !== deletedId));
+          }
+        }
+      )
       .subscribe();
 
     return () => {
       window.removeEventListener('posts_updated', handlePostsUpdated);
+      window.removeEventListener('post_deleted', handlePostsUpdated);
       supabase.removeChannel(channel);
     };
   }, [user?.id]);

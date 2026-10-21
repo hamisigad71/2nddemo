@@ -84,6 +84,23 @@ const CreatorFeed = () => {
 
   useEffect(() => {
     loadPosts();
+
+    const handleUpdate = (e: any) => {
+      const deletedId = e?.detail?.postId;
+      if (deletedId) {
+        setPosts(prev => prev.filter(p => p.id !== deletedId));
+      } else {
+        loadPosts();
+      }
+    };
+
+    window.addEventListener('posts_updated', handleUpdate);
+    window.addEventListener('post_deleted', handleUpdate);
+
+    return () => {
+      window.removeEventListener('posts_updated', handleUpdate);
+      window.removeEventListener('post_deleted', handleUpdate);
+    };
   }, [loadPosts]);
 
   const handleDelete = async (postId: string) => {
