@@ -179,12 +179,12 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
 
   return (
     <>
-      <article className="bg-zinc-950 border border-white/[0.06] overflow-hidden shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300 hover:border-white/10 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
+      <article className="bg-card border border-border overflow-hidden shadow-sm flex flex-col transition-all duration-300 hover:border-border/80 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
 
         {/* Single creator header */}
         <div
           onClick={() => navigate(profileRoute)}
-          className="relative h-20 sm:h-24 w-full overflow-hidden cursor-pointer group/creator border-b border-white/10 bg-zinc-950 select-none"
+          className="relative h-20 sm:h-24 w-full overflow-hidden cursor-pointer group/creator border-b border-border bg-card select-none"
         >
           <div className="relative z-10 h-full flex items-center justify-between gap-3 px-4 sm:px-5">
             <div className="flex items-center gap-3 min-w-0">
@@ -193,17 +193,17 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
                   src={avatarUrl}
                   alt={creatorName}
                   referrerPolicy="no-referrer"
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-zinc-600/80 shadow-2xl transition-all group-hover/creator:ring-zinc-400"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-border shadow-md transition-all group-hover/creator:ring-primary/50"
                 />
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
               </div>
               <div className="min-w-0">
-                <div className="font-black text-sm sm:text-base text-white flex items-center gap-1 drop-shadow">
+                <div className="font-black text-sm sm:text-base text-foreground flex items-center gap-1 drop-shadow-sm">
                   <span className="truncate">{creatorName}</span>
                   <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" />
                 </div>
-                <p className="text-[11px] sm:text-xs text-zinc-300 font-medium truncate">{creatorHandle}</p>
-                <p className="text-[10px] text-zinc-400 mt-0.5">{timeAgo}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground font-medium truncate">{creatorHandle}</p>
+                <p className="text-[10px] text-muted-foreground/80 mt-0.5">{timeAgo}</p>
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
@@ -276,12 +276,12 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
         )}
 
         {/* ── Actions Bar Matching OnlyFans Screenshot ── */}
-        <div className="px-4 sm:px-5 py-3 flex items-center justify-between bg-zinc-950 border-b border-white/5">
+        <div className="px-4 sm:px-5 py-3 flex items-center justify-between bg-card border-b border-border/50">
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Heart / Like */}
             <button
               onClick={handleToggleLike}
-              className={`transition-all active:scale-75 cursor-pointer ${isLiked ? 'text-red-500' : 'text-zinc-400 hover:text-white'}`}
+              className={`transition-all active:scale-75 cursor-pointer ${isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'}`}
               title="Like"
             >
               <Heart className={`w-6 h-6 transition-transform ${isLiked ? 'fill-red-500 text-red-500 scale-110' : 'group-hover:scale-105'}`} />
@@ -290,7 +290,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
             {/* Comment */}
             <button
               onClick={handleToggleComments}
-              className={`flex items-center gap-1.5 transition-all active:scale-75 cursor-pointer ${showComments ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+              className={`flex items-center gap-1.5 transition-all active:scale-75 cursor-pointer ${showComments ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               title="Comment"
             >
               <MessageCircle className="w-6 h-6" />
@@ -300,9 +300,9 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
             {/* $ SEND TIP pill button */}
             <button
               onClick={() => setIsTipOpen(true)}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white border border-white/15 text-xs font-black tracking-wider uppercase transition-all hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-foreground border border-border text-xs font-black tracking-wider uppercase transition-all hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 cursor-pointer"
             >
-              <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-black">$</span>
+              <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">$</span>
               <span>SEND TIP</span>
             </button>
           </div>
@@ -310,7 +310,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setIsSaved(!isSaved)}
-              className={`p-1.5 rounded-full transition-all active:scale-90 cursor-pointer ${isSaved ? 'text-red-500' : 'text-zinc-400 hover:text-white'}`}
+              className={`p-1.5 rounded-full transition-all active:scale-90 cursor-pointer ${isSaved ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'}`}
               title="Save Post"
             >
               <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
@@ -319,16 +319,16 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
         </div>
 
         {/* ── Like Counter & Caption ── */}
-        <div className="px-4 sm:px-5 pt-3 pb-4 bg-zinc-950 flex flex-col gap-1.5">
-          <div className="text-xs font-black text-white tracking-wide">
+        <div className="px-4 sm:px-5 pt-3 pb-4 bg-card flex flex-col gap-1.5">
+          <div className="text-xs font-black text-foreground tracking-wide">
             {likesCount} {likesCount === 1 ? 'like' : 'likes'}
           </div>
 
           {post.content && (
-            <p className="text-[13px] leading-relaxed text-zinc-300">
+            <p className="text-[13px] leading-relaxed text-foreground/90">
               <span
                 onClick={() => navigate(profileRoute)}
-                className="font-black text-white mr-2 hover:text-red-400 cursor-pointer transition-colors"
+                className="font-black text-foreground mr-2 hover:text-red-500 cursor-pointer transition-colors"
               >
                 {creatorName}
               </span>
@@ -339,7 +339,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
 
         {/* Comments Section */}
         {showComments && (
-          <div className="border-t border-white/[0.06] px-5 py-4 flex flex-col gap-3">
+          <div className="border-t border-border/50 px-5 py-4 flex flex-col gap-3">
             {/* Existing comments */}
             {loadingComments ? (
               <div className="flex justify-center py-3">

@@ -455,7 +455,7 @@ export default function CreatorProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0C] text-foreground pb-24">
+    <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Creator Owner Quick Toggle Bar (only visible to the actual creator) */}
       {isOwner && (
         <div className="bg-gradient-to-r from-red-950 via-zinc-900 to-black text-white px-4 py-2 text-xs font-bold flex items-center justify-between sticky top-0 z-50 border-b border-red-500/30 backdrop-blur-md shadow-lg">
@@ -1097,7 +1097,7 @@ export default function CreatorProfile() {
                 return (
                   <div
                     key={post.id}
-                    className="bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col"
+                    className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col"
                   >
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -1107,13 +1107,13 @@ export default function CreatorProfile() {
                           className="w-11 h-11 rounded-full object-cover ring-2 ring-red-500/30"
                         />
                         <div>
-                          <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                          <div className="font-bold text-sm text-foreground flex items-center gap-1.5">
                             {creator.name}
                             {creator.isVerified && (
                               <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" />
                             )}
                           </div>
-                          <div className="text-xs text-zinc-400">
+                          <div className="text-xs text-muted-foreground">
                             {new Date(post.created_at).toLocaleDateString()}
                           </div>
                         </div>

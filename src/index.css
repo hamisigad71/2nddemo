@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-background: var(--bg);
   --color-foreground: var(--fg);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-fg);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-fg);
   --color-secondary: var(--secondary);
@@ -21,6 +25,8 @@
   :root, .dark {
     --bg: hsl(0 0% 7%);
     --fg: hsl(30 15% 94%);
+    --card: hsl(0 0% 9%);
+    --card-fg: hsl(30 15% 94%);
     --primary: hsl(0 85% 48%);
     --primary-fg: hsl(0 0% 100%);
     --secondary: hsl(15 65% 65%);
@@ -35,24 +41,103 @@
   }
 
   .light {
-    --bg: hsl(0 0% 100%);
-    --fg: hsl(240 10% 4%);
+    --bg: hsl(0 0% 98%);
+    --fg: hsl(240 10% 6%);
+    --card: hsl(0 0% 100%);
+    --card-fg: hsl(240 10% 6%);
     --primary: hsl(346.8 77.2% 49.8%);
     --primary-fg: hsl(0 0% 100%);
     --secondary: hsl(240 5% 96%);
     --secondary-fg: hsl(240 6% 10%);
-    --muted: hsl(240 5% 96%);
+    --muted: hsl(240 5% 94%);
     --muted-fg: hsl(240 4% 46%);
     --accent: hsl(240 5% 96%);
     --accent-fg: hsl(240 6% 10%);
-    --border: hsl(240 6% 90%);
-    --input: hsl(240 6% 90%);
+    --border: hsl(240 6% 88%);
+    --input: hsl(240 6% 88%);
     --ring: hsl(346.8 77.2% 49.8%);
   }
 
   body {
     @apply bg-background text-foreground;
     scroll-behavior: smooth;
+  }
+}
+
+/* ── Light Mode Surface & Card Rules Across All Components ── */
+.light {
+  /* 1. Global Card and Container Backgrounds */
+  .bg-zinc-950,
+  .bg-zinc-900,
+  .bg-black,
+  .bg-\[\#0A0A0C\],
+  .bg-\[\#100F12\],
+  .bg-\[\#0D0E12\],
+  .bg-\[\#19171B\],
+  .bg-\[\#111115\],
+  .bg-\[\#1b0809\]\/90 {
+    background-color: var(--card) !important;
+    color: var(--card-fg) !important;
+  }
+
+  /* 2. Semi-transparent backdrop cards & overlays */
+  .bg-zinc-900\/60,
+  .bg-zinc-950\/60,
+  .bg-zinc-900\/90,
+  .bg-zinc-950\/90,
+  .bg-\[\#0D0E12\]\/90,
+  .bg-\[\#0D0E12\]\/95,
+  .bg-\[\#100F12\]\/95,
+  .bg-zinc-900\/80,
+  .bg-zinc-950\/80 {
+    background-color: color-mix(in srgb, var(--card) 95%, transparent) !important;
+    color: var(--card-fg) !important;
+  }
+
+  /* 3. Borders */
+  .border-white\/\[0\.06\],
+  .border-white\/\[0\.08\],
+  .border-white\/\[0\.09\],
+  .border-white\/5,
+  .border-white\/10,
+  .border-white\/15,
+  .border-white\/20,
+  .border-white\/30,
+  .border-zinc-800,
+  .border-zinc-700 {
+    border-color: var(--border) !important;
+  }
+
+  /* 4. Text contrast for light theme */
+  .text-white:not(.bg-primary *, .bg-red-600 *, .bg-red-500 *, .bg-emerald-500 *, .bg-emerald-600 *, .bg-blue-600 *, .btn-solid *),
+  .text-zinc-100,
+  .text-zinc-200,
+  .text-zinc-300 {
+    color: var(--fg) !important;
+  }
+
+  .text-zinc-400,
+  .text-zinc-500 {
+    color: var(--muted-fg) !important;
+  }
+
+  /* 5. Inputs in light mode */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    color: var(--fg);
+  }
+
+  /* 6. Keep buttons with red / primary backgrounds readable */
+  .bg-primary,
+  .bg-red-600,
+  .bg-red-500,
+  .bg-emerald-500,
+  .bg-emerald-600 {
+    color: #ffffff !important;
+    * {
+      color: inherit;
+    }
   }
 }
 

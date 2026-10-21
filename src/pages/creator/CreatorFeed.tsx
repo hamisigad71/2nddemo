@@ -219,7 +219,7 @@ const CreatorFeed = () => {
       ) : (
         <div className="space-y-6">
           {posts.map((post, index) => (
-            <article key={post.id} className="bg-zinc-950 border border-white/[0.06] overflow-hidden shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300 hover:border-white/10 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
+            <article key={post.id} className="bg-card border border-border overflow-hidden shadow-sm flex flex-col transition-all duration-300 hover:border-border/80 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
               {/* Post Header */}
               <div className="flex items-center justify-between px-5 py-4">
                 <div className="flex items-center gap-3">
