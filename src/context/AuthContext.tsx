@@ -51,38 +51,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    // Listen to normal auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const isOk = await verifyUserStatus(session.user.id);
-        if (isOk) setUser(session.user);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-      
-      // Ensure user profile exists in public.users on sign-in
-      if (event === 'SIGNED_IN' && session?.user) {
-        const storedRole = localStorage.getItem('pendingAuthRole');
-        const metadata = session.user.user_metadata || {};
-        const role = storedRole || metadata.role || 'subscriber';
-        const name = metadata.full_name || metadata.name || session.user.email?.split('@')[0] || 'User';
-        const phone = metadata.phone || '';
-        const avatar = metadata.avatar_url || metadata.picture || null;
-
-        try {
-          await createUserProfile(session.user.id, {
-            name,
-            email: session.user.email,
-            avatar,
-            phone,
-            role
-          });
-        } catch (err) {
-          console.error('Error ensuring profile after sign-in:', err);
+    // Listen to normal auth state changes.
+    // NOTE: Supabase recommends not awaiting other Supabase calls directly inside
+    // this callback (it runs while the auth lock is held), so DB work is deferred.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setTimeout(async () => {
+        if (session?.user) {
+          const isOk = await verifyUserStatus(session.user.id);
+          if (isOk) setUser(session.user);
+        } else {
+          setUser(null);
         }
-        if (storedRole) localStorage.removeItem('pendingAuthRole');
-      }
+        setLoading(false);
+
+        // Ensure user profile exists in public.users on sign-in
+        if (event === 'SIGNED_IN' && session?.user) {
+          const storedRole = localStorage.getItem('pendingAuthRole');
+          const metadata = session.user.user_metadata || {};
+          const role = storedRole || metadata.role || 'subscriber';
+          const name = metadata.full_name || metadata.name || session.user.email?.split('@')[0] || 'User';
+          const phone = metadata.phone || '';
+          const avatar = metadata.avatar_url || metadata.picture || null;
+
+          try {
+            await createUserProfile(session.user.id, {
+              name,
+              email: session.user.email,
+              avatar,
+              phone,
+              role
+            });
+          } catch (err) {
+            console.error('Error ensuring profile after sign-in:', err);
+          }
+          if (storedRole) localStorage.removeItem('pendingAuthRole');
+        }
+      }, 0);
     });
 
     return () => {

@@ -11,9 +11,9 @@ export const PLATFORM_FEE = 0.30;
 
 export const createUserProfile = async (uid: string, data: any) => {
   // Check by uid first (same auth session)
-  const { data: byUid } = await supabase.from('users').select('uid').eq('uid', uid).single();
+  const { data: byUid } = await supabase.from('users').select('uid, role, created_at').eq('uid', uid).maybeSingle();
   if (byUid) {
-    if (data.role === 'creator') {
+    if (data.role === 'creator' || byUid.role === 'creator') {
       try {
         await supabase.from('creator_profiles').upsert({
           user_id: uid,
@@ -22,15 +22,23 @@ export const createUserProfile = async (uid: string, data: any) => {
           location: 'Nairobi, Kenya',
           cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
           tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
-        }, { onConflict: 'user_id' });
+        }, { onConflict: 'user_id', ignoreDuplicates: true });
       } catch {
         // non-fatal if table not configured
       }
 
-      // Trigger notification for new creator joining
-      notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
-        console.warn('Could not dispatch new creator notification:', err);
-      });
+      // Announce only once, and only for accounts created in the last 24h
+      // (the row is usually pre-created by the on_auth_user_created DB trigger).
+      const flagKey = `tgd_new_creator_notified_${uid}`;
+      const createdAt = byUid.created_at ? new Date(byUid.created_at).getTime() : 0;
+      const isFresh = Date.now() - createdAt < 24 * 60 * 60 * 1000;
+      const alreadyNotified = typeof window !== 'undefined' && localStorage.getItem(flagKey);
+      if (isFresh && !alreadyNotified) {
+        if (typeof window !== 'undefined') localStorage.setItem(flagKey, '1');
+        notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
+          console.warn('Could not dispatch new creator notification:', err);
+        });
+      }
     }
     return;
   }
@@ -55,6 +63,13 @@ export const createUserProfile = async (uid: string, data: any) => {
     avatar: initialAvatar,
     phone: data.phone,
     role: data.role || 'subscriber',
+  }).then(({ error }) => {
+    // Surface failures instead of swallowing them. The DB trigger
+    // `on_auth_user_created` (supabase/sync_auth_users_to_profiles.sql) is the
+    // source of truth; this client insert is a best-effort fallback.
+    if (error && error.code !== '23505') {
+      console.error('createUserProfile: users insert failed:', error.message);
+    }
   });
 
   if (data.role === 'creator') {
@@ -2260,7 +2275,7 @@ export const getAdminUsers = async () => {
       id: u.uid,
       name: u.name || 'Anonymous User',
       email: u.email || 'No email',
-      type: u.role === 'creator' ? 'creator' : 'fan',
+      type: String(u.role || '').includes('creator') ? 'creator' : 'fan',
       subs: subsMap.get(u.uid) || 0,
       spent: `KES ${(spentMap.get(u.uid) || 0).toLocaleString()}`,
       status: u.status || 'active',
