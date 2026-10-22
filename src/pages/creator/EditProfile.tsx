@@ -10,7 +10,7 @@ import CreatePostForm from '../../components/CreatePostForm';
 import { resolveUserAvatar, compressAvatarImage } from '../../lib/avatar';
 
 const EditProfile = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState<string>('profile');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   
