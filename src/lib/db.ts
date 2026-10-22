@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
-import { resolveUserAvatar, getDefaultAvatar } from './avatar';
+import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage } from './avatar';
 
 export const PLATFORM_FEE = 0.30;
 
@@ -94,8 +94,39 @@ export const createUserProfile = async (uid: string, data: any) => {
 };
 
 export const getUserProfile = async (uid: string) => {
-  const { data } = await supabase.from('users').select('*').eq('uid', uid).single();
-  return data;
+  if (!uid) return null;
+  try {
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('*')
+      .eq('uid', uid)
+      .maybeSingle();
+
+    // If user's avatar is missing in users table, check creator_profiles
+    if (!userRow?.avatar) {
+      const { data: creatorMeta } = await supabase
+        .from('creator_profiles')
+        .select('*')
+        .eq('user_id', uid)
+        .maybeSingle();
+
+      if (creatorMeta) {
+        return {
+          ...(userRow || {}),
+          uid,
+          name: userRow?.name || creatorMeta.display_name || 'Creator',
+          avatar: creatorMeta.avatar_url || creatorMeta.avatar || userRow?.avatar || null,
+          bio: userRow?.bio || creatorMeta.bio,
+          cover_image: userRow?.cover_image || creatorMeta.cover_image,
+        };
+      }
+    }
+
+    return userRow;
+  } catch (err) {
+    console.warn('getUserProfile error:', err);
+    return null;
+  }
 };
 
 export const isVideoMediaUrl = (url?: string | null): boolean => {
@@ -116,33 +147,45 @@ export const getCreatorStorageAssets = async (creatorId: string): Promise<{ avat
   let avatar: string | null = null;
   let cover: string | null = null;
 
-  try {
-    const { data: avFiles } = await supabase.storage
-      .from('Daysman Gad')
-      .list(`avatars/${creatorId}`, { limit: 10, sortBy: { column: 'name', order: 'desc' } });
+  const storageBuckets = ['Daysman Gad', 'avatars', 'media'];
+  const avatarPrefixes = [`avatars/${creatorId}`, `avatars/users/${creatorId}`];
 
-    if (avFiles && avFiles.length > 0) {
-      const validFile = avFiles.find(f => f.name && !f.name.startsWith('.') && !f.name.includes('emptyFolderPlaceholder'));
-      if (validFile) {
-        const { data } = supabase.storage.from('Daysman Gad').getPublicUrl(`avatars/${creatorId}/${validFile.name}`);
-        if (data?.publicUrl) avatar = data.publicUrl;
-      }
+  for (const bucket of storageBuckets) {
+    if (avatar) break;
+    for (const prefix of avatarPrefixes) {
+      if (avatar) break;
+      try {
+        const { data: avFiles } = await supabase.storage
+          .from(bucket)
+          .list(prefix, { limit: 10, sortBy: { column: 'name', order: 'desc' } });
+
+        if (avFiles && avFiles.length > 0) {
+          const validFile = avFiles.find(f => f.name && !f.name.startsWith('.') && !f.name.includes('emptyFolderPlaceholder'));
+          if (validFile) {
+            const { data } = supabase.storage.from(bucket).getPublicUrl(`${prefix}/${validFile.name}`);
+            if (data?.publicUrl) avatar = data.publicUrl;
+          }
+        }
+      } catch {}
     }
-  } catch {}
+  }
 
-  try {
-    const { data: covFiles } = await supabase.storage
-      .from('Daysman Gad')
-      .list(`covers/${creatorId}`, { limit: 10, sortBy: { column: 'name', order: 'desc' } });
+  for (const bucket of storageBuckets) {
+    if (cover) break;
+    try {
+      const { data: covFiles } = await supabase.storage
+        .from(bucket)
+        .list(`covers/${creatorId}`, { limit: 10, sortBy: { column: 'name', order: 'desc' } });
 
-    if (covFiles && covFiles.length > 0) {
-      const validFile = covFiles.find(f => f.name && !f.name.startsWith('.') && !f.name.includes('emptyFolderPlaceholder'));
-      if (validFile) {
-        const { data } = supabase.storage.from('Daysman Gad').getPublicUrl(`covers/${creatorId}/${validFile.name}`);
-        if (data?.publicUrl) cover = data.publicUrl;
+      if (covFiles && covFiles.length > 0) {
+        const validFile = covFiles.find(f => f.name && !f.name.startsWith('.') && !f.name.includes('emptyFolderPlaceholder'));
+        if (validFile) {
+          const { data } = supabase.storage.from(bucket).getPublicUrl(`covers/${creatorId}/${validFile.name}`);
+          if (data?.publicUrl) cover = data.publicUrl;
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   const result = { avatar, cover };
   if (avatar || cover) {
@@ -152,12 +195,26 @@ export const getCreatorStorageAssets = async (creatorId: string): Promise<{ avat
 };
 
 export const updateUserProfile = async (uid: string, data: any) => {
+  if (!uid) return;
   try {
-    const { error } = await supabase
+    // 1. Try update on users table
+    const { data: updatedRows, error } = await supabase
       .from('users')
       .update(data)
-      .eq('uid', uid);
+      .eq('uid', uid)
+      .select('uid');
     
+    // If no row was updated (e.g. user row does not exist yet in users table), upsert it!
+    if (!error && (!updatedRows || updatedRows.length === 0)) {
+      const { error: upsertErr } = await supabase
+        .from('users')
+        .upsert({ uid, ...data }, { onConflict: 'uid' });
+      if (upsertErr) {
+        console.warn('users upsert note:', upsertErr.message);
+      }
+      return;
+    }
+
     if (!error) return;
 
     // If some columns like 'bio' or 'cover_image' are not in 'users' table yet, retry with safe core columns
@@ -165,14 +222,20 @@ export const updateUserProfile = async (uid: string, data: any) => {
       const safeData: any = {};
       if (data.name !== undefined) safeData.name = data.name;
       if (data.avatar !== undefined) safeData.avatar = data.avatar;
+      if (data.avatar_url !== undefined) safeData.avatar_url = data.avatar_url;
       if (data.phone !== undefined) safeData.phone = data.phone;
       if (data.role !== undefined) safeData.role = data.role;
       if (data.email !== undefined) safeData.email = data.email;
 
-      const { error: retryError } = await supabase
+      const { data: retryRows, error: retryError } = await supabase
         .from('users')
         .update(safeData)
-        .eq('uid', uid);
+        .eq('uid', uid)
+        .select('uid');
+        
+      if (!retryError && (!retryRows || retryRows.length === 0)) {
+        await supabase.from('users').upsert({ uid, ...safeData }, { onConflict: 'uid' });
+      }
       if (retryError) {
         console.warn('Retry updating user profile notice:', retryError.message);
       }
@@ -257,26 +320,52 @@ export const deleteUserAccount = async (uid: string): Promise<boolean> => {
 // ========================
 
 export const uploadFileToSupabase = async (file: File, bucket: string, path: string): Promise<string | null> => {
-  const bucketsToTry = Array.from(new Set([bucket, 'Daysman Gad', 'media', 'avatars', 'public', 'posts'].filter(Boolean)));
-  
-  for (const b of bucketsToTry) {
+  let fileToUpload = file;
+  let compactFallbackDataUrl = '';
+
+  // 1. Optimize & compress avatar/profile images client-side before upload
+  if (file.type && file.type.startsWith('image/')) {
     try {
-      const { error } = await supabase.storage.from(b).upload(path, file, { upsert: true });
-      if (!error) {
-        const { data } = supabase.storage.from(b).getPublicUrl(path);
-        if (data?.publicUrl) return data.publicUrl;
-      }
-    } catch (err: any) {
-      if (err?.message?.includes('50MB')) throw err;
+      const isAvatar = path.includes('avatars') || path.includes('verification');
+      const maxDim = isAvatar ? 512 : 1200;
+      const quality = isAvatar ? 0.82 : 0.85;
+      const compressed = await compressAvatarImage(file, maxDim, quality);
+      fileToUpload = compressed.file;
+      compactFallbackDataUrl = compressed.dataUrl;
+    } catch (e) {
+      console.warn('Avatar pre-compression notice:', e);
     }
   }
 
-  // Resilient fallback: Convert image to persistent Base64 Data URL (guaranteed never to expire or break on refresh)
+  const cleanPath = path.replace(/^\/+/, '').replace(/\s+/g, '_');
+  const bucketsToTry = Array.from(new Set([bucket, 'Daysman Gad', 'avatars', 'media', 'public', 'posts'].filter(Boolean)));
+  
+  for (const b of bucketsToTry) {
+    try {
+      const { error } = await supabase.storage.from(b).upload(cleanPath, fileToUpload, {
+        upsert: true,
+        contentType: fileToUpload.type || 'image/jpeg'
+      });
+      if (!error) {
+        const { data } = supabase.storage.from(b).getPublicUrl(cleanPath);
+        if (data?.publicUrl) return data.publicUrl;
+      } else {
+        console.warn(`Storage upload notice (${b}):`, error.message);
+      }
+    } catch (err: any) {
+      if (err?.message?.includes('50MB')) throw err;
+      console.warn(`Storage exception (${b}):`, err?.message || err);
+    }
+  }
+
+  // Resilient fallback: Return compact data URL (< 50KB) guaranteed to save into DB without payload limit errors
+  if (compactFallbackDataUrl) return compactFallbackDataUrl;
+
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
     reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToUpload);
   });
 };
 
@@ -1122,12 +1211,17 @@ export const getComments = async (postId: string) => {
   // Fetch user info for each commenter separately (no FK defined)
   const withUsers = await Promise.all(
     data.map(async (comment: any) => {
-      const { data: userInfo } = await supabase
-        .from('users')
-        .select('name, avatar')
-        .eq('uid', comment.user_id)
-        .maybeSingle();
-      return { ...comment, users: userInfo || null };
+      let userInfo: any = null;
+      try {
+        userInfo = await getUserProfile(comment.user_id);
+      } catch {}
+      return { 
+        ...comment, 
+        users: userInfo ? { 
+          name: userInfo.name, 
+          avatar: userInfo.avatar 
+        } : null 
+      };
     })
   );
   return withUsers;

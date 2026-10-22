@@ -7,7 +7,7 @@ import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSu
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import CreatePostForm from '../../components/CreatePostForm';
-import { resolveUserAvatar } from '../../lib/avatar';
+import { resolveUserAvatar, compressAvatarImage } from '../../lib/avatar';
 
 const EditProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -150,15 +150,21 @@ const EditProfile = () => {
     { id: 'preferences', label: 'Preferences', icon: Sliders, requiresAttention: false },
   ];
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const { file: compressedFile, dataUrl } = await compressAvatarImage(file, 512, 0.82);
+        setAvatarFile(compressedFile);
+        setAvatarPreview(dataUrl);
+      } catch {
+        setAvatarFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAvatarPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -319,7 +325,7 @@ const EditProfile = () => {
         const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const path = `avatars/${user.id}/${Date.now()}_${cleanName}`;
         const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', path);
-        if (uploaded) {
+        if (uploaded && !uploaded.startsWith('blob:')) {
           finalAvatarUrl = uploaded;
         }
       }
@@ -329,14 +335,23 @@ const EditProfile = () => {
         const cleanName = bannerFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const path = `covers/${user.id}/${Date.now()}_${cleanName}`;
         const uploaded = await uploadFileToSupabase(bannerFile, 'Daysman Gad', path);
-        if (uploaded) {
+        if (uploaded && !uploaded.startsWith('blob:')) {
           finalCoverUrl = uploaded;
         }
       }
 
       // Guarantee no temporary blob URLs get saved to storage or database
       if (finalAvatarUrl && finalAvatarUrl.startsWith('blob:')) {
-        finalAvatarUrl = profileData.avatarUrl || '';
+        if (avatarFile) {
+          try {
+            const comp = await compressAvatarImage(avatarFile, 512, 0.82);
+            finalAvatarUrl = comp.dataUrl;
+          } catch {
+            finalAvatarUrl = profileData.avatarUrl || '';
+          }
+        } else {
+          finalAvatarUrl = profileData.avatarUrl || '';
+        }
       }
       if (finalCoverUrl && finalCoverUrl.startsWith('blob:')) {
         finalCoverUrl = profileData.coverImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';

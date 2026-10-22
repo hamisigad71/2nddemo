@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getUserProfile, updateUserProfile, deleteUserAccount, uploadFileToSupabase } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
-import { resolveUserAvatar, DEFAULT_AVATAR } from '../../lib/avatar';
+import { resolveUserAvatar, DEFAULT_AVATAR, compressAvatarImage } from '../../lib/avatar';
 
 const UserSettings = () => {
   const { user, logout } = useAuth();
@@ -79,17 +79,20 @@ const UserSettings = () => {
     });
   }, [user]);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size must be less than 5MB');
-        return;
+      try {
+        const { file: compressedFile, dataUrl } = await compressAvatarImage(file, 512, 0.82);
+        setAvatarFile(compressedFile);
+        setAvatarPreview(dataUrl);
+        toast.info('New profile photo selected. Click "Save Profile" to apply changes.');
+      } catch {
+        setAvatarFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setAvatarPreview(previewUrl);
+        toast.info('New profile photo selected. Click "Save Profile" to apply changes.');
       }
-      setAvatarFile(file);
-      const previewUrl = URL.createObjectURL(file);
-      setAvatarPreview(previewUrl);
-      toast.info('New profile photo selected. Click "Save Profile" to apply changes.');
     }
   };
 
@@ -161,10 +164,24 @@ const UserSettings = () => {
         const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const path = `avatars/users/${user.id}/${Date.now()}_${cleanName}`;
         const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', path);
-        if (uploaded) {
+        if (uploaded && !uploaded.startsWith('blob:')) {
           finalAvatarUrl = uploaded;
         }
         setUploadingAvatar(false);
+      }
+
+      // Guarantee no local temporary blob URLs get saved to database
+      if (finalAvatarUrl && finalAvatarUrl.startsWith('blob:')) {
+        if (avatarFile) {
+          try {
+            const comp = await compressAvatarImage(avatarFile, 512, 0.82);
+            finalAvatarUrl = comp.dataUrl;
+          } catch {
+            finalAvatarUrl = null;
+          }
+        } else {
+          finalAvatarUrl = null;
+        }
       }
 
       const fullPhone = phone

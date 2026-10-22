@@ -21,6 +21,9 @@ export const getDefaultAvatar = (name?: string | null): string => {
   return DEFAULT_AVATAR;
 };
 
+// Supabase storage public URL prefix for fallback relative storage paths
+const SUPABASE_STORAGE_URL = 'https://gitkzykasegtygoybjhq.supabase.co/storage/v1/object/public/Daysman%20Gad';
+
 /**
  * Validates whether an avatar URL is a valid user-set photo or should fall back to default.
  */
@@ -31,7 +34,97 @@ export const resolveUserAvatar = (avatarUrl?: string | null, name?: string | nul
     if (cleanUrl.startsWith('blob:') || cleanUrl.includes('photo-1534528741775-53994a69daeb') || cleanUrl.includes('pravatar.cc')) {
       return getDefaultAvatar(name);
     }
+    // If it's a relative storage path (e.g. avatars/... or covers/...), convert to full public URL
+    if (cleanUrl.startsWith('avatars/') || cleanUrl.startsWith('covers/') || cleanUrl.startsWith('escort-verification/') || cleanUrl.startsWith('posts/')) {
+      return `${SUPABASE_STORAGE_URL}/${cleanUrl}`;
+    }
     return cleanUrl;
   }
   return getDefaultAvatar(name);
+};
+
+/**
+ * Client-side avatar image compressor.
+ * Downscales phone camera/high-res photos (5MB - 12MB) to max 512x512 JPEG (~30-50KB).
+ * This ensures:
+ * 1. Storage uploads are ultra-fast and reliable on any mobile/desktop connection.
+ * 2. If storage fails, fallback data URI fits within PostgreSQL and Supabase Auth payload limits.
+ */
+export const compressAvatarImage = async (
+  file: File,
+  maxDimension = 512,
+  quality = 0.82
+): Promise<{ file: File; dataUrl: string }> => {
+  return new Promise((resolve) => {
+    // If not an image, return original file
+    if (!file.type || !file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ file, dataUrl: (reader.result as string) || '' });
+      reader.onerror = () => resolve({ file, dataUrl: '' });
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Scale down preserving aspect ratio
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = Math.max(width, 1);
+        canvas.height = Math.max(height, 1);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return resolve({ file, dataUrl: (e.target?.result as string) || '' });
+        }
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Convert to compact dataUrl (~25-50KB)
+        let compactDataUrl = '';
+        try {
+          compactDataUrl = canvas.toDataURL('image/jpeg', quality);
+        } catch {
+          compactDataUrl = (e.target?.result as string) || '';
+        }
+
+        // Convert to Blob / File
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File(
+                [blob],
+                file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+                { type: 'image/jpeg', lastModified: Date.now() }
+              );
+              resolve({ file: compressedFile, dataUrl: compactDataUrl });
+            } else {
+              resolve({ file, dataUrl: compactDataUrl });
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => resolve({ file, dataUrl: (e.target?.result as string) || '' });
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve({ file, dataUrl: '' });
+    reader.readAsDataURL(file);
+  });
 };
