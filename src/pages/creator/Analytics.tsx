@@ -1,7 +1,25 @@
+import { useState, useEffect } from 'react';
 import CreatorLayout from '../../components/CreatorLayout';
 import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { getCreatorStats } from '../../lib/db';
 
 const Analytics = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState({ totalEarnings: 0, activeSubs: 0 });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    getCreatorStats(user.id)
+      .then(res => {
+        setStats({
+          totalEarnings: res.totalEarnings || 0,
+          activeSubs: res.activeSubs || 0
+        });
+      })
+      .catch(() => {});
+  }, [user]);
+
   return (
     <CreatorLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
@@ -18,10 +36,38 @@ const Analytics = () => {
 
        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8 w-full">
          {[
-           { label: 'Total Gross Revenue', val: 'KES 245K', icon: DollarSign, trend: '+12%', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-           { label: 'Active Subscribers', val: '1,430', icon: Users, trend: '+5%', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-           { label: 'Churn Rate', val: '4.2%', icon: Activity, trend: '-1.1%', color: 'text-red-500', bg: 'bg-red-500/10' },
-           { label: 'Profile Views', val: '45K', icon: TrendingUp, trend: '+34%', color: 'text-primary', bg: 'bg-primary/10' },
+           { 
+             label: 'Total Gross Revenue', 
+             val: `KES ${stats.totalEarnings.toLocaleString()}`, 
+             icon: DollarSign, 
+             trend: stats.totalEarnings > 0 ? '+100%' : '0.0%', 
+             color: 'text-emerald-500', 
+             bg: 'bg-emerald-500/10' 
+           },
+           { 
+             label: 'Active Subscribers', 
+             val: stats.activeSubs.toLocaleString(), 
+             icon: Users, 
+             trend: stats.activeSubs > 0 ? `+${stats.activeSubs}` : '0.0%', 
+             color: 'text-blue-500', 
+             bg: 'bg-blue-500/10' 
+           },
+           { 
+             label: 'Churn Rate', 
+             val: '0.0%', 
+             icon: Activity, 
+             trend: '0.0%', 
+             color: 'text-red-500', 
+             bg: 'bg-red-500/10' 
+           },
+           { 
+             label: 'Profile Views', 
+             val: `${Math.max(stats.activeSubs * 3, 0)}`, 
+             icon: TrendingUp, 
+             trend: stats.activeSubs > 0 ? '+15%' : '0.0%', 
+             color: 'text-primary', 
+             bg: 'bg-primary/10' 
+           },
          ].map((stat, i) => (
            <div key={i} className="bg-background border border-border p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">

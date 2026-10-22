@@ -34,6 +34,7 @@ import {
   checkUserSubscription,
   deletePost,
   getUserProfile,
+  getCreatorSubscriberCount,
 } from "../../lib/db";
 import { getDefaultAvatar } from "../../lib/avatar";
 import { useAuth } from "../../context/AuthContext";
@@ -60,6 +61,7 @@ export default function CreatorProfile() {
   const [mediaFilter, setMediaFilter] = useState<"all" | "photo" | "video">(
     "all",
   );
+  const [subscriberCount, setSubscriberCount] = useState<number>(0);
 
   // Subscription status
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -125,6 +127,18 @@ export default function CreatorProfile() {
 
         setCreator(profile);
         setSubscribePrice(profile.price_hr || 1000);
+
+        // Fetch real active subscriber count
+        try {
+          const count = await getCreatorSubscriberCount(id);
+          if (isMounted) {
+            setSubscriberCount(count);
+          }
+        } catch {
+          if (isMounted) {
+            setSubscriberCount((profile as any).total_subscribers || 0);
+          }
+        }
 
         // Fetch creator posts
         const creatorPosts = await getPostsByCreator(id, user?.id);
@@ -587,16 +601,22 @@ export default function CreatorProfile() {
                   Active now
                 </span>
               </p>
-              {creator.age && (
-                <p className="text-xs text-zinc-500 mt-1 flex items-center gap-2">
-                  <span>{creator.age} yrs</span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-red-500" />{" "}
-                    {creator.location}
-                  </span>
-                </p>
-              )}
+              <div className="text-xs text-zinc-500 mt-1 flex items-center gap-2 flex-wrap">
+                {creator.age && (
+                  <>
+                    <span>{creator.age} yrs</span>
+                    <span>•</span>
+                  </>
+                )}
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-red-500" />{" "}
+                  {creator.location}
+                </span>
+                <span>•</span>
+                <span className="text-zinc-300 font-semibold">
+                  {subscriberCount.toLocaleString()} {subscriberCount === 1 ? "subscriber" : "subscribers"}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -735,10 +755,12 @@ export default function CreatorProfile() {
 
             {/* Secondary Toolbar: Edit Profile, Vault, Go Live */}
             <div className="flex items-center justify-between pt-3 border-t border-white/10 flex-wrap gap-2 text-xs">
-              <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
+              <div className="flex items-center gap-2 text-zinc-400 text-[11px] flex-wrap">
                 <span>Fan Price: <strong className="text-white font-bold">KES {creatorPrice.toLocaleString()}/mo</strong></span>
                 <span>•</span>
                 <span>{posts.length} {posts.length === 1 ? "Post" : "Posts"} published</span>
+                <span>•</span>
+                <span><strong className="text-white font-bold">{subscriberCount.toLocaleString()}</strong> {subscriberCount === 1 ? "Subscriber" : "Subscribers"}</span>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
@@ -1412,9 +1434,11 @@ export default function CreatorProfile() {
               </div>
               <div className="flex items-center gap-2 text-zinc-300">
                 <span className="font-extrabold text-white text-base">
-                  {((creator.rating || 4.9) * 2.5).toFixed(1)}k
+                  {subscriberCount.toLocaleString()}
                 </span>
-                <span className="text-zinc-500">Subscribers</span>
+                <span className="text-zinc-500">
+                  {subscriberCount === 1 ? "Subscriber" : "Subscribers"}
+                </span>
               </div>
             </div>
           </div>
@@ -1452,6 +1476,7 @@ export default function CreatorProfile() {
             setIsSubscribed(true);
             setSubscriptionTier(sub.tierName);
             setSubscriptionExpiresAt(sub.expiresAt);
+            setSubscriberCount((prev) => prev + 1);
             if (id) {
               getPostsByCreator(id, user?.id).then((updatedPosts) =>
                 setPosts(updatedPosts.filter((post: any) => post.status !== "draft")),

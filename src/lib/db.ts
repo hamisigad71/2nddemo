@@ -1801,6 +1801,7 @@ export const getCreatorProfile = async (id: string) => {
         gallery: localCreator?.gallery || creatorMeta?.gallery || [],
         promo_discount: localCreator?.promo_discount ?? creatorMeta?.promo_discount ?? 50,
         promo_active: localCreator?.promo_active ?? (creatorMeta?.promo_active !== false),
+        total_subscribers: creatorMeta?.total_subscribers ?? localCreator?.total_subscribers ?? 0,
         isEscort: false,
       };
     }
@@ -1826,6 +1827,7 @@ export const getCreatorProfile = async (id: string) => {
       gallery: [],
       promo_discount: 50,
       promo_active: true,
+      total_subscribers: localCreator.total_subscribers || 0,
       isEscort: false,
     };
   }
@@ -1883,9 +1885,56 @@ export const getCreatorProfile = async (id: string) => {
   return null;
 };
 
+/**
+ * Get accurate, live active subscriber count for any creator.
+ * Queries Supabase subscriptions table, with fallback to creator_profiles.total_subscribers
+ * and local storage, ensuring brand new creators show 0 instead of fake numbers.
+ */
+export const getCreatorSubscriberCount = async (creatorId: string): Promise<number> => {
+  if (!creatorId) return 0;
+
+  // 1. Query Supabase subscriptions table for active subscriptions
+  try {
+    const { count, error } = await supabase
+      .from('subscriptions')
+      .select('*', { count: 'exact', head: true })
+      .eq('creator_id', creatorId)
+      .eq('status', 'active');
+
+    if (!error && typeof count === 'number') {
+      return count;
+    }
+  } catch (err) {
+    console.warn('Error querying subscriptions table for count:', err);
+  }
+
+  // 2. Fallback to creator_profiles.total_subscribers
+  try {
+    const { data } = await supabase
+      .from('creator_profiles')
+      .select('total_subscribers')
+      .eq('user_id', creatorId)
+      .maybeSingle();
+
+    if (data?.total_subscribers !== undefined && data?.total_subscribers !== null) {
+      return Number(data.total_subscribers) || 0;
+    }
+  } catch {}
+
+  // 3. Fallback to local storage cached creator profile
+  try {
+    const local = getStoredCreatorProfile(creatorId);
+    if (local?.total_subscribers !== undefined && local?.total_subscribers !== null) {
+      return Number(local.total_subscribers) || 0;
+    }
+  } catch {}
+
+  return 0;
+};
+
 export const HARDCODED_DISCOVER_CREATORS = [
-  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "12k followers", price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
-  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "9.5k followers", price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
+  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "12k followers", subscribersCount: 12000, price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
+  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "9.5k followers", subscribersCount: 9500, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
 ];
 
 export const getDiscoverCreators = async () => {
@@ -2011,6 +2060,24 @@ export const getDiscoverCreators = async () => {
       }
     } catch {}
 
+    // Query active subscriptions count per creator for live accurate subscriber stats
+    const creatorSubCounts = new Map<string, number>();
+    try {
+      const { data: activeSubs } = await supabase
+        .from('subscriptions')
+        .select('creator_id')
+        .eq('status', 'active');
+      if (activeSubs && activeSubs.length > 0) {
+        activeSubs.forEach((s: any) => {
+          if (s.creator_id) {
+            creatorSubCounts.set(s.creator_id, (creatorSubCounts.get(s.creator_id) || 0) + 1);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Could not query active subscriptions in getDiscoverCreators:', err);
+    }
+
     // Format all real creators with resilient storage assets
     const realCreators = await Promise.all(creatorUsers.map(async (u) => {
       const p = profileMap.get(u.uid);
@@ -2032,7 +2099,7 @@ export const getDiscoverCreators = async () => {
         || (postStats?.latestCover && !isVideoMediaUrl(postStats.latestCover) && !postStats.latestCover.startsWith('blob:') && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null);
 
       const cover = rawCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
-      const followers = p?.total_subscribers || (hasPosts ? Math.floor(12 + postStats!.count * 7) : 0);
+      const realSubs = creatorSubCounts.get(u.uid) ?? (p?.total_subscribers || 0);
 
       return {
         id: u.uid,
@@ -2040,7 +2107,8 @@ export const getDiscoverCreators = async () => {
         handle: `@${creatorName.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
         category: p?.niche || (p?.tags && p.tags[0]) || (hasPosts ? 'Active Feed Creator' : 'VIP Creator'),
         location: p?.location || 'Nairobi, Kenya',
-        subs: `${followers} followers`,
+        subs: `${realSubs} ${realSubs === 1 ? 'subscriber' : 'subscribers'}`,
+        subscribersCount: realSubs,
         price: `KES ${(p?.monthly_price || 1000).toLocaleString()}/mo`,
         avatar,
         cover,
@@ -2109,6 +2177,8 @@ export const getCreatorDashboardStats = async (creatorId: string) => {
     recentSubs: recentSubs || []
   };
 };
+
+export const getCreatorStats = getCreatorDashboardStats;
 
 export const checkEmailExists = async (email: string) => {
   const { data, error } = await supabase
