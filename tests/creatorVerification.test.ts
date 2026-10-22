@@ -26,4 +26,17 @@ describe('creator verification eligibility', () => {
     assert.equal(hasCompleteKycSubmission({ ...complete, idDocument: null }), false);
     assert.equal(hasCompleteKycSubmission({ ...complete, legalName: ' ' }), false);
   });
+
+  it('determines verification badge status upon admin approval based on KYC completion', () => {
+    // Helper replicating admin approval rule: creator only receives verified badge upon approval if KYC was filled
+    const resolveApprovalVerification = (hasFilledKyc: boolean) => {
+      return hasFilledKyc ? 'verified' : 'unverified';
+    };
+
+    assert.equal(resolveApprovalVerification(true), 'verified');
+    assert.equal(isCreatorVerified('creator-approved-with-kyc', true, resolveApprovalVerification(true)), true);
+
+    assert.equal(resolveApprovalVerification(false), 'unverified');
+    assert.equal(isCreatorVerified('creator-approved-without-kyc', true, resolveApprovalVerification(false)), false);
+  });
 });

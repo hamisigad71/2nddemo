@@ -208,7 +208,7 @@ const AdminCreators = () => {
                         <div>
                           <div className="font-bold text-white text-sm group-hover:text-red-400 transition-colors flex items-center gap-1.5">
                             {c.name}
-                            {c.isVerified && <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500 shrink-0" title="Verified Creator" />}
+                            {c.isVerified && <span title="Verified Creator"><CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500 shrink-0" /></span>}
                           </div>
                           <div className="text-[11px] text-zinc-500 font-medium">{c.email}</div>
                         </div>

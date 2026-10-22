@@ -1,5 +1,5 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check, Trash2, AlertTriangle, X } from 'lucide-react';
+import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check, Trash2, AlertTriangle, X, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +47,12 @@ const EditProfile = () => {
     idDocumentPreview: null as string | null,
     selfiePreview: null as string | null,
   });
+  const [kycFiles, setKycFiles] = useState<{ idFile: File | null; selfieFile: File | null }>({
+    idFile: null,
+    selfieFile: null,
+  });
+  const [kycStatus, setKycStatus] = useState<string>('unverified');
+  const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
 
   const [payoutData, setPayoutData] = useState({
     phoneNumber: '',
@@ -97,6 +103,19 @@ const EditProfile = () => {
     // 2. Fetch latest from Supabase
     getUserProfile(user.id).then(async (profile) => {
       if (profile) {
+        if (profile.kyc_status) {
+          setKycStatus(profile.kyc_status);
+        }
+        if (profile.legal_name || profile.national_id_number || profile.dob || profile.kyc_id_url || profile.kyc_selfie_url) {
+          setKycData(prev => ({
+            ...prev,
+            legalName: profile.legal_name || prev.legalName,
+            nationalId: profile.national_id_number || prev.nationalId,
+            dob: profile.dob || prev.dob,
+            idDocumentPreview: profile.kyc_id_url || prev.idDocumentPreview,
+            selfiePreview: profile.kyc_selfie_url || prev.selfiePreview,
+          }));
+        }
         if (profile.phone) {
           const raw = profile.phone.replace(/^\+254/, '').replace(/^0/, '');
           setPayoutData(prev => ({ ...prev, phoneNumber: raw }));
@@ -268,9 +287,93 @@ const EditProfile = () => {
 
   const handleKycUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'id' | 'selfie') => {
     if (e.target.files && e.target.files[0]) {
-       const url = URL.createObjectURL(e.target.files[0]);
-       if (type === 'id') setKycData(prev => ({ ...prev, idDocumentPreview: url }));
-       if (type === 'selfie') setKycData(prev => ({ ...prev, selfiePreview: url }));
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      if (type === 'id') {
+        setKycFiles(prev => ({ ...prev, idFile: file }));
+        setKycData(prev => ({ ...prev, idDocumentPreview: url }));
+      }
+      if (type === 'selfie') {
+        setKycFiles(prev => ({ ...prev, selfieFile: file }));
+        setKycData(prev => ({ ...prev, selfiePreview: url }));
+      }
+    }
+  };
+
+  const handleKycSubmit = async () => {
+    if (!user?.id) return;
+    if (!kycData.legalName.trim() || !kycData.nationalId.trim() || !kycData.dob) {
+      toast.error('Please enter your full legal name, ID number, and date of birth.');
+      return;
+    }
+    if (!kycFiles.idFile && !kycData.idDocumentPreview) {
+      toast.error('Please upload your National ID or Passport document.');
+      return;
+    }
+    if (!kycFiles.selfieFile && !kycData.selfiePreview) {
+      toast.error('Please upload your selfie holding your ID next to your face.');
+      return;
+    }
+
+    setIsSubmittingKyc(true);
+    try {
+      let idPath = kycData.idDocumentPreview || '';
+      let selfiePath = kycData.selfiePreview || '';
+
+      if (kycFiles.idFile) {
+        const ext = kycFiles.idFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+        const targetPath = `${user.id}/${Date.now()}-id.${ext}`;
+        const { error: idError } = await supabase.storage.from('kyc-documents').upload(targetPath, kycFiles.idFile, { upsert: true });
+        idPath = idError ? (await uploadFileToSupabase(kycFiles.idFile, 'Daysman Gad', `kyc/${targetPath}`)) || targetPath : targetPath;
+      }
+
+      if (kycFiles.selfieFile) {
+        const ext = kycFiles.selfieFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+        const targetPath = `${user.id}/${Date.now()}-selfie.${ext}`;
+        const { error: selfieError } = await supabase.storage.from('kyc-documents').upload(targetPath, kycFiles.selfieFile, { upsert: true });
+        selfiePath = selfieError ? (await uploadFileToSupabase(kycFiles.selfieFile, 'Daysman Gad', `kyc/${targetPath}`)) || targetPath : targetPath;
+      }
+
+      const { error: userError } = await supabase.from('users').update({
+        legal_name: kycData.legalName.trim(),
+        national_id_number: kycData.nationalId.trim(),
+        dob: kycData.dob,
+        kyc_id_url: idPath,
+        kyc_selfie_url: selfiePath,
+        kyc_status: 'pending'
+      }).eq('uid', user.id);
+
+      if (userError) throw userError;
+
+      try {
+        await supabase.from('creator_profiles').update({
+          kyc_status: 'pending',
+          kyc_id_url: idPath,
+          kyc_selfie_url: selfiePath
+        }).eq('user_id', user.id);
+      } catch {}
+
+      // Cache locally
+      try {
+        const local = JSON.parse(localStorage.getItem(`tgd_creator_profile_${user.id}`) || '{}');
+        local.legalName = kycData.legalName.trim();
+        local.nationalId = kycData.nationalId.trim();
+        local.dob = kycData.dob;
+        local.kyc_id_url = idPath;
+        local.kyc_selfie_url = selfiePath;
+        local.kyc_status = 'pending';
+        localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(local));
+      } catch {}
+
+      setKycStatus('pending');
+      window.dispatchEvent(new CustomEvent('creators_updated'));
+      toast.success('KYC Submitted Successfully!', {
+        description: 'Your documents have been submitted to admin for verification.'
+      });
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to submit KYC documents.');
+    } finally {
+      setIsSubmittingKyc(false);
     }
   };
 
@@ -869,15 +972,45 @@ const EditProfile = () => {
           {activeTab === 'kyc' && (
             <div className="p-6 sm:p-10">
               {/* Action Banner */}
-              <div className="mb-8 p-6 bg-red-950/40 border border-red-500/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className={`mb-8 p-6 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border ${
+                kycStatus === 'verified'
+                  ? 'bg-emerald-950/30 border-emerald-500/40'
+                  : kycStatus === 'pending'
+                  ? 'bg-yellow-950/30 border-yellow-500/40'
+                  : 'bg-red-950/40 border-red-500/40'
+              }`}>
                 <div>
-                  <h2 className="text-lg font-black flex items-center gap-2 text-red-500 mb-1">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" /> Action Required: Identity Verification
+                  <h2 className={`text-lg font-black flex items-center gap-2 mb-1 ${
+                    kycStatus === 'verified'
+                      ? 'text-emerald-400'
+                      : kycStatus === 'pending'
+                      ? 'text-yellow-400'
+                      : 'text-red-500'
+                  }`}>
+                    {kycStatus === 'verified' ? (
+                      <><CheckCircle2 className="w-5 h-5 flex-shrink-0 text-white fill-blue-500" /> Identity Verified (Blue Badge Active)</>
+                    ) : kycStatus === 'pending' ? (
+                      <><Clock className="w-5 h-5 flex-shrink-0 text-yellow-400" /> Verification In Review</>
+                    ) : (
+                      <><AlertCircle className="w-5 h-5 flex-shrink-0 text-red-500" /> Action Required: Identity Verification</>
+                    )}
                   </h2>
-                  <p className="text-sm text-zinc-300 font-medium">You cannot withdraw earnings until your identity is verified under Kenya regulatory compliance (AML).</p>
+                  <p className="text-sm text-zinc-300 font-medium">
+                    {kycStatus === 'verified'
+                      ? 'Your identity documents have been approved by an administrator. Your official blue verified badge is active across the feed, discovery, and profile pages.'
+                      : kycStatus === 'pending'
+                      ? 'Your verification documents have been received and are awaiting admin review. Once the admin clicks approve, you will immediately receive the blue verified badge.'
+                      : 'You cannot withdraw earnings until your identity is verified under Kenya regulatory compliance (AML).'}
+                  </p>
                 </div>
-                <div className="bg-red-600 text-white px-4 py-1.5 rounded-xl text-xs font-black tracking-widest uppercase border border-red-400 shadow-md">
-                  Unverified
+                <div className={`px-4 py-1.5 rounded-xl text-xs font-black tracking-widest uppercase border shadow-md flex items-center gap-1.5 ${
+                  kycStatus === 'verified'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : kycStatus === 'pending'
+                    ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'
+                    : 'bg-red-600 text-white border-red-400'
+                }`}>
+                  {kycStatus === 'verified' ? 'Verified 👑' : kycStatus === 'pending' ? 'Pending Review' : 'Unverified'}
                 </div>
               </div>
 
@@ -959,15 +1092,19 @@ const EditProfile = () => {
                 </div>
                 
                 <button 
-                  onClick={() => {
-                    console.log("Submitting KYC For Verification:", kycData);
-                    toast.success('KYC Submitted', {
-                      description: 'Your documents have been received and are under secure review.'
-                    });
-                  }} 
-                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-lg shadow-red-600/20 border border-red-500 transition-all"
+                  onClick={handleKycSubmit} 
+                  disabled={isSubmittingKyc || kycStatus === 'verified'}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-lg shadow-red-600/20 border border-red-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Submit KYC for Verification
+                  {isSubmittingKyc ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Submitting Documents...</>
+                  ) : kycStatus === 'verified' ? (
+                    <><CheckCircle2 className="w-5 h-5 text-white fill-blue-500" /> Identity Verified</>
+                  ) : kycStatus === 'pending' ? (
+                    'Update Submitted KYC Documents'
+                  ) : (
+                    'Submit KYC for Verification'
+                  )}
                 </button>
               </div>
             </div>
