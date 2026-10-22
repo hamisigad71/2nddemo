@@ -3027,14 +3027,17 @@ export const createNotificationsBatch = async (
     created_at: now
   }));
 
-  // 1. Single batch insert to Supabase for all recipients
-  try {
-    const { error } = await supabase.from('notifications').insert(dbRecords);
-    if (error) {
-      console.warn('Supabase batch notification insert warning:', error.message);
+  // 1. Batch insert to Supabase for all recipients (chunked in groups of 50)
+  for (let i = 0; i < dbRecords.length; i += 50) {
+    const chunk = dbRecords.slice(i, i + 50);
+    try {
+      const { error } = await supabase.from('notifications').insert(chunk);
+      if (error) {
+        console.warn('Supabase batch notification insert warning:', error.message);
+      }
+    } catch (err) {
+      console.warn('Supabase batch notification insert exception:', err);
     }
-  } catch (err) {
-    console.warn('Supabase batch notification insert exception:', err);
   }
 
   // 2. Also cache to local storage for instant sync / offline fallback
