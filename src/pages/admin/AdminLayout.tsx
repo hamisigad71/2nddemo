@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserCheck, DollarSign,
   BarChart3, Settings, Menu, LogOut, Bell, ChevronRight,
   Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart, Megaphone, Lock,
-  CheckCheck, Radio, Video, UserPlus, X, Sparkles
+  CheckCheck, Radio, Video, UserPlus, X
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -343,8 +343,9 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                   prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
                                 );
                                 setShowNotifications(false);
-                                if (notif.action_url || notif.link) {
-                                  navigate(notif.action_url || notif.link);
+                                const targetUrl = notif.action_url || notif.link;
+                                if (targetUrl) {
+                                  navigate(targetUrl);
                                 }
                               }}
                               className={`p-3.5 hover:bg-zinc-900/60 transition-colors cursor-pointer flex items-start gap-3 relative ${

@@ -2942,17 +2942,25 @@ export const createNotification = async (
     created_at: new Date().toISOString()
   };
 
-  // 1. Supabase attempt
+  // 1. Supabase attempt with all rich notification metadata
   try {
-    await supabase.from('notifications').insert({
+    const { error } = await supabase.from('notifications').insert({
       user_id: userId,
       title: newNotif.title,
       message: newNotif.message,
       type: newNotif.type,
+      link: newNotif.link,
+      avatar: newNotif.avatar,
+      badge: newNotif.badge,
+      action_label: newNotif.action_label,
+      action_url: newNotif.action_url,
       is_read: false
     });
+    if (error) {
+      console.warn('Supabase notification insert warning:', error.message);
+    }
   } catch (err) {
-    console.warn('Supabase notification insert warning:', err);
+    console.warn('Supabase notification insert exception:', err);
   }
 
   // 2. Always persist to localStorage for instant real-time sync / fallback
@@ -2972,6 +2980,75 @@ export const createNotification = async (
   return newNotif;
 };
 
+export const createNotificationsBatch = async (
+  userIds: string[],
+  notification: {
+    title: string;
+    message: string;
+    type?: 'subscription' | 'tip' | 'ppv' | 'comment' | 'like' | 'system' | 'warning' | 'creator';
+    link?: string;
+    avatar?: string;
+    badge?: string;
+    action_label?: string;
+    action_url?: string;
+  }
+) => {
+  if (!userIds || userIds.length === 0) return;
+  const uniqueUids = Array.from(new Set(userIds.filter(Boolean)));
+  if (uniqueUids.length === 0) return;
+
+  const now = new Date().toISOString();
+  const dbRecords = uniqueUids.map(uid => ({
+    user_id: uid,
+    title: notification.title,
+    message: notification.message,
+    type: notification.type || 'creator',
+    link: notification.link || notification.action_url || '',
+    avatar: notification.avatar || null,
+    badge: notification.badge || null,
+    action_label: notification.action_label || null,
+    action_url: notification.action_url || notification.link || null,
+    is_read: false,
+    created_at: now
+  }));
+
+  // 1. Single batch insert to Supabase for all recipients
+  try {
+    const { error } = await supabase.from('notifications').insert(dbRecords);
+    if (error) {
+      console.warn('Supabase batch notification insert warning:', error.message);
+    }
+  } catch (err) {
+    console.warn('Supabase batch notification insert exception:', err);
+  }
+
+  // 2. Also cache to local storage for instant sync / offline fallback
+  if (typeof window !== 'undefined') {
+    try {
+      uniqueUids.forEach(uid => {
+        const item: NotificationItem = {
+          id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          user_id: uid,
+          title: notification.title,
+          message: notification.message,
+          type: notification.type || 'creator',
+          link: notification.link || notification.action_url || '',
+          avatar: notification.avatar,
+          badge: notification.badge,
+          action_label: notification.action_label,
+          action_url: notification.action_url || notification.link,
+          is_read: false,
+          created_at: now
+        };
+        const key = `tgd_notifications_${uid}`;
+        const stored: NotificationItem[] = JSON.parse(localStorage.getItem(key) || '[]');
+        localStorage.setItem(key, JSON.stringify([item, ...stored].slice(0, 100)));
+      });
+      window.dispatchEvent(new CustomEvent('notifications_updated'));
+    } catch {}
+  }
+};
+
 export const notifyAdmins = async (notification: {
   title: string;
   message: string;
@@ -2982,7 +3059,7 @@ export const notifyAdmins = async (notification: {
   action_label?: string;
   action_url?: string;
 }) => {
-  const adminIds = new Set<string>();
+  const adminIds = new Set<string>(['admin']);
 
   // 1. Fetch all admin users from Supabase
   try {
@@ -2996,12 +3073,11 @@ export const notifyAdmins = async (notification: {
     console.warn('Error fetching admin users:', err);
   }
 
-  // 2. Dispatch notification to each registered admin user
-  for (const adminId of adminIds) {
-    try {
-      await createNotification(adminId, notification);
-    } catch {}
-  }
+  // 2. Batch insert notifications for admin recipients in Supabase
+  await createNotificationsBatch(Array.from(adminIds), {
+    ...notification,
+    type: notification.type || 'system'
+  });
 
   // 3. Always store to shared admin notifications pool in LocalStorage
   const adminNotifItem: NotificationItem = {
@@ -3036,29 +3112,30 @@ export const getAdminNotifications = async (): Promise<NotificationItem[]> => {
   try {
     const { data: adminUsers } = await supabase.from('users').select('uid').eq('role', 'admin');
     const adminUids = (adminUsers || []).map((a: any) => a.uid).filter(Boolean);
-    if (adminUids.length > 0) {
-      const { data } = await supabase
-        .from('notifications')
-        .select('*')
-        .in('user_id', adminUids)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (data) {
-        remoteItems = data.map((d: any) => ({
-          id: d.id,
-          user_id: d.user_id,
-          title: d.title,
-          message: d.message,
-          type: d.type || 'system',
-          link: d.link || '',
-          avatar: d.avatar,
-          badge: d.badge,
-          action_label: d.action_label,
-          action_url: d.action_url,
-          is_read: !!d.is_read,
-          created_at: d.created_at || new Date().toISOString()
-        }));
-      }
+    const targetUids = Array.from(new Set([...adminUids, 'admin']));
+
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .in('user_id', targetUids)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (data) {
+      remoteItems = data.map((d: any) => ({
+        id: d.id,
+        user_id: d.user_id,
+        title: d.title,
+        message: d.message,
+        type: d.type || 'system',
+        link: d.link || '',
+        avatar: d.avatar,
+        badge: d.badge,
+        action_label: d.action_label,
+        action_url: d.action_url,
+        is_read: !!d.is_read,
+        created_at: d.created_at || new Date().toISOString()
+      }));
     }
   } catch (err) {
     console.warn('Error fetching remote admin notifications:', err);
@@ -3223,22 +3300,17 @@ export const notifySubscribersOfNewContent = async (
     ? `"${truncatedSnippet}"` 
     : `Check out the latest ${isPpv ? 'exclusive PPV' : 'media'} update from ${creatorName}!`;
 
-  for (const fanId of subscriberIds) {
-    try {
-      await createNotification(fanId, {
-        title,
-        message,
-        type: 'creator',
-        link: '/user',
-        action_label: 'View Post',
-        action_url: '/user',
-        avatar: creatorAvatar || undefined,
-        badge: isVideo ? (isPpv ? 'PPV Video' : 'New Video') : (isPpv ? 'PPV Drop' : 'New Post')
-      });
-    } catch (err) {
-      console.warn(`Failed to notify subscriber ${fanId}:`, err);
-    }
-  }
+  // Dispatch batch notification to active subscribers and platform fans
+  await createNotificationsBatch(Array.from(subscriberIds), {
+    title,
+    message,
+    type: 'creator',
+    link: '/user',
+    action_label: 'View Post',
+    action_url: '/user',
+    avatar: creatorAvatar || undefined,
+    badge: isVideo ? (isPpv ? 'PPV Video' : 'New Video') : (isPpv ? 'PPV Drop' : 'New Post')
+  });
 
   // Dispatch notification to Platform Admins
   try {
@@ -3312,22 +3384,17 @@ export const notifySubscribersOfLiveStream = async (
   const title = `🔴 ${creatorName} is LIVE NOW!`;
   const message = `${creatorName} has started a live broadcast: "${stream.title || 'Live Broadcast'}". Join now to watch and chat!`;
 
-  for (const fanId of fanIds) {
-    try {
-      await createNotification(fanId, {
-        title,
-        message,
-        type: 'creator',
-        link: `/live/${stream.id}`,
-        action_label: 'Join Live',
-        action_url: `/live/${stream.id}`,
-        avatar: creatorAvatar || undefined,
-        badge: 'LIVE NOW'
-      });
-    } catch (err) {
-      console.warn(`Failed to notify fan ${fanId} of live stream:`, err);
-    }
-  }
+  // Dispatch batch notification to fans
+  await createNotificationsBatch(Array.from(fanIds), {
+    title,
+    message,
+    type: 'creator',
+    link: `/live/${stream.id}`,
+    action_label: 'Join Live',
+    action_url: `/live/${stream.id}`,
+    avatar: creatorAvatar || undefined,
+    badge: 'LIVE NOW'
+  });
 
   // Dispatch notification to Platform Admins
   try {
@@ -3401,22 +3468,17 @@ export const notifySubscribersOfNewCreator = async (
   const title = `New Creator Joined: ${creatorName}! ✨`;
   const message = `${creatorName} has just joined The Gents DollHouse. Discover their profile, explore exclusive media, and subscribe!`;
 
-  for (const fanId of fanIds) {
-    try {
-      await createNotification(fanId, {
-        title,
-        message,
-        type: 'creator',
-        link: `/creator/${creatorId}`,
-        action_label: 'View Profile',
-        action_url: `/creator/${creatorId}`,
-        avatar: creatorAvatar || undefined,
-        badge: 'New Creator'
-      });
-    } catch (err) {
-      console.warn(`Failed to notify fan ${fanId} of new creator:`, err);
-    }
-  }
+  // Dispatch batch notification to all fans
+  await createNotificationsBatch(Array.from(fanIds), {
+    title,
+    message,
+    type: 'creator',
+    link: `/creator/${creatorId}`,
+    action_label: 'View Profile',
+    action_url: `/creator/${creatorId}`,
+    avatar: creatorAvatar || undefined,
+    badge: 'New Creator'
+  });
 
   // Dispatch notification to Platform Admins
   try {
