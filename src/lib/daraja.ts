@@ -1,8 +1,10 @@
 // Daraja M-Pesa STK Push Integration (Sandbox)
 // Safaricom Developer Portal: developer.safaricom.co.ke
 
-const DARAJA_CONSUMER_KEY = import.meta.env.VITE_DARAJA_CONSUMER_KEY || 'cAuxScUGKBIUuUdaEMEJIM6PzOWvyooXPQaRLA0m3oi4PU1c';
-const DARAJA_CONSUMER_SECRET = import.meta.env.VITE_DARAJA_CONSUMER_SECRET || 'pa3gzEfCu5yGSNftc8odrv9i0qVRjqtHXqZO4A6YXzUlLJ5zelzyEOuLf0uCYyA';
+import { getEnv } from './env';
+
+const DARAJA_CONSUMER_KEY = getEnv('VITE_DARAJA_CONSUMER_KEY', 'cAuxScUGKBIUuUdaEMEJIM6PzOWvyooXPQaRLA0m3oi4PU1c');
+const DARAJA_CONSUMER_SECRET = getEnv('VITE_DARAJA_CONSUMER_SECRET', 'pa3gzEfCu5yGSNftc8odrv9i0qVRjqtHXqZO4A6YXzUlLJ5zelzyEOuLf0uCYyA');
 
 // Sandbox shortcode and passkey (from Safaricom portal)
 const SHORTCODE = '174379';
@@ -20,7 +22,10 @@ const DARAJA_BASE = '/daraja';
  * Accepts: 07XXXXXXXX, 7XXXXXXXX, +2547XXXXXXXX, 2547XXXXXXXX
  */
 export const formatPhone = (phone: string): string => {
-  const cleaned = phone.replace(/\D/g, ''); // remove non-digits
+  let cleaned = phone.replace(/\D/g, ''); // remove non-digits
+  if (cleaned.startsWith('2540')) {
+    cleaned = '254' + cleaned.slice(4);
+  }
   if (cleaned.startsWith('254')) return cleaned;
   if (cleaned.startsWith('0')) return '254' + cleaned.slice(1);
   if (cleaned.startsWith('7') || cleaned.startsWith('1')) return '254' + cleaned;

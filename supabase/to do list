@@ -1,0 +1,31 @@
+1. finishing-a-development-branch
+What it does: Runs a branch graduation check: verifies tests, reviews unstaged changes, cleans commit history, and prepares everything for deployment or merging to production.
+How to use it now:
+Audit all modified files (Checkout.tsx, PPVUnlockModal.tsx, db.ts, App.tsx, admin_delete_user.sql).
+Stage and organize commits so your Git branch is clean and deployable to Vercel/production.
+2. test-driven-development (TDD)
+What it does: Sets up an automated testing framework (like Vitest) and writes tests before writing code, guaranteeing 100% test coverage.
+How to use it now:
+Currently, package.json does not have an npm test script.
+We can install Vitest and write automated unit tests for critical business logic:
+M-Pesa phone number parsing (+254 formatting, zero-stripping).
+Platform fee calculations (80/20 creator split vs. platform fee).
+Notification timestamp parsing (UTC/Z timezone calculations).
+Avatar fallback resolution (resolveUserAvatar and default SVGs).
+Chat safety filters (stripDigits and phone number masking).
+3. requesting-code-review & receiving-code-review
+What it does: Launches a strict, independent review subagent to audit our recent changes from an adversarial perspective.
+How to use it now:
+A reviewer agent scans the code diff line-by-line looking for edge cases, unhandled promise rejections, memory leaks, or missing null checks.
+Generates a prioritized punch list of improvements before pushing live.
+4. writing-plans & executing-plans
+What it does: Takes any big idea or complex feature and converts it into a numbered, bite-sized implementation roadmap with verifiable milestones.
+How to use it now:
+Useful if you want to implement a major feature next, such as:
+Automated B2C M-Pesa Creator Payouts (PayHero / Daraja B2C endpoint).
+Real-Time WebRTC Video Streaming for the Live Studio.
+Automated Escort ID Verification & Approval System.
+5. subagent-driven-development & dispatching-parallel-agents
+What it does: Dispatches multiple independent AI subagents in parallel to work on separate modules simultaneously without cluttering context.
+How to use it now:
+We can have one agent audit the Admin portal, another audit the User experience, and a third inspect the Creator dashboard at the exact same time.

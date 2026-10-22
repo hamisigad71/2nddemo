@@ -5,6 +5,15 @@ import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage } from './avat
 
 export const PLATFORM_FEE = 0.30;
 
+export const calculateFeeSplit = (grossAmount: number, feeRate: number = PLATFORM_FEE): { platformFee: number; creatorNet: number } => {
+  if (!grossAmount || grossAmount <= 0) {
+    return { platformFee: 0, creatorNet: 0 };
+  }
+  const platformFee = Math.round(grossAmount * feeRate);
+  const creatorNet = Math.max(0, grossAmount - platformFee);
+  return { platformFee, creatorNet };
+};
+
 // ========================
 // 1. USERS
 // ========================
@@ -1336,8 +1345,7 @@ export const processPayment = async (
   referenceId?: string,
   postId?: string
 ) => {
-  const platformFee = Math.round(grossAmount * PLATFORM_FEE);
-  const netAmount = grossAmount - platformFee;
+  const { platformFee, creatorNet: netAmount } = calculateFeeSplit(grossAmount);
 
   let tx: any = {
     id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,

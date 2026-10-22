@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../../lib/db';
+import { parseNotificationDate, formatTimeAgo as formatNotificationTime } from '../../lib/dateUtils';
 
 export interface NotificationItem {
   id: string;
@@ -48,39 +49,7 @@ function extractInitials(title?: string, message?: string): string {
   return 'VIP';
 }
 
-const parseNotificationDate = (dateStr: string): Date => {
-  if (!dateStr) return new Date();
-  let s = String(dateStr).trim();
-  if (!s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
-    s = s.replace(' ', 'T') + 'Z';
-  }
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? new Date(dateStr) : d;
-};
 
-const formatNotificationTime = (dateStr: string) => {
-  try {
-    const d = parseNotificationDate(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-
-    // Guard against slight clock skew between client and database server
-    if (diffMs < 60 * 1000) return 'Just now';
-
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return d.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' });
-  } catch {
-    return 'Recently';
-  }
-};
 
 const formatFullDate = (dateStr: string) => {
   try {

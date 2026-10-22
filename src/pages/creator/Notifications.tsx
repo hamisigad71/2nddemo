@@ -19,34 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, type NotificationItem } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
-
-function parseNotificationDate(dateStr: string): Date {
-  if (!dateStr) return new Date();
-  let s = String(dateStr).trim();
-  if (!s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
-    s = s.replace(' ', 'T') + 'Z';
-  }
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? new Date(dateStr) : d;
-}
-
-function formatTimeAgo(dateStr: string) {
-  try {
-    const d = parseNotificationDate(dateStr);
-    const diffMs = Date.now() - d.getTime();
-    if (diffMs < 60 * 1000) return 'Just now';
-    const diffMin = Math.floor(diffMs / (1000 * 60));
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    const diffDays = Math.floor(diffHr / 24);
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return d.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' });
-  } catch {
-    return 'Recently';
-  }
-}
+import { formatTimeAgo } from '../../lib/dateUtils';
 
 function extractInitials(title?: string, message?: string): string {
   const combined = `${title || ''} ${message || ''}`;

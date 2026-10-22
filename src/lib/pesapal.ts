@@ -1,11 +1,13 @@
 // Pesapal API v3 Service Integration
 // Credentials provided: Consumer Key & Secret
 
-const PESAPAL_CONSUMER_KEY = import.meta.env.VITE_PESAPAL_CONSUMER_KEY || 'qkio1BGGYAXTu2JOfm7XSXNruoZsrqEW';
-const PESAPAL_CONSUMER_SECRET = import.meta.env.VITE_PESAPAL_CONSUMER_SECRET || 'osGQ364R49cXKeOYSpaOnT++rHs=';
+import { getEnv } from './env';
+
+const PESAPAL_CONSUMER_KEY = getEnv('VITE_PESAPAL_CONSUMER_KEY', 'qkio1BGGYAXTu2JOfm7XSXNruoZsrqEW');
+const PESAPAL_CONSUMER_SECRET = getEnv('VITE_PESAPAL_CONSUMER_SECRET', 'osGQ364R49cXKeOYSpaOnT++rHs=');
 
 // Environment selector (Default to Live Production endpoint; set VITE_PESAPAL_ENV="sandbox" for testing)
-const IS_LIVE = import.meta.env.VITE_PESAPAL_ENV !== 'sandbox';
+const IS_LIVE = getEnv('VITE_PESAPAL_ENV') !== 'sandbox';
 
 const PROXY_LIVE_URL = '/pesapal-api';
 const PROXY_SANDBOX_URL = '/pesapal-sandbox';

@@ -29,6 +29,8 @@ export interface PaystackOptions {
   onClose: () => void;
 }
 
+import { getEnv } from './env';
+
 export interface PaystackPaymentRequest {
   email: string;
   amount: number; // in standard currency units (e.g. 1000 KES)
@@ -75,10 +77,7 @@ export const loadPaystackScript = (): Promise<boolean> => {
  * Get active Paystack Public Key
  */
 export const getPaystackPublicKey = (): string => {
-  return (
-    import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
-    'pk_test_58f3c1684a175af6256dceff974cf2ed4e3102d2'
-  );
+  return getEnv('VITE_PAYSTACK_PUBLIC_KEY', 'pk_test_58f3c1684a175af6256dceff974cf2ed4e3102d2');
 };
 
 /**
