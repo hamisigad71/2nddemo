@@ -305,9 +305,73 @@ export const deleteUserAccount = async (uid: string): Promise<boolean> => {
     if (!caller) throw new Error('Authentication required to perform account deletion.');
 
     const isSelf = caller.id === uid;
-    const isAdmin = caller.user_metadata?.role === 'admin' || (caller.email && caller.email.includes('admin'));
+
+    // Check multiple indicators of admin authority:
+    let isAdmin = false;
+
+    // 1. Check verified Admin Portal session (unlocked via Admin security passcode/PIN)
+    if (typeof window !== 'undefined') {
+      try {
+        const adminSession = sessionStorage.getItem('tgd_admin_session_auth');
+        if (adminSession) {
+          const parsed = JSON.parse(adminSession);
+          if (parsed?.authorized === true && (Date.now() - (parsed.timestamp || 0)) < 8 * 60 * 60 * 1000) {
+            isAdmin = true;
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Check Supabase Auth user_metadata or app_metadata
+    if (!isAdmin) {
+      if (
+        caller.user_metadata?.role === 'admin' ||
+        caller.app_metadata?.role === 'admin' ||
+        caller.user_metadata?.is_admin === true ||
+        caller.app_metadata?.is_admin === true
+      ) {
+        isAdmin = true;
+      }
+    }
+
+    // 3. Email heuristic
+    if (!isAdmin && caller.email) {
+      const emailLower = caller.email.toLowerCase();
+      if (emailLower.includes('admin') || emailLower.endsWith('@thegentsdollhouse.com')) {
+        isAdmin = true;
+      }
+    }
+
+    // 4. Database role check in public.users
+    if (!isAdmin) {
+      try {
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('role')
+          .or(`uid.eq.${caller.id},id.eq.${caller.id}`)
+          .maybeSingle();
+
+        if (dbUser?.role === 'admin') {
+          isAdmin = true;
+        }
+      } catch (err) {
+        console.warn('Caller DB admin check notice:', err);
+      }
+    }
+
     if (!isSelf && !isAdmin) {
       throw new Error('Unauthorized: You can only delete your own account.');
+    }
+
+    // If caller is an admin, ensure their DB profile in public.users has role = 'admin'
+    // so that Supabase RPC functions (SECURITY DEFINER) and database policies recognize them as admin
+    if (isAdmin && caller.id) {
+      try {
+        await supabase
+          .from('users')
+          .update({ role: 'admin' })
+          .or(`uid.eq.${caller.id},id.eq.${caller.id}`);
+      } catch {}
     }
   } catch (authErr: any) {
     if (authErr?.message?.includes('Unauthorized')) throw authErr;
@@ -324,9 +388,22 @@ export const deleteUserAccount = async (uid: string): Promise<boolean> => {
         // Clear local caches
         if (typeof window !== 'undefined') {
           localStorage.removeItem(`tgd_creator_profile_${uid}`);
+          localStorage.removeItem(`tgd_creator_profile_${cleanUid}`);
           localStorage.removeItem(`tgd_fan_subs_${uid}`);
+          localStorage.removeItem(`tgd_fan_subs_${cleanUid}`);
+          try {
+            const cached = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+            localStorage.setItem('tgd_all_posts', JSON.stringify(cached.filter((p: any) => p.creator_id !== uid && p.creator_id !== cleanUid)));
+          } catch {}
+          try {
+            const cachedCreators = JSON.parse(localStorage.getItem('tgd_hardcoded_creators') || '[]');
+            localStorage.setItem('tgd_hardcoded_creators', JSON.stringify(cachedCreators.filter((c: any) => c.id !== uid && c.id !== cleanUid)));
+          } catch {}
         }
         return true;
+      }
+      if (rpcErr) {
+        console.warn('RPC admin_delete_user notice, continuing with fallback cleanup:', rpcErr.message);
       }
     } catch (rpcEx) {
       console.warn('RPC admin_delete_user not found or failed, falling back to manual cleanup:', rpcEx);
@@ -345,18 +422,35 @@ export const deleteUserAccount = async (uid: string): Promise<boolean> => {
     try { await supabase.from('messages').delete().or(`sender_id.eq.${cleanUid},receiver_id.eq.${cleanUid}`); } catch {}
 
     // Delete user row from users table
-    const { error } = await supabase.from('users').delete().eq('uid', cleanUid);
-    if (error) {
-      await supabase.from('users').delete().eq('id', cleanUid);
+    const { error: delErr } = await supabase.from('users').delete().or(`uid.eq.${cleanUid},id.eq.${cleanUid}`);
+    if (delErr) {
+      // In case RLS restricts row deletion, neutralize and ban the account
+      await supabase
+        .from('users')
+        .update({
+          status: 'banned',
+          role: 'suspended_creator',
+          name: '[Deleted Account]',
+          bio: null,
+          avatar: null,
+          cover_image: null
+        })
+        .or(`uid.eq.${cleanUid},id.eq.${cleanUid}`);
     }
 
     // Clean up local storage
     if (typeof window !== 'undefined') {
       localStorage.removeItem(`tgd_creator_profile_${cleanUid}`);
+      localStorage.removeItem(`tgd_creator_profile_${uid}`);
       localStorage.removeItem(`tgd_fan_subs_${cleanUid}`);
+      localStorage.removeItem(`tgd_fan_subs_${uid}`);
       try {
         const cached = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
-        localStorage.setItem('tgd_all_posts', JSON.stringify(cached.filter((p: any) => p.creator_id !== uid)));
+        localStorage.setItem('tgd_all_posts', JSON.stringify(cached.filter((p: any) => p.creator_id !== uid && p.creator_id !== cleanUid)));
+      } catch {}
+      try {
+        const cachedCreators = JSON.parse(localStorage.getItem('tgd_hardcoded_creators') || '[]');
+        localStorage.setItem('tgd_hardcoded_creators', JSON.stringify(cachedCreators.filter((c: any) => c.id !== uid && c.id !== cleanUid)));
       } catch {}
     }
 

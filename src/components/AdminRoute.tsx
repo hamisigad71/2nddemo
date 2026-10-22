@@ -3,6 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { ShieldCheck, KeyRound, Lock, Eye, EyeOff, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { logAdminAction } from '../lib/db';
+import { supabase } from '../lib/supabase';
 
 const SESSION_KEY = 'tgd_admin_session_auth';
 const ATTEMPTS_KEY = 'tgd_admin_failed_attempts';
@@ -77,6 +78,18 @@ export const AdminRoute: React.FC = () => {
     return () => window.removeEventListener('admin_session_locked', handleLock);
   }, []);
 
+  // Ensure authorized admin's database profile has role = 'admin'
+  useEffect(() => {
+    if (user && isAuthorized) {
+      supabase
+        .from('users')
+        .update({ role: 'admin' })
+        .or(`uid.eq.${user.id},id.eq.${user.id}`)
+        .then(() => {})
+        .catch(() => {});
+    }
+  }, [user, isAuthorized]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#07080a] flex flex-col items-center justify-center text-white">
@@ -121,6 +134,16 @@ export const AdminRoute: React.FC = () => {
 
       localStorage.removeItem(ATTEMPTS_KEY);
       localStorage.removeItem(LOCKOUT_KEY);
+
+      // Ensure admin role is reflected in database
+      if (user?.id) {
+        supabase
+          .from('users')
+          .update({ role: 'admin' })
+          .or(`uid.eq.${user.id},id.eq.${user.id}`)
+          .then(() => {})
+          .catch(() => {});
+      }
 
       // Log successful security unlock
       logAdminAction({

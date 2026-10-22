@@ -1,5 +1,6 @@
+// @ts-expect-error Node.js test types are not configured in this project.
 import { describe, it } from 'node:test';
-import assert from 'node:assert';
+import assert from 'assert';
 import { parseNotificationDate, formatTimeAgo } from '../src/lib/dateUtils';
 
 describe('Notification Time & Date Utilities (dateUtils)', () => {
