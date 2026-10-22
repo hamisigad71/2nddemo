@@ -143,7 +143,7 @@ BEGIN
       'Manage Creators',
       '/admin/creators',
       false,
-      NOW()
+      COALESCE(NEW.created_at, NOW())
     );
 
     -- 2. Insert notifications for all active subscribers & fans
@@ -161,7 +161,7 @@ BEGIN
       'View Profile',
       '/creator/' || creator_id,
       false,
-      NOW()
+      COALESCE(NEW.created_at, NOW())
     FROM public.users u
     WHERE u.uid != creator_id
       AND (u.role IN ('subscriber', 'fan', 'user') OR u.role IS NULL);
@@ -185,7 +185,7 @@ DECLARE
   c RECORD;
 BEGIN
   FOR c IN 
-    SELECT uid, name, avatar 
+    SELECT uid, name, avatar, created_at
     FROM public.users 
     WHERE role = 'creator'
     ORDER BY created_at DESC 
@@ -210,7 +210,7 @@ BEGIN
         'Manage Creators',
         '/admin/creators',
         false,
-        NOW()
+        COALESCE(c.created_at, NOW())
       );
     END IF;
 
@@ -229,7 +229,7 @@ BEGIN
       'View Profile',
       '/creator/' || c.uid,
       false,
-      NOW()
+      COALESCE(c.created_at, NOW())
     FROM public.users u
     WHERE u.uid != c.uid
       AND (u.role IN ('subscriber', 'fan', 'user') OR u.role IS NULL)

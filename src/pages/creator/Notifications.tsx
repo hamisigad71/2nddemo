@@ -10,32 +10,68 @@ import {
   CheckCheck, 
   Film, 
   Loader2,
-  Inbox
+  Inbox,
+  Sparkles,
+  ArrowUpRight,
+  Check,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, type NotificationItem } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
 
+function parseNotificationDate(dateStr: string): Date {
+  if (!dateStr) return new Date();
+  let s = String(dateStr).trim();
+  if (!s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
+    s = s.replace(' ', 'T') + 'Z';
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? new Date(dateStr) : d;
+}
+
 function formatTimeAgo(dateStr: string) {
   try {
-    const diffMs = Date.now() - new Date(dateStr).getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    if (diffSec < 60) return 'Just now';
-    const diffMin = Math.floor(diffSec / 60);
+    const d = parseNotificationDate(dateStr);
+    const diffMs = Date.now() - d.getTime();
+    if (diffMs < 60 * 1000) return 'Just now';
+    const diffMin = Math.floor(diffMs / (1000 * 60));
     if (diffMin < 60) return `${diffMin}m ago`;
     const diffHr = Math.floor(diffMin / 60);
     if (diffHr < 24) return `${diffHr}h ago`;
     const diffDays = Math.floor(diffHr / 24);
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
-    return new Date(dateStr).toLocaleDateString('en-KE', { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' });
   } catch {
     return 'Recently';
   }
 }
 
+function extractInitials(title?: string, message?: string): string {
+  const combined = `${title || ''} ${message || ''}`;
+  const match = combined.match(/New Creator Joined:?\s*([A-Za-z0-9_]+(?:\s+[A-Za-z0-9_]+)?)/i)
+    || combined.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+))/);
+  if (match && match[1]) {
+    const parts = match[1].trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return 'VIP';
+}
+
 function getNotificationMeta(type?: string) {
   switch (type) {
+    case 'creator':
+      return {
+        icon: Sparkles,
+        iconColor: 'text-amber-400',
+        badgeBg: 'bg-amber-400/10 text-amber-300 border-amber-400/25',
+        label: 'Creator spotlight',
+        category: 'All',
+        actionLabel: 'View profile',
+        actionUrl: undefined
+      };
     case 'subscription':
       return {
         icon: UserPlus,
@@ -277,34 +313,89 @@ const Notifications = () => {
               const meta = getNotificationMeta(item.type);
               const IconComponent = meta.icon;
               const isUnread = !item.is_read;
+              const isNewCreator = item.type === 'creator' || /new creator|welcome.*creator|joined/i.test(`${item.title} ${item.message}`) || item.badge === 'New Creator';
+              const isLive = /live|broadcast/i.test(`${item.title} ${item.message}`) || item.badge?.includes('LIVE');
+              const isVideo = /video|reel|clip/i.test(`${item.title} ${item.message}`) || item.badge?.includes('Video');
+
+              // Badge styling and text
+              const badgeLabel = isNewCreator 
+                ? 'Creator Spotlight' 
+                : isLive 
+                  ? 'Live Broadcast' 
+                  : isVideo 
+                    ? 'New Video' 
+                    : (item.badge || meta.label);
+
+              const badgePillClass = isNewCreator
+                ? 'bg-amber-400/10 text-amber-300 border-amber-400/25'
+                : isLive
+                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                  : isVideo
+                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/25'
+                    : meta.badgeBg;
+
+              // Action link and label
+              const targetUrl = item.action_url || item.link || meta.actionUrl;
+              const targetLabel = item.action_label || meta.actionLabel || (isNewCreator ? 'View Profile' : isLive ? 'Join Live' : isVideo ? 'Watch Video' : 'View in feed');
 
               return (
                 <article
                   key={item.id} 
-                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-150 flex flex-col sm:flex-row sm:items-start gap-4 ${
+                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-start gap-4 group ${
                     isUnread 
-                      ? 'bg-[#14141d] border-rose-500/25 shadow-[0_4px_20px_-8px_rgba(225,29,72,0.15)] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:bg-rose-500 before:rounded-r'
-                      : 'bg-[#111217] border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141a]'
+                      ? 'bg-gradient-to-r from-amber-500/[0.03] via-[#14151e] to-[#101117] border-amber-500/25 shadow-[0_4px_24px_-8px_rgba(217,119,6,0.12)]'
+                      : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
                   }`}
                 >
-                  {/* Category Icon */}
+                  {/* Category / Creator Avatar Icon */}
                   <div className="shrink-0 self-start">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white">
-                      <IconComponent className={`w-5 h-5 ${meta.iconColor}`} strokeWidth={1.8} />
-                    </div>
+                    {item.avatar ? (
+                      <div className="relative">
+                        <img
+                          src={item.avatar}
+                          alt=""
+                          className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
+                        />
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-0.5 rounded-full ring-1 ring-white/10 flex items-center justify-center">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 fill-amber-500/20" />
+                        </div>
+                      </div>
+                    ) : isNewCreator ? (
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/25 via-amber-600/15 to-zinc-900 border border-amber-500/30 flex items-center justify-center text-amber-200 font-serif font-bold text-sm tracking-wider shadow-inner">
+                          {extractInitials(item.title, item.message)}
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-amber-500/30 flex items-center justify-center">
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white">
+                        <IconComponent className={`w-5 h-5 ${meta.iconColor}`} strokeWidth={1.8} />
+                      </div>
+                    )}
                   </div>
 
                   {/* Details */}
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-x-2 gap-y-1 flex-wrap">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${meta.badgeBg}`}>
-                        {meta.label}
+                    <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap">
+                      <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-md border ${badgePillClass}`}>
+                        {badgeLabel}
                       </span>
+
+                      {isUnread && (
+                        <span className="relative flex h-2 w-2 shrink-0" title="Unread notification">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                        </span>
+                      )}
+
                       <h2 className={`text-sm font-semibold tracking-tight transition-colors ${
                         isUnread ? 'text-white' : 'text-zinc-200'
                       }`}>
                         {item.title}
                       </h2>
+
                       <time
                         dateTime={item.created_at}
                         className="text-zinc-500 text-xs tabular-nums sm:ml-auto"
@@ -313,21 +404,22 @@ const Notifications = () => {
                       </time>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-zinc-400 font-normal leading-relaxed max-w-2xl">
+                    <p className="text-xs sm:text-[13px] text-zinc-400 font-normal leading-relaxed max-w-2xl">
                       {item.message}
                     </p>
 
                     {/* Quick action buttons */}
                     <div className="pt-2 flex items-center gap-3 flex-wrap">
-                      {meta.actionLabel && meta.actionUrl && (
+                      {targetUrl && (
                         <Link
-                          to={meta.actionUrl}
+                          to={targetUrl}
                           onClick={() => {
                             if (isUnread) handleItemRead(item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-200 bg-white/[0.05] hover:bg-white/[0.1] hover:text-white border border-white/[0.09] hover:border-white/20 px-3.5 py-1.5 rounded-lg transition-all active:scale-95"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-amber-400/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
                         >
-                          <span>{meta.actionLabel}</span>
+                          <span>{targetLabel}</span>
+                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-300" />
                         </Link>
                       )}
 
@@ -335,9 +427,10 @@ const Notifications = () => {
                         <button
                           type="button"
                           onClick={() => handleItemRead(item.id)}
-                          className="text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors py-1"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
                         >
-                          Mark as read
+                          <Check className="w-3.5 h-3.5 text-zinc-500" />
+                          <span>Mark as read</span>
                         </button>
                       )}
                     </div>

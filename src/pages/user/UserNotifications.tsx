@@ -15,7 +15,9 @@ import {
   Inbox,
   Sparkles,
   Film,
-  Compass
+  Compass,
+  ArrowUpRight,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../../lib/db';
@@ -29,20 +31,46 @@ export interface NotificationItem {
   is_read: boolean;
   action_label?: string;
   action_url?: string;
+  link?: string;
   avatar?: string;
   badge?: string;
 }
 
+function extractInitials(title?: string, message?: string): string {
+  const combined = `${title || ''} ${message || ''}`;
+  const match = combined.match(/New Creator Joined:?\s*([A-Za-z0-9_]+(?:\s+[A-Za-z0-9_]+)?)/i)
+    || combined.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+))/);
+  if (match && match[1]) {
+    const parts = match[1].trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return 'VIP';
+}
+
+const parseNotificationDate = (dateStr: string): Date => {
+  if (!dateStr) return new Date();
+  let s = String(dateStr).trim();
+  if (!s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
+    s = s.replace(' ', 'T') + 'Z';
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? new Date(dateStr) : d;
+};
+
 const formatNotificationTime = (dateStr: string) => {
   try {
-    const d = new Date(dateStr);
+    const d = parseNotificationDate(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
+
+    // Guard against slight clock skew between client and database server
+    if (diffMs < 60 * 1000) return 'Just now';
+
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays === 1) return 'Yesterday';
@@ -56,8 +84,8 @@ const formatNotificationTime = (dateStr: string) => {
 
 const formatFullDate = (dateStr: string) => {
   try {
-    const d = new Date(dateStr);
-    return `${d.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString('en-KE', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+    const d = parseNotificationDate(dateStr);
+    return `${d.toLocaleDateString('en-KE', { month: 'short', day: 'numeric', year: 'numeric' })} at ${d.toLocaleTimeString('en-KE', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
   } catch {
     return '';
   }
@@ -283,31 +311,65 @@ const UserNotifications = () => {
             filteredNotifications.map(item => {
               const meta = getCategoryMeta(item);
               const IconComponent = meta.icon;
+              const isUnread = !item.is_read;
+              const isNewCreator = /new creator|welcome.*creator|joined/i.test(`${item.title} ${item.message}`) || item.badge === 'New Creator';
+              const isLive = /live|broadcast/i.test(`${item.title} ${item.message}`) || item.badge?.includes('LIVE');
+              const isVideo = /video|reel|clip/i.test(`${item.title} ${item.message}`) || item.badge?.includes('Video');
+
+              // Badge styling and text
+              const badgeLabel = isNewCreator 
+                ? 'Creator Spotlight' 
+                : isLive 
+                  ? 'Live Broadcast' 
+                  : isVideo 
+                    ? 'New Video' 
+                    : (item.badge || meta.label);
+
+              const badgePillClass = isNewCreator
+                ? 'bg-amber-400/10 text-amber-300 border-amber-400/25'
+                : isLive
+                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                  : isVideo
+                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/25'
+                    : meta.badgeBg;
+
+              // Action link and label
+              const targetUrl = item.action_url || item.link;
+              const targetLabel = item.action_label || (isNewCreator ? 'View Profile' : isLive ? 'Join Live' : isVideo ? 'Watch Video' : 'View Details');
 
               return (
                 <article
                   key={item.id}
-                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-150 flex flex-col sm:flex-row sm:items-start gap-4 ${
-                    !item.is_read
-                      ? 'bg-[#14141d] border-rose-500/25 shadow-[0_4px_20px_-8px_rgba(225,29,72,0.15)] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:bg-rose-500 before:rounded-r'
-                      : 'bg-[#111217] border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141a]'
+                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-start gap-4 group ${
+                    isUnread
+                      ? 'bg-gradient-to-r from-amber-500/[0.03] via-[#14151e] to-[#101117] border-amber-500/25 shadow-[0_4px_24px_-8px_rgba(217,119,6,0.12)]'
+                      : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
                   }`}
                 >
-                  {/* Avatar / Category emblem */}
+                  {/* Avatar / Monogram emblem */}
                   <div className="relative shrink-0 self-start">
                     {item.avatar ? (
                       <div className="relative">
                         <img
                           src={item.avatar}
                           alt=""
-                          className="w-11 h-11 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
+                          className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
                         />
                         <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-0.5 rounded-full ring-1 ring-white/10 flex items-center justify-center">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-rose-400 fill-rose-500/20" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 fill-amber-500/20" />
+                        </div>
+                      </div>
+                    ) : isNewCreator ? (
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/25 via-amber-600/15 to-zinc-900 border border-amber-500/30 flex items-center justify-center text-amber-200 font-serif font-bold text-sm tracking-wider shadow-inner">
+                          {extractInitials(item.title, item.message)}
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-amber-500/30 flex items-center justify-center">
+                          <Sparkles className="w-3 h-3 text-amber-400" />
                         </div>
                       </div>
                     ) : (
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white">
                         <IconComponent className={`w-5 h-5 ${meta.iconColor}`} strokeWidth={1.8} />
                       </div>
                     )}
@@ -315,15 +377,24 @@ const UserNotifications = () => {
 
                   {/* Body */}
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-x-2 gap-y-1 flex-wrap">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${meta.badgeBg}`}>
-                        {item.badge || meta.label}
+                    <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap">
+                      <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-md border ${badgePillClass}`}>
+                        {badgeLabel}
                       </span>
+
+                      {isUnread && (
+                        <span className="relative flex h-2 w-2 shrink-0" title="Unread notification">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                        </span>
+                      )}
+
                       <h2 className={`text-sm font-semibold tracking-tight transition-colors ${
-                        !item.is_read ? 'text-white' : 'text-zinc-200'
+                        isUnread ? 'text-white' : 'text-zinc-200'
                       }`}>
                         {item.title}
                       </h2>
+
                       <time
                         dateTime={item.created_at}
                         title={formatFullDate(item.created_at)}
@@ -333,31 +404,33 @@ const UserNotifications = () => {
                       </time>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-zinc-400 font-normal leading-relaxed max-w-2xl">
+                    <p className="text-xs sm:text-[13px] text-zinc-400 font-normal leading-relaxed max-w-2xl">
                       {item.message}
                     </p>
 
                     {/* Actions */}
                     <div className="pt-2 flex items-center gap-3 flex-wrap">
-                      {item.action_label && item.action_url && (
+                      {targetUrl && (
                         <Link
-                          to={item.action_url}
+                          to={targetUrl}
                           onClick={() => {
-                            if (!item.is_read) handleMarkAsRead(item.id);
+                            if (isUnread) handleMarkAsRead(item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-200 bg-white/[0.05] hover:bg-white/[0.1] hover:text-white border border-white/[0.09] hover:border-white/20 px-3.5 py-1.5 rounded-lg transition-all active:scale-95"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-amber-400/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
                         >
-                          <span>{item.action_label}</span>
+                          <span>{targetLabel}</span>
+                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-300" />
                         </Link>
                       )}
 
-                      {!item.is_read && (
+                      {isUnread && (
                         <button
                           type="button"
                           onClick={() => handleMarkAsRead(item.id)}
-                          className="text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors py-1"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
                         >
-                          Mark as read
+                          <Check className="w-3.5 h-3.5 text-zinc-500" />
+                          <span>Mark as read</span>
                         </button>
                       )}
                     </div>
