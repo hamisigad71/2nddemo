@@ -31,6 +31,15 @@ const Checkout = () => {
          const { checkPaymentStatus } = await import('../../lib/payments');
          const res = await checkPaymentStatus(checkoutId);
          if (res.paid) {
+           if (user?.id) {
+             try {
+               const { subscribeToCreator } = await import('../../lib/db');
+               const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
+               await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30);
+             } catch (subErr) {
+               console.error('Checkout M-Pesa subscription activation error:', subErr);
+             }
+           }
            setStatus('success');
            return;
          }
@@ -44,6 +53,15 @@ const Checkout = () => {
           .single();
           
        if (data?.status === 'completed') {
+          if (user?.id) {
+            try {
+              const { subscribeToCreator } = await import('../../lib/db');
+              const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
+              await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30);
+            } catch (subErr) {
+              console.error('Checkout M-Pesa subscription activation error:', subErr);
+            }
+          }
           setStatus('success');
        } else if (data?.status === 'failed') {
           setStatus('failed');
@@ -52,7 +70,7 @@ const Checkout = () => {
     
     const interval = setInterval(checkStatus, 3000);
     return () => clearInterval(interval);
-  }, [checkoutId, status]);
+  }, [checkoutId, status, user, creator.id, creator.price]);
 
   const handleMpesaPay = async (e: React.FormEvent) => {
     e.preventDefault();
