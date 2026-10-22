@@ -7,31 +7,33 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Landing from "./pages/public/Landing";
-import Discover from "./pages/public/Discover";
-import Login from "./pages/public/Login";
-import ForgotPassword from "./pages/public/ForgotPassword";
-import Signup from "./pages/public/Signup";
-import CreatorProfile from "./pages/public/CreatorProfile";
-import Checkout from "./pages/user/Checkout";
-import CreatorDashboard from "./pages/creator/CreatorDashboard";
-import CreatePost from "./pages/creator/CreatePost";
-import UserDashboard from "./pages/user/UserDashboard";
-import Messages from "./pages/creator/Messages";
-import MediaVault from "./pages/creator/MediaVault";
-import EarningsWallet from "./pages/creator/EarningsWallet";
-import CreatorSettings from "./pages/creator/CreatorSettings";
-import Notifications from "./pages/creator/Notifications";
-import EditProfile from "./pages/creator/EditProfile";
-import CreatorFeed from "./pages/creator/CreatorFeed";
-import UserMessages from "./pages/user/UserMessages";
-import UserVault from "./pages/user/UserVault";
-import Subscriptions from "./pages/user/Subscriptions";
-import UserNotifications from "./pages/user/UserNotifications";
-import PaymentMethods from "./pages/user/PaymentMethods";
-import UserSettings from "./pages/user/UserSettings";
-import UserWallet from "./pages/user/UserWallet";
 import InstallAppPrompt from "./components/InstallAppPrompt";
 import CreatorSupportChat from "./components/CreatorSupportChat";
+
+// Keep the landing page in the initial bundle; load all other route screens on demand.
+const Discover = lazy(() => import("./pages/public/Discover"));
+const Login = lazy(() => import("./pages/public/Login"));
+const ForgotPassword = lazy(() => import("./pages/public/ForgotPassword"));
+const Signup = lazy(() => import("./pages/public/Signup"));
+const CreatorProfile = lazy(() => import("./pages/public/CreatorProfile"));
+const Checkout = lazy(() => import("./pages/user/Checkout"));
+const CreatorDashboard = lazy(() => import("./pages/creator/CreatorDashboard"));
+const CreatePost = lazy(() => import("./pages/creator/CreatePost"));
+const UserDashboard = lazy(() => import("./pages/user/UserDashboard"));
+const Messages = lazy(() => import("./pages/creator/Messages"));
+const MediaVault = lazy(() => import("./pages/creator/MediaVault"));
+const EarningsWallet = lazy(() => import("./pages/creator/EarningsWallet"));
+const CreatorSettings = lazy(() => import("./pages/creator/CreatorSettings"));
+const Notifications = lazy(() => import("./pages/creator/Notifications"));
+const EditProfile = lazy(() => import("./pages/creator/EditProfile"));
+const CreatorFeed = lazy(() => import("./pages/creator/CreatorFeed"));
+const UserMessages = lazy(() => import("./pages/user/UserMessages"));
+const UserVault = lazy(() => import("./pages/user/UserVault"));
+const Subscriptions = lazy(() => import("./pages/user/Subscriptions"));
+const UserNotifications = lazy(() => import("./pages/user/UserNotifications"));
+const PaymentMethods = lazy(() => import("./pages/user/PaymentMethods"));
+const UserSettings = lazy(() => import("./pages/user/UserSettings"));
+const UserWallet = lazy(() => import("./pages/user/UserWallet"));
 
 // Lazy-loaded Admin Pages
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
@@ -199,4 +201,3 @@ function App() {
 }
 
 export default App;
-

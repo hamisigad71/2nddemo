@@ -32,14 +32,14 @@ const AdminUsers = () => {
     try {
       const success = await deleteUserAccount(deleteModalUser.id);
       if (success) {
-        toast.success(`User ${deleteModalUser.name} permanently deleted.`);
+        toast.success(`Subscriber ${deleteModalUser.name} permanently deleted.`);
         setDeleteModalUser(null);
         await fetchUsers();
       } else {
-        toast.error('Failed to delete user.');
+        toast.error('Failed to delete subscriber.');
       }
     } catch (err: any) {
-      toast.error(err?.message || 'Error deleting user.');
+      toast.error(err?.message || 'Error deleting subscriber.');
     } finally {
       setDeleting(false);
     }
@@ -51,7 +51,7 @@ const AdminUsers = () => {
       const data = await getAdminUsers();
       setUsersList(data);
     } catch (err) {
-      console.error('Failed to load users:', err);
+      console.error('Failed to load subscribers:', err);
     } finally {
       setLoadingUsers(false);
     }
@@ -119,10 +119,10 @@ const AdminUsers = () => {
               <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500">
                 <Users className="w-5 h-5" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">User / Fan Management</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Subscriber / Fan Management</h1>
             </div>
             <p className="text-zinc-400 text-sm font-medium max-w-xl leading-relaxed mb-6">
-              View and manage all registered platform users directly from the live database. Manage bans, verification, and user activity.
+              View and manage all registered subscribers and fans directly from the live database. Manage bans, verification, and subscriber activity.
             </p>
             
             <div className="flex items-center gap-2">
@@ -134,7 +134,7 @@ const AdminUsers = () => {
                     : 'bg-[#0d0e12] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700'
                 }`}
               >
-                All Users ({usersList.length})
+                All Subscribers ({usersList.length})
               </button>
               <button 
                 onClick={() => setView('kyc')}
@@ -163,7 +163,7 @@ const AdminUsers = () => {
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search real users by name or email..."
+                  placeholder="Search subscribers by name or email..."
                   className="w-full bg-[#0d0e12] border border-zinc-800 pl-11 pr-4 py-3.5 rounded-2xl text-white text-sm font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
                 />
               </div>
@@ -193,17 +193,17 @@ const AdminUsers = () => {
                 {loadingUsers ? (
                   <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
                     <Loader2 className="w-8 h-8 animate-spin text-red-500 mb-3" />
-                    <span className="text-sm">Loading live users from database...</span>
+                    <span className="text-sm">Loading live subscribers from database...</span>
                   </div>
                 ) : filtered.length === 0 ? (
                   <div className="py-20 text-center text-sm text-zinc-500">
-                    No users matching criteria. New subscriber registrations will appear here immediately.
+                    No subscribers matching criteria. New subscriber registrations will appear here immediately.
                   </div>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-[#0d0e12] border-b border-zinc-800">
-                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">User profile</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pl-8">Subscriber profile</th>
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Account Type</th>
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Subscriptions</th>
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Spent</th>
@@ -346,10 +346,10 @@ const AdminUsers = () => {
               <div className="w-12 h-12 rounded-2xl bg-red-600/15 border border-red-500/30 flex items-center justify-center text-red-500 mb-4">
                 <AlertTriangle className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-black text-white mb-2">Permanently Delete Account?</h3>
+              <h3 className="text-xl font-black text-white mb-2">Permanently Delete Subscriber?</h3>
               <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed mb-6">
                 Are you sure you want to delete <strong className="text-white">{deleteModalUser.name}</strong> ({deleteModalUser.email})?
-                This will permanently wipe their account from the database, erase their subscriptions, and immediately log them out of the platform.
+                This will permanently wipe their subscriber account from the database, erase their subscriptions, and immediately log them out of the platform.
               </p>
               <div className="flex gap-3">
                 <button

@@ -31,7 +31,7 @@ const navItems: AdminNavItem[] = [
   { label: 'Overview',        icon: LayoutDashboard, path: '/admin' },
   { label: 'Ads & Campaigns', icon: Megaphone,       path: '/admin/ads', isNew: true },
   { label: 'Creators',        icon: UserCheck,       path: '/admin/creators' },
-  { label: 'Users / Fans',    icon: Users,           path: '/admin/users' },
+  { label: 'Subscribers / Fans', icon: Users,        path: '/admin/users' },
   { label: 'Transactions',    icon: DollarSign,      path: '/admin/transactions' },
   { label: 'Payouts',         icon: Wallet,          path: '/admin/payouts', isNew: true },
   { label: 'Content',         icon: Rss,             path: '/admin/content' },

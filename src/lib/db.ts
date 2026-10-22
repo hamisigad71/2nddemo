@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
 import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage } from './avatar';
+import { fetchAllPages } from './pagination';
+import { addLocalCreatorCandidates, resolveCreatorDisplayName } from './creatorDirectory';
 
 export const PLATFORM_FEE = 0.30;
 
@@ -22,6 +24,17 @@ export const createUserProfile = async (uid: string, data: any) => {
   // Check by uid first (same auth session)
   const { data: byUid } = await supabase.from('users').select('uid, role, created_at').eq('uid', uid).maybeSingle();
   if (byUid) {
+    // If role was explicitly specified (e.g. 'creator') and differs from existing role, update it
+    if (data.role && data.role !== byUid.role) {
+      await supabase.from('users').update({ role: data.role }).eq('uid', uid);
+    }
+    if (data.name || data.avatar) {
+      await supabase.from('users').update({
+        ...(data.name ? { name: data.name } : {}),
+        ...(data.avatar ? { avatar: data.avatar } : {}),
+      }).eq('uid', uid);
+    }
+
     if (data.role === 'creator' || byUid.role === 'creator') {
       try {
         await supabase.from('creator_profiles').upsert({
@@ -57,10 +70,15 @@ export const createUserProfile = async (uid: string, data: any) => {
   if (data.email) {
     const { data: byEmail } = await supabase
       .from('users')
-      .select('uid')
+      .select('uid, role')
       .eq('email', data.email)
       .maybeSingle();
-    if (byEmail) return; // Email already has a profile — skip creating another
+    if (byEmail) {
+      if (data.role && data.role !== byEmail.role) {
+        await supabase.from('users').update({ role: data.role }).eq('uid', byEmail.uid);
+      }
+      return; // Email already has a profile — skip creating duplicate row
+    }
   }
 
   const initialAvatar = data.avatar || getDefaultAvatar(data.name);
@@ -542,20 +560,41 @@ export const uploadPrivatePostMedia = async (file: File, creatorId: string, path
   return cleanPath;
 };
 
-const resolvePrivatePostMedia = async (posts: any[], viewerId?: string) => {
-  if (!viewerId) {
-    return posts.map(post => post.media_private ? { ...post, media_url: null } : post);
-  }
+const resolvePrivatePostMedia = async (posts: any[], viewerId?: string, subscribedCreatorIds?: Set<string>) => {
   return Promise.all(posts.map(async (post) => {
-    if (!post.media_url || (!post.media_private && post.visibility === 'public') || /^https?:\/\//i.test(post.media_url) || post.media_url.startsWith('data:')) return post;
-    const { data, error } = await supabase.storage
-      .from('Daysman Gad')
-      .createSignedUrl(post.media_url, 60 * 60);
-    if (error) {
-      console.warn('Could not authorize private post media:', error.message);
-      return post;
+    // 1. Is viewer the author/creator of this post?
+    const isOwner = Boolean(viewerId && viewerId === post.creator_id);
+
+    // 2. Is viewer an active subscriber to this creator?
+    const isSubscribed = Boolean(viewerId && subscribedCreatorIds?.has(post.creator_id));
+
+    // 3. Is post free and public?
+    const isPublicFree = Boolean((post.visibility === 'public' || !post.visibility) && !post.is_locked);
+
+    // 4. Access is granted if owner, or if public free, or if subscribed and post is not a separate PPV unlock
+    const accessGranted = isOwner || isPublicFree || (isSubscribed && post.visibility !== 'ppv' && !post.is_locked);
+
+    let mediaUrl = post.media_url;
+
+    // If media is a relative storage path, create signed URL or public URL
+    if (mediaUrl && !/^https?:\/\//i.test(mediaUrl) && !mediaUrl.startsWith('data:') && !mediaUrl.startsWith('blob:')) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('Daysman Gad')
+          .createSignedUrl(mediaUrl, 60 * 60);
+        if (!error && data?.signedUrl) {
+          mediaUrl = data.signedUrl;
+        }
+      } catch (err) {
+        console.warn('Could not authorize private post media:', err);
+      }
     }
-    return { ...post, media_url: data.signedUrl, media_access_granted: true };
+
+    return {
+      ...post,
+      media_url: mediaUrl,
+      media_access_granted: accessGranted
+    };
   }));
 };
 
@@ -638,12 +677,14 @@ export const createPost = async (
 
   // Proactively ensure creator exists in public.users before inserting post
   try {
-    const { data: userExists } = await supabase.from('users').select('uid').eq('uid', creatorId).maybeSingle();
-    if (!userExists) {
+    const { data: userRow } = await supabase.from('users').select('uid, role').or(`uid.eq.${creatorId},id.eq.${creatorId}`).maybeSingle();
+    if (!userRow) {
       await createUserProfile(creatorId, {
         name: creatorName,
         role: 'creator',
       });
+    } else if (userRow.role !== 'creator' && userRow.role !== 'admin') {
+      await supabase.from('users').update({ role: 'creator' }).or(`uid.eq.${creatorId},id.eq.${creatorId}`);
     }
   } catch (profErr) {
     console.warn('Profile check before post insert note:', profErr);
@@ -1097,15 +1138,14 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
 
   // 1. Fetch real posts from Supabase (all posts on platform, newest first)
   try {
-    const { data: supabasePosts, error } = await supabase
-      .from('posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(60);
-
-    if (!error && supabasePosts) {
-      allRealPosts = [...supabasePosts];
-    }
+    allRealPosts = await fetchAllPages(async (offset, pageSize) => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+      return { data, error };
+    });
   } catch (err) {
     console.warn('Error fetching Supabase posts for feed:', err);
   }
@@ -1168,14 +1208,24 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
     }
   }
 
+  // Visible posts: include all published posts (and author's own drafts if viewing own feed)
   const visiblePosts = [...priorityPosts, ...otherPosts].filter((post) =>
-    post.status !== 'draft' &&
-    (post.visibility !== 'subscribers' || subscribedCreatorIds.has(post.creator_id))
+    post.status !== 'draft' || (fanId && post.creator_id === fanId)
   );
-  const enrichedReal = await resolvePrivatePostMedia(await enrichPostsWithUsers(visiblePosts), fanId);
 
-  // 4. Return strictly real posts (no mockups in user feeds)
-  const fullFeed = [...enrichedReal];
+  const enrichedReal = await resolvePrivatePostMedia(
+    await enrichPostsWithUsers(visiblePosts),
+    fanId,
+    subscribedCreatorIds
+  );
+
+  // Return real posts first; if platform has few real posts (initial stage), append fallback feed posts
+  let fullFeed = [...enrichedReal];
+  if (fullFeed.length < 10) {
+    const existingIds = new Set(fullFeed.map(p => p.id));
+    const fallbackToAdd = FALLBACK_POSTS.filter(fp => !existingIds.has(fp.id));
+    fullFeed = [...fullFeed, ...fallbackToAdd];
+  }
 
   // 5. Paginate
   const start = page * limit;
@@ -2172,8 +2222,17 @@ export const getCreatorSubscriberCount = async (creatorId: string): Promise<numb
 };
 
 export const HARDCODED_DISCOVER_CREATORS = [
-  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "0 subscribers", subscribersCount: 0, price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
-  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "0 subscribers", subscribersCount: 0, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
+  { id: 'creator-wairimu', name: "Wairimu K. ✨", handle: "@wairimuk", category: "Swimwear & BTS", location: "Nairobi, Kenya", subs: "342 subscribers", subscribersCount: 342, price: "KES 1,000/mo", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T12:00:00Z' },
+  { id: 'creator-chebet', name: "Chebet Fit & Spice 🔥", handle: "@chebetfit", category: "Fitness & Spice", location: "Eldoret / Nairobi", subs: "512 subscribers", subscribersCount: 512, price: "KES 1,200/mo", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80", cover: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=720&q=75", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T11:00:00Z' },
+  { id: 'creator-chloe', name: "Chloe Vibe 💋", handle: "@chloevibe", category: "Lifestyle & Music", location: "Nairobi, Kenya", subs: "890 subscribers", subscribersCount: 890, price: "KES 1,500/mo", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/07/e6/cf/07e6cf77a0f77ad57c801c7d47bfeb6b.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:30:00Z' },
+  { id: 'creator-amina', name: "Chef Amina Seductive", handle: "@chefamina", category: "Culinary & Romance", location: "Mombasa, Kenya", subs: "420 subscribers", subscribersCount: 420, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/b7/75/0b/b7750b0872ecc70a467ef3e193047f21.jpg", cover: "https://i.pinimg.com/736x/b7/75/0b/b7750b0872ecc70a467ef3e193047f21.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
+  { id: 'creator-vanessa', name: "Vanessa VIP 💎", handle: "@vanessavip", category: "Luxury & Travel", location: "Diani Beach", subs: "1,240 subscribers", subscribersCount: 1240, price: "KES 2,000/mo", avatar: "https://i.pinimg.com/736x/89/f9/f6/89f9f6530bb2948cf90037ada5dc6625.jpg", cover: "https://i.pinimg.com/736x/89/f9/f6/89f9f6530bb2948cf90037ada5dc6625.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:30:00Z' },
+  { id: 'creator-stacy', name: "Stacy Temptation", handle: "@stacyt", category: "Lingerie & Fashion", location: "Nairobi, Kenya", subs: "675 subscribers", subscribersCount: 675, price: "KES 1,000/mo", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/1200x/4d/bf/10/4dbf1060dbefbb66bf90f1e104d95aa3.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
+  { id: 'creator-maya', name: "Maya Secrets 🌹", handle: "@mayasecrets", category: "Sensual & Boudoir", location: "Nairobi, Kenya", subs: "980 subscribers", subscribersCount: 980, price: "KES 1,500/mo", avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/98/31/13/983113cb5055f3a435b0eda12a31c5fb.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T08:30:00Z' },
+  { id: 'creator-zola', name: "Zola Allure 🖤", handle: "@zolaallure", category: "Safari & Glamour", location: "Maasai Mara / Nairobi", subs: "1,530 subscribers", subscribersCount: 1530, price: "KES 1,800/mo", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/f9/6c/ff/f96cff8bc21c4d23cba1cfbbc19f0aac.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T08:00:00Z' },
+  { id: 'creator-samantha', name: "Samantha Seduction 💋", handle: "@samanthaseduction", category: "Glamour & 4K Sets", location: "Nairobi, Kenya", subs: "730 subscribers", subscribersCount: 730, price: "KES 1,200/mo", avatar: "https://i.pinimg.com/736x/db/fc/0c/dbfc0ce39862d0dc21444df706e75de2.jpg", cover: "https://i.pinimg.com/1200x/36/a2/dc/36a2dc31c77aa8245e14a976919c0e13.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T07:30:00Z' },
+  { id: 'creator-njeri', name: "Njeri Sweetness 🍯", handle: "@njerisweet", category: "Cozy & Bedtime", location: "Nakuru / Nairobi", subs: "1,120 subscribers", subscribersCount: 1120, price: "KES 900/mo", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T07:00:00Z' },
+  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "950 subscribers", subscribersCount: 950, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
 ];
 
 export const getDiscoverCreators = async () => {
@@ -2181,12 +2240,17 @@ export const getDiscoverCreators = async () => {
     // 1. Fetch all posts to identify creators who have actually posted on the feeds
     let allPosts: any[] = [];
     try {
-      const { data: dbPosts } = await supabase
-        .from('posts')
-        .select('id, creator_id, media_url, is_locked, price, created_at, status')
-        .order('created_at', { ascending: false });
-      if (dbPosts) allPosts = [...dbPosts];
-    } catch {}
+      allPosts = await fetchAllPages(async (offset, pageSize) => {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('id, creator_id, media_url, is_locked, price, created_at, status')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        return { data, error };
+      });
+    } catch (err) {
+      console.warn('Could not fetch posts for creator discovery:', err);
+    }
 
     try {
       const localPosts = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
@@ -2286,18 +2350,21 @@ export const getDiscoverCreators = async () => {
     }
 
     // Also check local storage cached creator profiles
+    const localCreatorProfiles: Array<{ uid: string; profile: any }> = [];
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('tgd_creator_profile_')) {
           const uid = key.replace('tgd_creator_profile_', '');
           const localProf = JSON.parse(localStorage.getItem(key) || '{}');
+          localCreatorProfiles.push({ uid, profile: localProf });
           if (!profileMap.has(uid)) {
             profileMap.set(uid, localProf);
           }
         }
       }
     } catch {}
+    creatorUsers = addLocalCreatorCandidates(creatorUsers, localCreatorProfiles);
 
     // Query active subscriptions count per creator for live accurate subscriber stats
     let activeSubsQueriedSuccessfully = false;
@@ -2331,7 +2398,15 @@ export const getDiscoverCreators = async () => {
         storageAssets = await getCreatorStorageAssets(u.uid);
       }
 
-      const creatorName = u.name || p?.display_name || p?.name || (u.uid === 'b3bdd443-103e-45cb-986b-1d3d32659b3a' ? 'Joy Mwangi' : 'VIP Creator');
+      const local = getStoredCreatorProfile(u.uid);
+      const creatorName = resolveCreatorDisplayName(
+        u.name,
+        p?.display_name,
+        p?.name,
+        local?.name,
+        local?.display_name,
+        u.uid === 'b3bdd443-103e-45cb-986b-1d3d32659b3a' ? 'Joy Mwangi' : null,
+      );
       const rawAvatar = u.avatar || p?.avatar_url || p?.avatar || storageAssets.avatar;
       const avatar = resolveUserAvatar(rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null, creatorName);
       
@@ -2494,29 +2569,139 @@ export const getAdminOverviewStats = async () => {
 
 export const getAdminCreators = async () => {
   try {
-    const { data: creatorUsers, error } = await supabase
-      .from('users')
-      .select('uid, name, email, avatar, role, created_at')
-      .in('role', ['creator', 'pending_creator', 'suspended_creator']);
+    // 1. Fetch creators explicitly marked with creator/escort roles
+    let creatorUsers: any[] = [];
+    try {
+      const { data: byRole } = await supabase
+        .from('users')
+        .select('uid, name, email, avatar, role, created_at')
+        .in('role', ['creator', 'pending_creator', 'suspended_creator', 'escort']);
+      if (byRole) creatorUsers = [...byRole];
+    } catch (e) {
+      console.warn('Error querying creator users by role:', e);
+    }
+
+    const creatorUids = new Set<string>(creatorUsers.map(u => u.uid));
+
+    // 2. Fetch all creator_profiles to catch any creator registered via profile
+    try {
+      const { data: profiles } = await supabase
+        .from('creator_profiles')
+        .select('user_id, display_name, avatar_url, avatar, created_at');
       
-    if (error) throw error;
-    
-    const uids = (creatorUsers || []).map(u => u.uid);
+      const missingUids = (profiles || [])
+        .map(p => p.user_id)
+        .filter(id => id && !creatorUids.has(id));
+
+      if (missingUids.length > 0) {
+        const { data: extraUsers } = await supabase
+          .from('users')
+          .select('uid, name, email, avatar, role, created_at')
+          .in('uid', missingUids);
+
+        if (extraUsers) {
+          extraUsers.forEach(u => {
+            if (!creatorUids.has(u.uid)) {
+              creatorUsers.push(u);
+              creatorUids.add(u.uid);
+            }
+          });
+        }
+
+        // For any profile still not in users table, synthesize candidate
+        (profiles || []).forEach(p => {
+          if (p.user_id && !creatorUids.has(p.user_id)) {
+            creatorUsers.push({
+              uid: p.user_id,
+              name: p.display_name || 'Creator',
+              email: 'No email',
+              avatar: p.avatar_url || p.avatar || null,
+              role: 'creator',
+              created_at: p.created_at || new Date().toISOString()
+            });
+            creatorUids.add(p.user_id);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Error checking creator_profiles in getAdminCreators:', err);
+    }
+
+    // 3. Fetch creators who have actually uploaded posts on the platform
+    try {
+      const { data: posts } = await supabase
+        .from('posts')
+        .select('creator_id');
+      
+      const postingUids = Array.from(new Set((posts || []).map(p => p.creator_id)))
+        .filter(id => id && !creatorUids.has(id) && !id.startsWith('creator-') && !id.startsWith('escort-'));
+
+      if (postingUids.length > 0) {
+        const { data: postingUsers } = await supabase
+          .from('users')
+          .select('uid, name, email, avatar, role, created_at')
+          .in('uid', postingUids);
+
+        if (postingUsers) {
+          postingUsers.forEach(u => {
+            if (!creatorUids.has(u.uid)) {
+              creatorUsers.push(u);
+              creatorUids.add(u.uid);
+            }
+          });
+        }
+      }
+    } catch {}
+
+    // 4. Check local storage for any recently created creator profiles
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('tgd_creator_profile_')) {
+            const uid = key.replace('tgd_creator_profile_', '');
+            if (!creatorUids.has(uid)) {
+              const localProf = JSON.parse(localStorage.getItem(key) || '{}');
+              creatorUsers.push({
+                uid,
+                name: localProf.name || localProf.display_name || 'Creator',
+                email: 'No email',
+                avatar: localProf.avatar || localProf.avatar_url || null,
+                role: 'creator',
+                created_at: new Date().toISOString()
+              });
+              creatorUids.add(uid);
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // Auto-sync: Ensure any users identified as creators have role = 'creator' in database
+    const syncUids = creatorUsers.filter(u => u.role !== 'creator' && u.role !== 'suspended_creator' && u.role !== 'pending_creator').map(u => u.uid);
+    if (syncUids.length > 0) {
+      supabase.from('users').update({ role: 'creator' }).in('uid', syncUids).then(() => {}).catch(() => {});
+    }
+
+    const uids = creatorUsers.map(u => u.uid);
     const { data: profiles } = uids.length > 0 
       ? await supabase.from('creator_profiles').select('*').in('user_id', uids)
       : { data: [] };
 
     const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
 
-    return (creatorUsers || []).map((u) => {
+    return creatorUsers.map((u) => {
       const p = profileMap.get(u.uid);
+      const local = getStoredCreatorProfile(u.uid);
+      const name = u.name || p?.display_name || local?.name || local?.display_name || 'Creator';
+      const avatar = u.avatar || p?.avatar_url || p?.avatar || local?.avatar || local?.avatar_url || null;
       return {
         id: u.uid,
-        name: u.name || p?.display_name || 'Creator',
+        name,
         email: u.email || 'No email',
-        img: resolveUserAvatar(u.avatar || p?.avatar_url || p?.avatar, u.name || p?.display_name),
-        category: p?.niche || (p?.tags && p.tags[0]) || 'Various',
-        subs: p?.total_subscribers || 0,
+        img: resolveUserAvatar(avatar, name),
+        category: p?.niche || local?.category || (p?.tags && p.tags[0]) || 'Various',
+        subs: p?.total_subscribers || local?.total_subscribers || 0,
         revenue: `KES ${(p?.total_earnings || 0).toLocaleString()}`,
         status: u.role === 'creator' ? 'active' : u.role === 'suspended_creator' ? 'suspended' : 'pending',
         joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }) : 'Recent'
@@ -2552,12 +2737,57 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
 
 export const getAdminUsers = async () => {
   try {
+    // 1. Gather all creator IDs from creator_profiles, posts, and creator roles to strictly exclude them
+    const creatorUids = new Set<string>();
+
+    try {
+      const { data: profiles } = await supabase
+        .from('creator_profiles')
+        .select('user_id');
+      (profiles || []).forEach(p => { if (p.user_id) creatorUids.add(p.user_id); });
+    } catch {}
+
+    try {
+      const { data: posts } = await supabase
+        .from('posts')
+        .select('creator_id');
+      (posts || []).forEach(p => { if (p.creator_id) creatorUids.add(p.creator_id); });
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('tgd_creator_profile_')) {
+            creatorUids.add(key.replace('tgd_creator_profile_', ''));
+          }
+        }
+      } catch {}
+    }
+
     const { data: users, error } = await supabase
       .from('users')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error || !users) return [];
+
+    // Strictly separate: Only include subscribers/fans (exclude creators, escorts, and admins)
+    const subscriberUsers = users.filter(u => {
+      const r = (u.role || '').toLowerCase();
+      if (
+        r === 'creator' ||
+        r === 'pending_creator' ||
+        r === 'suspended_creator' ||
+        r === 'escort' ||
+        r === 'admin' ||
+        creatorUids.has(u.uid) ||
+        creatorUids.has(u.id)
+      ) {
+        return false;
+      }
+      return true;
+    });
 
     const { data: txs } = await supabase
       .from('transactions')
@@ -2584,11 +2814,11 @@ export const getAdminUsers = async () => {
       }
     });
 
-    return users.map(u => ({
+    return subscriberUsers.map(u => ({
       id: u.uid,
-      name: u.name || 'Anonymous User',
+      name: u.name || 'Anonymous Subscriber',
       email: u.email || 'No email',
-      type: String(u.role || '').includes('creator') ? 'creator' : 'fan',
+      type: 'subscriber',
       subs: subsMap.get(u.uid) || 0,
       spent: `KES ${(spentMap.get(u.uid) || 0).toLocaleString()}`,
       status: u.status || 'active',

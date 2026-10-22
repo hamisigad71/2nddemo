@@ -158,7 +158,7 @@ const Login = () => {
           className="absolute inset-0 w-full h-full object-cover opacity-80 object-top"
           loading="eager"
           fetchPriority="high"
-          decoding="sync"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
         <div className="relative z-10 max-w-md">

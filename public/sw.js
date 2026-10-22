@@ -4,9 +4,7 @@ const STATIC_ASSETS = [
   '/',
   '/manifest.json',
   '/icon-192.png',
-  '/icon-512.png',
-  '/logo3.png',
-  '/favicon.svg'
+  '/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -54,4 +52,3 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-
