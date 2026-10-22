@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import { supabase } from '../../lib/supabase';
+import { notifySubscribersOfNewCreator } from '../../lib/db';
 import type { EscortApplication } from '../../types/escort';
 import { Loader2, Check, X, User as UserIcon, AlertCircle, Users } from 'lucide-react';
 
@@ -55,6 +56,12 @@ const AdminEscorts = () => {
           console.error("Failed to update user escort status", userError);
           // Could revert application status here in a robust system but we proceed for now
         }
+
+        // Notify subscribers, fans and admin about the verified creator
+        try {
+          const { data: u } = await supabase.from('users').select('name, avatar').eq('uid', creatorId).single();
+          notifySubscribersOfNewCreator(creatorId, u?.name || 'Verified Creator', u?.avatar).catch(() => {});
+        } catch {}
       }
 
       // Remove from pending list

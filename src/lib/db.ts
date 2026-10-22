@@ -26,6 +26,11 @@ export const createUserProfile = async (uid: string, data: any) => {
       } catch {
         // non-fatal if table not configured
       }
+
+      // Trigger notification for new creator joining
+      notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
+        console.warn('Could not dispatch new creator notification:', err);
+      });
     }
     return;
   }
@@ -182,23 +187,49 @@ export const updateCreatorProfile = async (uid: string, data: any) => {
 
 export const deleteUserAccount = async (uid: string): Promise<boolean> => {
   try {
-    // Delete associated application/profile records
-    await supabase.from('escort_applications').delete().eq('user_id', uid);
-    await supabase.from('ad_applications').delete().eq('user_id', uid);
-    await supabase.from('notifications').delete().eq('user_id', uid);
-    await supabase.from('post_likes').delete().eq('user_id', uid);
-    await supabase.from('comments').delete().eq('user_id', uid);
-    await supabase.from('subscriptions').delete().eq('user_id', uid);
-    await supabase.from('transactions').delete().eq('user_id', uid);
-    await supabase.from('creator_profiles').delete().eq('user_id', uid);
-    await supabase.from('posts').delete().eq('user_id', uid);
-    await supabase.from('messages').delete().or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
+    // 1. Try server-side RPC function which deletes from auth.users and public tables
+    try {
+      const { data: rpcSuccess, error: rpcErr } = await supabase.rpc('admin_delete_user', { target_uid: uid });
+      if (!rpcErr && rpcSuccess) {
+        // Clear local caches
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(`tgd_creator_profile_${uid}`);
+          localStorage.removeItem(`tgd_fan_subs_${uid}`);
+        }
+        return true;
+      }
+    } catch (rpcEx) {
+      console.warn('RPC admin_delete_user not found or failed, falling back to manual cleanup:', rpcEx);
+    }
 
-    // Delete user row
+    // 2. Direct database table cleanups
+    try { await supabase.from('escort_applications').delete().or(`creator_id.eq.${uid},user_id.eq.${uid}`); } catch {}
+    try { await supabase.from('ad_applications').delete().eq('creator_id', uid); } catch {}
+    try { await supabase.from('notifications').delete().eq('user_id', uid); } catch {}
+    try { await supabase.from('post_likes').delete().eq('user_id', uid); } catch {}
+    try { await supabase.from('comments').delete().eq('user_id', uid); } catch {}
+    try { await supabase.from('subscriptions').delete().or(`fan_id.eq.${uid},creator_id.eq.${uid}`); } catch {}
+    try { await supabase.from('transactions').delete().eq('from_user_id', uid); } catch {}
+    try { await supabase.from('creator_profiles').delete().eq('user_id', uid); } catch {}
+    try { await supabase.from('posts').delete().eq('creator_id', uid); } catch {}
+    try { await supabase.from('messages').delete().or(`sender_id.eq.${uid},receiver_id.eq.${uid}`); } catch {}
+
+    // Delete user row from users table
     const { error } = await supabase.from('users').delete().eq('uid', uid);
     if (error) {
       await supabase.from('users').delete().eq('id', uid);
     }
+
+    // Clean up local storage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`tgd_creator_profile_${uid}`);
+      localStorage.removeItem(`tgd_fan_subs_${uid}`);
+      try {
+        const cached = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
+        localStorage.setItem('tgd_all_posts', JSON.stringify(cached.filter((p: any) => p.creator_id !== uid)));
+      } catch {}
+    }
+
     return true;
   } catch (err) {
     console.warn('Error during deleteUserAccount DB cleanup:', err);
@@ -2182,6 +2213,13 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
     .eq('uid', creatorId);
     
   if (error) throw error;
+
+  if (newStatus === 'active') {
+    try {
+      const { data: user } = await supabase.from('users').select('name, avatar').eq('uid', creatorId).single();
+      notifySubscribersOfNewCreator(creatorId, user?.name || 'Verified Creator', user?.avatar).catch(() => {});
+    } catch {}
+  }
 };
 
 export const getAdminUsers = async () => {
@@ -2934,6 +2972,148 @@ export const createNotification = async (
   return newNotif;
 };
 
+export const notifyAdmins = async (notification: {
+  title: string;
+  message: string;
+  type?: 'subscription' | 'tip' | 'ppv' | 'comment' | 'like' | 'system' | 'warning' | 'creator';
+  link?: string;
+  avatar?: string;
+  badge?: string;
+  action_label?: string;
+  action_url?: string;
+}) => {
+  const adminIds = new Set<string>();
+
+  // 1. Fetch all admin users from Supabase
+  try {
+    const { data: admins } = await supabase.from('users').select('uid').eq('role', 'admin');
+    if (admins) {
+      admins.forEach((a: any) => {
+        if (a.uid) adminIds.add(a.uid);
+      });
+    }
+  } catch (err) {
+    console.warn('Error fetching admin users:', err);
+  }
+
+  // 2. Dispatch notification to each registered admin user
+  for (const adminId of adminIds) {
+    try {
+      await createNotification(adminId, notification);
+    } catch {}
+  }
+
+  // 3. Always store to shared admin notifications pool in LocalStorage
+  const adminNotifItem: NotificationItem = {
+    id: `admin_notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    user_id: 'admin',
+    title: notification.title,
+    message: notification.message,
+    type: notification.type || 'system',
+    link: notification.link || notification.action_url || '',
+    avatar: notification.avatar,
+    badge: notification.badge,
+    action_label: notification.action_label,
+    action_url: notification.action_url || notification.link,
+    is_read: false,
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const raw = localStorage.getItem('tgd_admin_notifications');
+    const existing: NotificationItem[] = raw ? JSON.parse(raw) : [];
+    localStorage.setItem('tgd_admin_notifications', JSON.stringify([adminNotifItem, ...existing].slice(0, 100)));
+  } catch {}
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('admin_notifications_updated', { detail: adminNotifItem }));
+    window.dispatchEvent(new CustomEvent('notifications_updated', { detail: { userId: 'admin' } }));
+  }
+};
+
+export const getAdminNotifications = async (): Promise<NotificationItem[]> => {
+  let remoteItems: NotificationItem[] = [];
+  try {
+    const { data: adminUsers } = await supabase.from('users').select('uid').eq('role', 'admin');
+    const adminUids = (adminUsers || []).map((a: any) => a.uid).filter(Boolean);
+    if (adminUids.length > 0) {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .in('user_id', adminUids)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (data) {
+        remoteItems = data.map((d: any) => ({
+          id: d.id,
+          user_id: d.user_id,
+          title: d.title,
+          message: d.message,
+          type: d.type || 'system',
+          link: d.link || '',
+          avatar: d.avatar,
+          badge: d.badge,
+          action_label: d.action_label,
+          action_url: d.action_url,
+          is_read: !!d.is_read,
+          created_at: d.created_at || new Date().toISOString()
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('Error fetching remote admin notifications:', err);
+  }
+
+  let localItems: NotificationItem[] = [];
+  try {
+    const raw = localStorage.getItem('tgd_admin_notifications');
+    localItems = raw ? JSON.parse(raw) : [];
+  } catch {}
+
+  const seen = new Set<string>();
+  const merged: NotificationItem[] = [];
+  for (const item of [...localItems, ...remoteItems]) {
+    const key = item.id || `${item.title}-${item.message}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+  merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return merged;
+};
+
+export const markAdminNotificationAsRead = async (id: string) => {
+  try {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+  } catch {}
+  try {
+    const raw = localStorage.getItem('tgd_admin_notifications');
+    if (raw) {
+      const list: NotificationItem[] = JSON.parse(raw);
+      const updated = list.map(item => item.id === id ? { ...item, is_read: true } : item);
+      localStorage.setItem('tgd_admin_notifications', JSON.stringify(updated));
+    }
+  } catch {}
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('admin_notifications_updated'));
+  }
+};
+
+export const markAllAdminNotificationsAsRead = async () => {
+  try {
+    const raw = localStorage.getItem('tgd_admin_notifications');
+    if (raw) {
+      const list: NotificationItem[] = JSON.parse(raw);
+      const updated = list.map(item => ({ ...item, is_read: true }));
+      localStorage.setItem('tgd_admin_notifications', JSON.stringify(updated));
+    }
+  } catch {}
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('admin_notifications_updated'));
+  }
+};
+
 export const notifySubscribersOfNewContent = async (
   creatorId: string,
   creatorName: string,
@@ -3000,12 +3180,40 @@ export const notifySubscribersOfNewContent = async (
           }
         }
       }
+
+      // If this is a public post or PPV video, notify all platform fans
+      if (!post.is_locked || post.visibility === 'public' || post.visibility === 'ppv' || subscriberIds.size === 0) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('tgd_notifications_')) {
+            const uid = key.replace('tgd_notifications_', '');
+            if (uid && uid !== creatorId && uid !== 'admin') {
+              subscriberIds.add(uid);
+            }
+          }
+        }
+      }
     } catch {}
   }
 
-  if (subscriberIds.size === 0) return;
+  // Also query users table for platform fans if public/ppv post
+  if (post.visibility === 'public' || post.visibility === 'ppv' || subscriberIds.size === 0) {
+    try {
+      const { data: allFans } = await supabase
+        .from('users')
+        .select('uid, role')
+        .neq('uid', creatorId);
+      if (allFans) {
+        allFans.forEach((u: any) => {
+          if (u.uid && (u.role === 'subscriber' || u.role === 'fan' || u.role === 'user' || !u.role)) {
+            subscriberIds.add(u.uid);
+          }
+        });
+      }
+    } catch {}
+  }
 
-  const isVideo = post.media_type === 'video';
+  const isVideo = post.media_type === 'video' || isVideoMediaUrl(post.media_url);
   const isPpv = post.is_locked || post.visibility === 'ppv';
   const contentSnippet = post.content ? post.content.trim() : '';
   const truncatedSnippet = contentSnippet.length > 70 ? `${contentSnippet.slice(0, 70)}...` : contentSnippet;
@@ -3025,11 +3233,116 @@ export const notifySubscribersOfNewContent = async (
         action_label: 'View Post',
         action_url: '/user',
         avatar: creatorAvatar || undefined,
-        badge: isPpv ? 'PPV Drop' : 'New Post'
+        badge: isVideo ? (isPpv ? 'PPV Video' : 'New Video') : (isPpv ? 'PPV Drop' : 'New Post')
       });
     } catch (err) {
       console.warn(`Failed to notify subscriber ${fanId}:`, err);
     }
+  }
+
+  // Dispatch notification to Platform Admins
+  try {
+    await notifyAdmins({
+      title: `${creatorName} Uploaded New ${isVideo ? 'Video' : 'Media'}! ${isVideo ? '🎬' : '📸'}`,
+      message: `${creatorName} just published ${isVideo ? 'a new video' : 'new content'}${contentSnippet ? `: "${truncatedSnippet}"` : ''}. Review and moderate on Admin Content.`,
+      link: '/admin/content',
+      action_label: 'Review Content',
+      action_url: '/admin/content',
+      avatar: creatorAvatar || undefined,
+      badge: isVideo ? 'New Video' : 'New Media',
+      type: 'creator'
+    });
+  } catch (err) {
+    console.warn('Failed to notify admins of new post:', err);
+  }
+};
+
+export const notifySubscribersOfLiveStream = async (
+  creatorId: string,
+  creatorName: string,
+  creatorAvatar: string | null | undefined,
+  stream: { id: string; title: string; category?: string }
+) => {
+  const fanIds = new Set<string>();
+
+  // 1. Fetch subscribers and fans from Supabase
+  try {
+    const { data: users } = await supabase
+      .from('users')
+      .select('uid, role')
+      .neq('uid', creatorId);
+
+    if (users) {
+      users.forEach((u: any) => {
+        if (u.uid && (u.role === 'subscriber' || u.role === 'fan' || u.role === 'user' || !u.role)) {
+          fanIds.add(u.uid);
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Error fetching users for live stream notification:', err);
+  }
+
+  // 2. Discover local subscribers/fans from LocalStorage
+  if (typeof window !== 'undefined') {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('tgd_notifications_')) {
+          const uid = key.replace('tgd_notifications_', '');
+          if (uid && uid !== creatorId && uid !== 'admin') {
+            fanIds.add(uid);
+          }
+        }
+      }
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('auth-token'))) {
+          const session = JSON.parse(localStorage.getItem(key) || '{}');
+          const uid = session?.user?.id;
+          if (uid && uid !== creatorId && uid !== 'admin') {
+            fanIds.add(uid);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const title = `🔴 ${creatorName} is LIVE NOW!`;
+  const message = `${creatorName} has started a live broadcast: "${stream.title || 'Live Broadcast'}". Join now to watch and chat!`;
+
+  for (const fanId of fanIds) {
+    try {
+      await createNotification(fanId, {
+        title,
+        message,
+        type: 'creator',
+        link: `/live/${stream.id}`,
+        action_label: 'Join Live',
+        action_url: `/live/${stream.id}`,
+        avatar: creatorAvatar || undefined,
+        badge: 'LIVE NOW'
+      });
+    } catch (err) {
+      console.warn(`Failed to notify fan ${fanId} of live stream:`, err);
+    }
+  }
+
+  // Dispatch notification to Platform Admins
+  try {
+    await notifyAdmins({
+      title: `🔴 Creator Broadcast Live: ${creatorName}`,
+      message: `${creatorName} just started broadcasting live: "${stream.title || 'Live Broadcast'}". Monitor stream activity now.`,
+      link: `/live/${stream.id}`,
+      action_label: 'Monitor Stream',
+      action_url: `/live/${stream.id}`,
+      avatar: creatorAvatar || undefined,
+      badge: 'Live Broadcast',
+      type: 'creator'
+    });
+  } catch (err) {
+    console.warn('Failed to notify admins of live stream:', err);
   }
 };
 
@@ -3049,7 +3362,7 @@ export const notifySubscribersOfNewCreator = async (
 
     if (!error && users) {
       users.forEach((u: any) => {
-        if (u.uid && (u.role === 'subscriber' || !u.role)) {
+        if (u.uid && (u.role === 'subscriber' || u.role === 'fan' || u.role === 'user' || !u.role)) {
           fanIds.add(u.uid);
         }
       });
@@ -3065,7 +3378,7 @@ export const notifySubscribersOfNewCreator = async (
         const key = localStorage.key(i);
         if (key && key.startsWith('tgd_notifications_')) {
           const uid = key.replace('tgd_notifications_', '');
-          if (uid && uid !== creatorId) {
+          if (uid && uid !== creatorId && uid !== 'admin') {
             fanIds.add(uid);
           }
         }
@@ -3077,7 +3390,7 @@ export const notifySubscribersOfNewCreator = async (
         if (key && (key.startsWith('sb-') || key.includes('auth-token'))) {
           const session = JSON.parse(localStorage.getItem(key) || '{}');
           const uid = session?.user?.id;
-          if (uid && uid !== creatorId) {
+          if (uid && uid !== creatorId && uid !== 'admin') {
             fanIds.add(uid);
           }
         }
@@ -3103,6 +3416,22 @@ export const notifySubscribersOfNewCreator = async (
     } catch (err) {
       console.warn(`Failed to notify fan ${fanId} of new creator:`, err);
     }
+  }
+
+  // Dispatch notification to Platform Admins
+  try {
+    await notifyAdmins({
+      title: `New Creator Joined Platform! 🎉`,
+      message: `${creatorName} just registered on The Gents DollHouse. Review their creator account and compliance status.`,
+      link: '/admin/creators',
+      action_label: 'Manage Creators',
+      action_url: '/admin/creators',
+      badge: 'New Creator',
+      avatar: creatorAvatar || undefined,
+      type: 'creator'
+    });
+  } catch (err) {
+    console.warn('Failed to notify admins of new creator:', err);
   }
 };
 

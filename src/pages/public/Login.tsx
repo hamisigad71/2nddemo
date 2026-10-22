@@ -14,6 +14,13 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'account_suspended') {
+      setError('This account has been suspended or deleted by the platform administrator.');
+    }
+  }, []);
+
+  useEffect(() => {
     const handleNavigation = async () => {
       if (user) {
         try {

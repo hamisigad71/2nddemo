@@ -2,19 +2,60 @@ import { useState } from 'react';
 import { 
   Radio, Video, Sparkles, Bell, ArrowLeft, Plus, 
   Coins, MessageCircle, Lock, CheckCircle2,
-  Clock, Zap, LayoutDashboard, Wifi, Activity
+  Clock, Zap, LayoutDashboard, Wifi, Activity, X
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from '../../context/ToastContext';
+import { createLiveStream } from '../../lib/liveStream';
+import { getStoredCreatorProfile } from '../../lib/db';
 
 export default function LiveStudio() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [notified, setNotified] = useState(false);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [streamTitle, setStreamTitle] = useState('VIP Live Broadcast & Chat 💋');
+  const [category, setCategory] = useState('VIP Lounge');
+  const [accessType, setAccessType] = useState<'public' | 'subscribers_only'>('public');
+  const [startingBroadcast, setStartingBroadcast] = useState(false);
 
   const handleNotifyMe = () => {
     setNotified(true);
     toast.success("You're on the early-access list! You'll receive an email notification when Live Studio launches.");
+  };
+
+  const handleStartBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error('Please log in as a creator to broadcast.');
+      return;
+    }
+
+    try {
+      setStartingBroadcast(true);
+      const profile = getStoredCreatorProfile(user.id);
+      const creatorName = profile?.name || profile?.display_name || user.user_metadata?.name || user.user_metadata?.full_name || 'Creator';
+      const creatorAvatar = profile?.avatar || profile?.avatar_url || user.user_metadata?.avatar_url || null;
+
+      const stream = await createLiveStream({
+        creatorId: user.id,
+        creatorName,
+        creatorAvatar: creatorAvatar || undefined,
+        title: streamTitle.trim() || 'Live Broadcast',
+        category,
+        accessType
+      });
+
+      toast.success('Broadcast live! Platform subscribers & admins have been notified.');
+      setShowBroadcastModal(false);
+      navigate(`/live/${stream.id}`);
+    } catch (err: any) {
+      toast.error('Failed to initialize broadcast: ' + (err.message || err));
+    } finally {
+      setStartingBroadcast(false);
+    }
   };
 
   return (
@@ -102,12 +143,19 @@ export default function LiveStudio() {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-10">
               <button
+                onClick={() => setShowBroadcastModal(true)}
+                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-red-600/30 active:scale-[0.98] cursor-pointer"
+              >
+                <Radio className="w-4 h-4 animate-pulse" /> Go Live Now (Broadcast)
+              </button>
+
+              <button
                 onClick={handleNotifyMe}
                 disabled={notified}
                 className={`w-full sm:w-auto px-7 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
                   notified
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-default"
-                    : "bg-red-600 hover:bg-red-500 text-white shadow-md active:scale-[0.98]"
+                    : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"
                 }`}
               >
                 {notified ? (
@@ -116,7 +164,7 @@ export default function LiveStudio() {
                   </>
                 ) : (
                   <>
-                    <Bell className="w-4 h-4" /> Notify Me When Live Launches
+                    <Bell className="w-4 h-4" /> Keep Me Updated
                   </>
                 )}
               </button>
@@ -125,7 +173,7 @@ export default function LiveStudio() {
                 to="/create-post"
                 className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-zinc-200 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               >
-                <Plus className="w-4 h-4" /> Upload Content Instead
+                <Plus className="w-4 h-4" /> Upload Content
               </Link>
             </div>
 
@@ -248,6 +296,101 @@ export default function LiveStudio() {
             </Link>
           </div>
         </div>
+        {/* Broadcast Initialization Modal */}
+        {showBroadcastModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-[#0e1015] border border-zinc-800 rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative">
+              <button
+                onClick={() => setShowBroadcastModal(false)}
+                className="absolute top-5 right-5 p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center">
+                  <Radio className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">Go Live Now</h3>
+                  <p className="text-xs text-zinc-400">Launch a live broadcast. Subscribers & admin will be notified.</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleStartBroadcast} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                    Broadcast Title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={streamTitle}
+                    onChange={(e) => setStreamTitle(e.target.value)}
+                    placeholder="e.g. Late Night VIP Lounge & Q&A 💋"
+                    className="w-full px-4 py-3 bg-zinc-950/80 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-red-500 transition-colors"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                      Category
+                    </label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full px-4 py-3 bg-zinc-950/80 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-red-500 transition-colors"
+                    >
+                      <option value="VIP Lounge">VIP Lounge</option>
+                      <option value="Exclusive Q&A">Exclusive Q&A</option>
+                      <option value="Casual Hangout">Casual Hangout</option>
+                      <option value="Music & Dance">Music & Dance</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                      Audience Access
+                    </label>
+                    <select
+                      value={accessType}
+                      onChange={(e) => setAccessType(e.target.value as any)}
+                      className="w-full px-4 py-3 bg-zinc-950/80 border border-zinc-800 rounded-xl text-white text-sm focus:outline-none focus:border-red-500 transition-colors"
+                    >
+                      <option value="public">Public (All Fans)</option>
+                      <option value="subscribers_only">Subscribers Only</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-red-950/20 border border-red-500/20 text-xs text-zinc-300 flex items-start gap-2.5">
+                  <Bell className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <span>
+                    When you click broadcast, an alert will be dispatched in real time to your fans and the platform admin console.
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBroadcastModal(false)}
+                    className="flex-1 py-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={startingBroadcast}
+                    className="flex-1 py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {startingBroadcast ? 'Starting...' : 'Start Broadcast'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </CreatorLayout>
   );

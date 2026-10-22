@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { notifySubscribersOfLiveStream } from './db';
 
 export interface LiveStream {
   id: string;
@@ -142,6 +143,13 @@ export async function createLiveStream(params: {
   const updated = streams.map(s => s.creatorId === params.creatorId ? { ...s, status: 'ended' as const } : s);
   updated.unshift(newStream);
   saveStoredStreams(updated);
+
+  // 3. Notify subscribers, fans and platform admins
+  try {
+    notifySubscribersOfLiveStream(params.creatorId, params.creatorName, params.creatorAvatar, newStream).catch(err => {
+      console.warn('Live stream notification error:', err);
+    });
+  } catch {}
 
   return newStream;
 }

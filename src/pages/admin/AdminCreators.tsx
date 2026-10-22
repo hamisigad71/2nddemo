@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-import { getAdminCreators, updateCreatorStatus } from '../../lib/db';
+import { getAdminCreators, updateCreatorStatus, deleteUserAccount } from '../../lib/db';
+import { toast } from '../../context/ToastContext';
 
 const statusStyles: Record<string, string> = {
   active: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
@@ -15,10 +17,32 @@ const statusIcons: Record<string, React.ReactNode> = {
 };
 
 const AdminCreators = () => {
+  const navigate = useNavigate();
   const [creatorsList, setCreatorsList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [deleteModalCreator, setDeleteModalCreator] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteCreator = async () => {
+    if (!deleteModalCreator) return;
+    setDeleting(true);
+    try {
+      const success = await deleteUserAccount(deleteModalCreator.id);
+      if (success) {
+        toast.success(`Creator ${deleteModalCreator.name} permanently deleted.`);
+        setDeleteModalCreator(null);
+        await loadCreators();
+      } else {
+        toast.error('Failed to delete creator.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error deleting creator.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const loadCreators = async () => {
     setIsLoading(true);
@@ -75,10 +99,14 @@ const AdminCreators = () => {
               <span className="text-2xl font-black text-white">{creatorsList.length}</span>
               <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total</span>
             </div>
-            <div className="bg-red-950/20 border border-red-500/20 rounded-2xl p-4 flex flex-col items-center justify-center min-w-[100px] shadow-[0_0_15px_rgba(220,38,38,0.05)]">
+            <button
+              onClick={() => setFilter('pending')}
+              className="bg-red-950/20 border border-red-500/20 rounded-2xl p-4 flex flex-col items-center justify-center min-w-[100px] shadow-[0_0_15px_rgba(220,38,38,0.05)] hover:border-red-500/40 hover:bg-red-950/30 transition-all cursor-pointer text-center"
+              title="Filter by pending creators"
+            >
               <span className="text-2xl font-black text-red-500 drop-shadow-md">{pendingCreators.length}</span>
               <span className="text-[10px] uppercase font-bold text-red-400 tracking-wider">Pending</span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -186,21 +214,25 @@ const AdminCreators = () => {
                       {c.joined}
                     </td>
                     <td className="px-6 py-4 pr-8 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2">
                         {c.status === 'pending' && (
                           <>
-                            <button onClick={() => handleStatusChange(c.id, 'active')} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[11px] uppercase tracking-wider font-black rounded-xl border border-red-500 shadow-lg shadow-red-600/20 transition-all active:scale-95">Approve</button>
-                            <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-red-400 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Reject</button>
+                            <button onClick={() => handleStatusChange(c.id, 'active')} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[11px] uppercase tracking-wider font-black rounded-xl border border-red-500 shadow-lg shadow-red-600/20 transition-all active:scale-95">Approve</button>
+                            <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-3 py-1.5 bg-[#0d0e12] text-zinc-400 hover:text-red-400 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Reject</button>
                           </>
                         )}
                         {c.status === 'active' && (
-                          <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-4 py-2 bg-[#0d0e12] text-zinc-400 hover:text-red-400 hover:border-red-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Suspend</button>
+                          <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-3 py-1.5 bg-[#0d0e12] text-yellow-500 hover:text-yellow-400 hover:border-yellow-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-yellow-500/20 transition-all active:scale-95">Suspend</button>
                         )}
                         {c.status === 'suspended' && (
-                          <button onClick={() => handleStatusChange(c.id, 'active')} className="px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95">Restore</button>
+                          <button onClick={() => handleStatusChange(c.id, 'active')} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95">Restore</button>
                         )}
-                        <button className="p-2 bg-[#0d0e12] rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all active:scale-95">
-                          <MoreVertical className="w-4 h-4" />
+                        <button
+                          onClick={() => setDeleteModalCreator(c)}
+                          className="px-3 py-1.5 bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+                          title="Permanently Delete Creator"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
                       </div>
                     </td>
@@ -220,12 +252,17 @@ const AdminCreators = () => {
               </h2>
               <p className="text-zinc-500 text-sm mt-1">Review applicant KYC and verification documents.</p>
             </div>
-            <button className="text-red-500 text-sm font-bold hover:text-red-400 transition-colors">View All Applications &rarr;</button>
+            <button
+              onClick={() => navigate('/admin/escorts')}
+              className="text-red-500 text-sm font-bold hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
+            >
+              View All Applications &rarr;
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {pendingCreators.length === 0 ? (
-              <div className="col-span-full py-8 text-center text-zinc-500 font-medium bg-[#0d0e12] border border-zinc-800 rounded-3xl">No pending creations in the queue.</div>
+              <div className="col-span-full py-8 text-center text-zinc-500 font-medium bg-[#0d0e12] border border-zinc-800 rounded-3xl">No pending applications in the queue.</div>
             ) : pendingCreators.map((p, i) => (
               <div key={p.id} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition-all group relative overflow-hidden shadow-xl">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
@@ -266,6 +303,40 @@ const AdminCreators = () => {
             ))}
           </div>
         </div>
+
+        {/* Delete Creator Confirmation Modal */}
+        {deleteModalCreator && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-[#0d0e12] border border-red-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+              <div className="w-12 h-12 rounded-2xl bg-red-600/15 border border-red-500/30 flex items-center justify-center text-red-500 mb-4">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-black text-white mb-2">Permanently Delete Creator?</h3>
+              <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed mb-6">
+                Are you sure you want to delete <strong className="text-white">{deleteModalCreator.name}</strong> ({deleteModalCreator.email})?
+                This will permanently wipe their creator profile, all their uploaded posts & media, erase subscriptions, and immediately log them out of the platform.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setDeleteModalCreator(null)}
+                  className="flex-1 py-3 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-black uppercase tracking-wider transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={handleDeleteCreator}
+                  className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2"
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Permanently'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </AdminLayout>

@@ -24,16 +24,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const verifyUserStatus = async (uid: string) => {
+    try {
+      const { data: dbUser } = await supabase.from('users').select('status').eq('uid', uid).maybeSingle();
+      if (dbUser && (dbUser.status === 'banned' || dbUser.status === 'suspended')) {
+        await supabase.auth.signOut();
+        setUser(null);
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login?error=account_suspended';
+        }
+        return false;
+      }
+    } catch {}
+    return true;
+  };
+
   useEffect(() => {
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const isOk = await verifyUserStatus(session.user.id);
+        if (isOk) setUser(session.user);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
     // Listen to normal auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        const isOk = await verifyUserStatus(session.user.id);
+        if (isOk) setUser(session.user);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
       
       // Ensure user profile exists in public.users on sign-in
