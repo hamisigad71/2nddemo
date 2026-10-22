@@ -58,12 +58,21 @@ const CreatorSettings = () => {
         </div>
       )}
 
+      <Link
+        to="/user/settings#identity-verification"
+        className="mb-8 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm font-semibold transition-colors hover:bg-primary/10"
+      >
+        <Shield className="h-5 w-5 text-primary" />
+        <span>Submit your ID and selfie for verification. The verified badge appears only after admin approval.</span>
+      </Link>
+
       <div className="grid md:grid-cols-3 gap-8">
         
         {/* Navigation sidebar */}
         <div className="hidden md:flex flex-col gap-2">
            <button className="text-left px-4 py-3 rounded-xl font-bold bg-primary/10 text-primary">Subscription & Tiers</button>
            <Link to="/edit-profile" className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Profile & Photos (Edit)</Link>
+           <Link to="/user/settings#identity-verification" className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Identity Verification (KYC)</Link>
            <button className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Privacy & Safety</button>
            <button className="text-left px-4 py-3 rounded-xl font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Watermarks</button>
         </div>

@@ -339,8 +339,18 @@ const Signup = () => {
                   <AlertTriangle className="w-4 h-4 text-red-500" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-red-400 font-black text-xs uppercase tracking-wider mb-1">Error</div>
+                  <div className="text-red-400 font-black text-xs uppercase tracking-wider mb-1">Notice</div>
                   <div className="text-red-300/90 text-sm font-medium leading-relaxed break-words">{error}</div>
+                  {error.includes('already exists') && (
+                    <div className="mt-3 pt-3 border-t border-red-500/20 flex flex-wrap gap-2">
+                      <Link 
+                        to={`/login?email=${encodeURIComponent(email.trim())}`}
+                        className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase rounded-lg transition-colors inline-flex items-center gap-1.5"
+                      >
+                        Log In With Password
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

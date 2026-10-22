@@ -213,7 +213,9 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
               <div className="min-w-0">
                 <div className="font-black text-sm sm:text-base text-foreground flex items-center gap-1 drop-shadow-sm">
                   <span className="truncate">{creatorName}</span>
-                  <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" />
+                  {(post.isVerified || post.users?.isVerified) && (
+                    <CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" title="Verified Creator" />
+                  )}
                 </div>
                 <p className="text-[11px] sm:text-xs text-muted-foreground font-medium truncate">{creatorHandle}</p>
                 <p className="text-[10px] text-muted-foreground/80 mt-0.5">{timeAgo}</p>

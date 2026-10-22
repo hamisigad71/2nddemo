@@ -35,7 +35,7 @@ const Checkout = () => {
              try {
                const { subscribeToCreator } = await import('../../lib/db');
                const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
-               await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30);
+               await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30, checkoutId || undefined);
              } catch (subErr) {
                console.error('Checkout M-Pesa subscription activation error:', subErr);
              }
@@ -57,7 +57,7 @@ const Checkout = () => {
             try {
               const { subscribeToCreator } = await import('../../lib/db');
               const amount = parseInt(creator.price.replace(/[^\d]/g, '')) || 1000;
-              await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30);
+              await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30, checkoutId || undefined);
             } catch (subErr) {
               console.error('Checkout M-Pesa subscription activation error:', subErr);
             }
@@ -138,7 +138,7 @@ const Checkout = () => {
           try {
             await verifyPaystackTransaction(reference);
             const { subscribeToCreator } = await import('../../lib/db');
-            await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30);
+            await subscribeToCreator(user.id, creator.id || 'creator-default', 'VIP Tier', amount, 30, reference);
             setStatus('success');
             toast.success('Subscription Activated!', {
               description: `You are now subscribed to ${creator.name}.`

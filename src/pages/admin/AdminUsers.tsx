@@ -20,6 +20,7 @@ const AdminUsers = () => {
 
   const [view, setView] = useState<'list' | 'kyc'>('list');
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [kycDocumentUrls, setKycDocumentUrls] = useState<Record<string, { id: string | null; selfie: string | null }>>({});
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -69,7 +70,29 @@ const AdminUsers = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.from('users').select('*').eq('kyc_status', 'pending');
-      if (!error) setPendingUsers(data || []);
+      if (error) throw error;
+      const users = data || [];
+      setPendingUsers(users);
+      const documentUrls = await Promise.all(users.map(async user => {
+        const [idResult, selfieResult] = await Promise.all([
+          user.kyc_id_url
+            ? supabase.storage.from('kyc-documents').createSignedUrl(user.kyc_id_url, 60 * 10)
+            : Promise.resolve({ data: null, error: null }),
+          user.kyc_selfie_url
+            ? supabase.storage.from('kyc-documents').createSignedUrl(user.kyc_selfie_url, 60 * 10)
+            : Promise.resolve({ data: null, error: null }),
+        ]);
+        if (idResult.error) console.error(`Failed to access KYC ID document for ${user.uid}:`, idResult.error);
+        if (selfieResult.error) console.error(`Failed to access KYC selfie for ${user.uid}:`, selfieResult.error);
+        return [user.uid, {
+          id: idResult.data?.signedUrl || null,
+          selfie: selfieResult.data?.signedUrl || null,
+        }] as const;
+      }));
+      setKycDocumentUrls(Object.fromEntries(documentUrls));
+    } catch (err: any) {
+      console.error('Failed to load pending KYC applications:', err);
+      toast.error(err?.message || 'Failed to load pending identity verification applications.');
     } finally {
       setLoading(false);
     }
@@ -78,11 +101,29 @@ const AdminUsers = () => {
   const handleKycAction = async (id: string, newStatus: 'verified' | 'rejected') => {
     setActionLoading(id);
     try {
-      await supabase.from('users').update({ kyc_status: newStatus }).eq('uid', id);
+      const applicant = pendingUsers.find(user => user.uid === id);
+      if (newStatus === 'verified' && (
+        !applicant?.legal_name?.trim() ||
+        !applicant?.national_id_number?.trim() ||
+        !applicant?.dob ||
+        !applicant?.kyc_id_url ||
+        !applicant?.kyc_selfie_url ||
+        !kycDocumentUrls[id]?.id ||
+        !kycDocumentUrls[id]?.selfie
+      )) {
+        throw new Error('Cannot approve KYC until all identity details and proof documents are submitted.');
+      }
+      const { error } = await supabase.from('users').update({ kyc_status: newStatus }).eq('uid', id);
+      if (error) throw error;
       setPendingUsers(prev => prev.filter(u => u.uid !== id));
+      setKycDocumentUrls(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       toast.success(`User KYC status set to ${newStatus}`);
-    } catch {
-      toast.error('Failed to update KYC status');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update KYC status');
     } finally {
       setActionLoading(null);
     }
@@ -313,12 +354,31 @@ const AdminUsers = () => {
                       <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-6">
                         <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-1">Phone Number</div>
                         <div className="text-sm font-bold text-white">{user.phone || 'Not provided'}</div>
+                        <div className="mt-3 text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-1">Identity details</div>
+                        <div className="text-sm text-white">{user.legal_name || 'Legal name not provided'}</div>
+                        <div className="text-xs text-zinc-400">ID / passport: {user.national_id_number || 'Not provided'}</div>
+                        <div className="text-xs text-zinc-400">Date of birth: {user.dob || 'Not provided'}</div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mb-5">
+                        {[
+                          ['ID document', kycDocumentUrls[user.uid]?.id],
+                          ['Selfie with ID', kycDocumentUrls[user.uid]?.selfie],
+                        ].map(([label, url]) => (
+                          <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-2">
+                            <div className="text-[10px] text-zinc-500 uppercase font-black mb-2">{label}</div>
+                            {url ? (
+                              <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 underline">Review document</a>
+                            ) : (
+                              <span className="text-xs text-zinc-500">Missing or unavailable</span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-800">
                       <button 
-                        disabled={actionLoading === user.uid}
+                        disabled={actionLoading === user.uid || !user.legal_name?.trim() || !user.national_id_number?.trim() || !user.dob || !user.kyc_id_url || !user.kyc_selfie_url || !kycDocumentUrls[user.uid]?.id || !kycDocumentUrls[user.uid]?.selfie}
                         onClick={() => handleKycAction(user.uid, 'verified')}
                         className="py-3 bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
                       >

@@ -6,7 +6,7 @@ export type CreatorDirectoryCandidate = {
   created_at?: string | null;
 };
 
-const GENERIC_CREATOR_NAMES = new Set(['creator', 'vip creator', 'new creator']);
+export const GENERIC_CREATOR_NAMES = new Set(['creator', 'vip creator', 'new creator']);
 
 export const resolveCreatorDisplayName = (
   ...names: Array<string | null | undefined>

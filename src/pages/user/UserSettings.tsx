@@ -7,6 +7,7 @@ import { getUserProfile, updateUserProfile, deleteUserAccount, uploadFileToSupab
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import { resolveUserAvatar, DEFAULT_AVATAR, compressAvatarImage } from '../../lib/avatar';
+import { hasCompleteKycSubmission } from '../../lib/verification';
 
 const UserSettings = () => {
   const { user, logout } = useAuth();
@@ -40,6 +41,8 @@ const UserSettings = () => {
   });
   const [kycStatus, setKycStatus] = useState('unverified');
   const [kycSaving, setKycSaving] = useState(false);
+  const [idDocumentFile, setIdDocumentFile] = useState<File | null>(null);
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
 
   // Load real profile from DB & local cache
   useEffect(() => {
@@ -278,27 +281,77 @@ const UserSettings = () => {
 
   const handleKycUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'id' | 'selfie') => {
     if (e.target.files && e.target.files[0]) {
-       const url = URL.createObjectURL(e.target.files[0]);
-       if (type === 'id') setKycData(prev => ({ ...prev, idDocumentPreview: url }));
-       if (type === 'selfie') setKycData(prev => ({ ...prev, selfiePreview: url }));
+       const file = e.target.files[0];
+       if (!file.type.startsWith('image/')) {
+         setSaveMsg('Failed: Upload an image file for identity verification.');
+         e.target.value = '';
+         return;
+       }
+       if (file.size > 10 * 1024 * 1024) {
+         setSaveMsg('Failed: Each verification image must be 10 MB or smaller.');
+         e.target.value = '';
+         return;
+       }
+       const url = URL.createObjectURL(file);
+       if (type === 'id') {
+         setIdDocumentFile(file);
+         setKycData(prev => ({ ...prev, idDocumentPreview: url }));
+       }
+       if (type === 'selfie') {
+         setSelfieFile(file);
+         setKycData(prev => ({ ...prev, selfiePreview: url }));
+       }
     }
   };
 
   const submitKyc = async () => {
     if (!user?.id) return;
-    if (!kycData.legalName || !kycData.nationalId || !kycData.dob) {
-      setSaveMsg('Failed: Please fill out all required KYC fields.');
+    if (!hasCompleteKycSubmission({
+      legalName: kycData.legalName,
+      nationalId: kycData.nationalId,
+      dob: kycData.dob,
+      idDocument: idDocumentFile,
+      selfie: selfieFile,
+    })) {
+      setSaveMsg('Failed: Fill in your identity details and upload both your ID and selfie with ID.');
       return;
     }
+    const idDocument = idDocumentFile;
+    const selfie = selfieFile;
+    if (!idDocument || !selfie) return;
     setKycSaving(true);
     setSaveMsg('');
     try {
-      await updateUserProfile(user.id, {
-        legal_name: kycData.legalName,
-        national_id_number: kycData.nationalId,
-        dob: kycData.dob,
-        kyc_status: 'pending'
-      });
+      const idExtension = idDocument.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      const selfieExtension = selfie.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      const documentBase = `${user.id}/${Date.now()}`;
+      const idPath = `${documentBase}-id.${idExtension}`;
+      const selfiePath = `${documentBase}-selfie.${selfieExtension}`;
+      const { error: idUploadError } = await supabase.storage
+        .from('kyc-documents')
+        .upload(idPath, idDocument, { contentType: idDocument.type, upsert: false });
+      if (idUploadError) throw idUploadError;
+      const { error: selfieUploadError } = await supabase.storage
+        .from('kyc-documents')
+        .upload(selfiePath, selfie, { contentType: selfie.type, upsert: false });
+      if (selfieUploadError) {
+        await supabase.storage.from('kyc-documents').remove([idPath]);
+        throw selfieUploadError;
+      }
+      try {
+        const { error } = await supabase.from('users').update({
+          legal_name: kycData.legalName,
+          national_id_number: kycData.nationalId,
+          dob: kycData.dob,
+          kyc_id_url: idPath,
+          kyc_selfie_url: selfiePath,
+          kyc_status: 'pending'
+        }).eq('uid', user.id);
+        if (error) throw error;
+      } catch (error) {
+        await supabase.storage.from('kyc-documents').remove([idPath, selfiePath]);
+        throw error;
+      }
       setKycStatus('pending');
       setSaveMsg('KYC Submitted securely for review!');
     } catch (err: any) {
@@ -330,7 +383,7 @@ const UserSettings = () => {
        <div className="space-y-8 max-w-3xl">
           
           {/* Profile Section */}
-          <section className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+          <section id="identity-verification" className="bg-background border border-border rounded-2xl p-6 shadow-sm">
              <h2 className="text-lg font-bold mb-6 pb-2 border-b border-border flex items-center gap-2">
                 <Globe className="w-5 h-5 text-muted-foreground" /> Public Profile
              </h2>

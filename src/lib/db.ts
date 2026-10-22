@@ -3,7 +3,13 @@ import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
 import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage } from './avatar';
 import { fetchAllPages } from './pagination';
-import { addLocalCreatorCandidates, resolveCreatorDisplayName } from './creatorDirectory';
+import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_NAMES } from './creatorDirectory';
+import { isKycVerified, isCreatorVerified } from './verification';
+import {
+  buildAdminPaymentNotification,
+  buildCreatorSubscriptionMessage,
+  getPaymentMethodLabel,
+} from './paymentNotifications';
 
 export const PLATFORM_FEE = 0.30;
 
@@ -396,7 +402,7 @@ export const deleteUserAccount = async (uid: string): Promise<boolean> => {
     console.warn('Caller verification note:', authErr);
   }
 
-  const cleanUid = uid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const cleanUid = uid.trim();
 
   try {
     // 1. Try server-side RPC function which deletes from auth.users and public tables
@@ -1055,12 +1061,16 @@ export const enrichPostsWithUsers = async (rawPosts: any[]) => {
       || resolvedUser?.name
       || 'Creator';
 
+    const verified = isCreatorVerified(post.creator_id, post.isVerified);
+
     return {
       ...post,
+      isVerified: verified,
       users: {
         uid: post.creator_id,
         name: finalName,
         avatar: finalAvatar,
+        isVerified: verified,
       },
     };
   });
@@ -1503,6 +1513,7 @@ export const processPayment = async (
     reference_id: referenceId || null,
     created_at: new Date().toISOString(),
   };
+  let transactionRecorded = false;
 
   try {
     const { data, error } = await supabase.from('transactions').insert({
@@ -1513,19 +1524,19 @@ export const processPayment = async (
       platform_fee: platformFee,
       net_amount: netAmount,
       status: 'completed',
-      reference_id: referenceId || null,
-      ...(type === 'ppv' && postId ? { post_id: postId } : {}),
     }).select().maybeSingle();
 
     if (data) {
-      tx = data;
+      tx = { ...data };
+      transactionRecorded = true;
     }
     if (error) {
-      console.warn('Supabase transactions insert notice:', error.message);
+      console.error('Confirmed payment transaction could not be recorded:', error.message);
     }
   } catch (err: any) {
-    console.warn('Supabase transactions insert exception:', err?.message || err);
+    console.error('Confirmed payment transaction insert failed:', err?.message || err);
   }
+  tx = { ...tx, transaction_recorded: transactionRecorded };
 
   // Cache locally so transaction records are immediately visible in wallet/history
   try {
@@ -1533,26 +1544,6 @@ export const processPayment = async (
     const list = JSON.parse(localStorage.getItem(localKey) || '[]');
     localStorage.setItem(localKey, JSON.stringify([tx, ...list]));
   } catch {}
-
-  // Increment Creator's Total Net Earnings in creator_profiles if profile exists
-  try {
-    const { data: profile } = await supabase
-      .from('creator_profiles')
-      .select('total_earnings')
-      .eq('user_id', toCreatorId)
-      .single();
-
-    if (profile) {
-      await supabase
-        .from('creator_profiles')
-        .update({
-          total_earnings: (profile.total_earnings || 0) + netAmount
-        })
-        .eq('user_id', toCreatorId);
-    }
-  } catch (err) {
-    console.error('Error updating creator profile earnings:', err);
-  }
 
   // Trigger Creator Notification for Tips and PPV unlocks
   try {
@@ -1583,6 +1574,34 @@ export const processPayment = async (
     }
   } catch (notifErr) {
     console.warn('Could not dispatch creator payment notification:', notifErr);
+  }
+
+  // Notify Admins about confirmed platform payments
+  try {
+    const [{ data: fanUser }, { data: creatorUser }] = await Promise.all([
+      supabase.from('users').select('name').eq('uid', fromUserId).maybeSingle(),
+      supabase.from('users').select('name').eq('uid', toCreatorId).maybeSingle(),
+    ]);
+    const fanName = fanUser?.name || 'A customer';
+    const creatorName = creatorUser?.name || 'a creator';
+
+    const titles: Record<string, string> = {
+      subscription: `New VIP Subscriber Payment! 👑`,
+      tip: `New Creator Tip Sent! 💰`,
+      ppv: `New PPV Content Unlocked! 🔓`
+    };
+
+    await notifyAdmins({
+      title: titles[type] || `New Payment: KES ${grossAmount.toLocaleString()}`,
+      message: `${fanName} paid KES ${grossAmount.toLocaleString()} to ${creatorName} (${type.toUpperCase()}). Net: KES ${netAmount.toLocaleString()}, Platform Fee: KES ${platformFee.toLocaleString()}.`,
+      type: type === 'subscription' ? 'subscription' : type === 'ppv' ? 'ppv' : 'tip',
+      link: '/admin/transactions',
+      action_label: 'View Transactions',
+      action_url: '/admin/transactions',
+      badge: type.toUpperCase()
+    });
+  } catch (err) {
+    console.error('Could not notify admins about confirmed payment:', err);
   }
 
   // Trigger Subscriber Notification (Receipt & Access Confirmation)
@@ -1670,9 +1689,10 @@ export const subscribeToCreator = async (
   creatorId: string,
   tierName: string = 'VIP Tier',
   price: number = 1000,
-  durationDays: number = 30
+  durationDays: number = 30,
+  paymentReference?: string
 ) => {
-  await processPayment('subscription', fanId, creatorId, price);
+  const payment = await processPayment('subscription', fanId, creatorId, price, paymentReference);
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + durationDays);
@@ -1741,11 +1761,17 @@ export const subscribeToCreator = async (
     let fanName = 'A subscriber';
     const { data: fanUser } = await supabase.from('users').select('name').eq('uid', fanId).maybeSingle();
     if (fanUser?.name) fanName = fanUser.name;
-    const netCredit = Math.round(price * (1 - PLATFORM_FEE));
 
     await createNotification(creatorId, {
       title: 'New VIP Subscriber! 👑',
-      message: `${fanName} subscribed to your ${tierName} (${durationDays} days) for KES ${price.toLocaleString()}! KES ${netCredit.toLocaleString()} (after 30% platform fee) has been credited to your wallet.`,
+      message: buildCreatorSubscriptionMessage(
+        fanName,
+        tierName,
+        durationDays,
+        price,
+        payment.net_amount,
+        payment.transaction_recorded,
+      ),
       type: 'subscription',
       link: '/wallet',
       action_label: 'View Wallet',
@@ -1846,16 +1872,18 @@ export const getFanSubscriptions = async (fanId: string) => {
         let creatorAvatar = localProfile?.avatar || localProfile?.avatar_url || null;
         let creatorName = localProfile?.name || localProfile?.display_name || sub.creator_name || 'Creator';
 
+        let creatorKycStatus: unknown;
         try {
           const { data: userProfile } = await supabase
             .from('users')
-            .select('uid, name, avatar, email, role')
+            .select('uid, name, avatar, email, role, kyc_status')
             .eq('uid', sub.creator_id)
             .maybeSingle();
 
           if (userProfile) {
             creatorName = userProfile.name || creatorName;
             creatorAvatar = userProfile.avatar || creatorAvatar;
+            creatorKycStatus = userProfile.kyc_status;
           }
         } catch {
           // continue
@@ -1870,7 +1898,7 @@ export const getFanSubscriptions = async (fanId: string) => {
             name: creatorName,
             avatar: fallbackAvatar,
             handle: `@${creatorName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'creator'}`,
-            isVerified: true,
+            isVerified: isKycVerified(creatorKycStatus),
             price: 1000,
           }
         };
@@ -2082,7 +2110,7 @@ export const getCreatorProfile = async (id: string) => {
         bio: resolvedBio,
         location: localCreator?.location || creatorMeta?.location || 'Nairobi, Kenya',
         rating: 4.9,
-        isVerified: true,
+        isVerified: isCreatorVerified(id, userRow?.is_verified, userRow?.kyc_status),
         isOnline: true,
         price_hr: localCreator?.monthly_price || creatorMeta?.monthly_price || 1000,
         age: localCreator?.age || creatorMeta?.age || 24,
@@ -2108,7 +2136,7 @@ export const getCreatorProfile = async (id: string) => {
       bio: localCreator.bio || 'Welcome to my official creator page!',
       location: localCreator.location || 'Nairobi, Kenya',
       rating: 4.9,
-      isVerified: true,
+      isVerified: isCreatorVerified(id, localCreator?.isVerified),
       isOnline: true,
       price_hr: localCreator.monthly_price || 1000,
       age: localCreator.age || 24,
@@ -2136,7 +2164,7 @@ export const getCreatorProfile = async (id: string) => {
       bio: fallbackPost.content || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
       location: 'Nairobi, Kenya',
       rating: 4.9,
-      isVerified: true,
+      isVerified: false,
       isOnline: true,
       price_hr: fallbackPost.price || 1000,
       age: 23,
@@ -2159,7 +2187,7 @@ export const getCreatorProfile = async (id: string) => {
       bio: `Welcome to my official creator page! Follow my exclusive posts, photos, and direct VIP chat.`,
       location: hardcodedMatch.location,
       rating: 4.9,
-      isVerified: true,
+      isVerified: false,
       isOnline: true,
       price_hr: parseInt(String(hardcodedMatch.price).replace(/\D/g, ''), 10) || 1000,
       age: 24,
@@ -2331,17 +2359,50 @@ export const getDiscoverCreators = async () => {
         .from('creator_profiles')
         .select('*');
       if (profiles && profiles.length > 0) {
+        // Collect user_ids missing from creatorUsers to fetch their real profile from 'users'
+        const missingUserIds = profiles
+          .map(p => p.user_id)
+          .filter(uid => uid && !creatorUserIds.has(uid));
+
+        const fetchedUsersMap = new Map<string, any>();
+        if (missingUserIds.length > 0) {
+          try {
+            const { data: userRows } = await supabase
+              .from('users')
+              .select('uid, name, email, avatar, role, phone, created_at')
+              .in('uid', missingUserIds);
+            (userRows || []).forEach(ur => fetchedUsersMap.set(ur.uid, ur));
+          } catch {}
+        }
+
         profiles.forEach(p => {
           profileMap.set(p.user_id, p);
           if (!creatorUserIds.has(p.user_id)) {
+            const matchedUser = fetchedUsersMap.get(p.user_id);
+            const resolvedName = resolveCreatorDisplayName(
+              matchedUser?.name,
+              p.display_name,
+              p.name,
+              matchedUser?.email?.split('@')[0]
+            );
+
             creatorUsers.push({
               uid: p.user_id,
-              name: p.display_name || p.name || 'VIP Creator',
-              avatar: p.avatar_url || p.avatar || null,
-              role: 'creator',
-              created_at: p.created_at || new Date().toISOString()
+              name: resolvedName,
+              avatar: matchedUser?.avatar || p.avatar_url || p.avatar || null,
+              role: matchedUser?.role || 'creator',
+              created_at: p.created_at || matchedUser?.created_at || new Date().toISOString()
             });
             creatorUserIds.add(p.user_id);
+
+            // Sync display_name in database if null so future reads are instantaneous
+            if (matchedUser?.name && !p.display_name) {
+              supabase
+                .from('creator_profiles')
+                .update({ display_name: matchedUser.name })
+                .eq('user_id', p.user_id)
+                .then(() => {}, () => {});
+            }
           }
         });
       }
@@ -2365,6 +2426,35 @@ export const getDiscoverCreators = async () => {
       }
     } catch {}
     creatorUsers = addLocalCreatorCandidates(creatorUsers, localCreatorProfiles);
+
+    // CRITICAL: Ensure NO creator displays as "VIP Creator" when their real account name exists in 'users'
+    const genericUids = creatorUsers
+      .filter(u => !u.name || GENERIC_CREATOR_NAMES.has(u.name.trim().toLowerCase()))
+      .map(u => u.uid);
+
+    if (genericUids.length > 0) {
+      try {
+        const { data: realUsers } = await supabase
+          .from('users')
+          .select('uid, name, avatar')
+          .in('uid', genericUids);
+
+        if (realUsers && realUsers.length > 0) {
+          const realUserMap = new Map(realUsers.map(ru => [ru.uid, ru]));
+          creatorUsers.forEach(u => {
+            const ru = realUserMap.get(u.uid);
+            if (ru?.name && !GENERIC_CREATOR_NAMES.has(ru.name.trim().toLowerCase())) {
+              u.name = ru.name;
+            }
+            if (ru?.avatar && !u.avatar) {
+              u.avatar = ru.avatar;
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Could not backfill real user names for creators:', err);
+      }
+    }
 
     // Query active subscriptions count per creator for live accurate subscriber stats
     let activeSubsQueriedSuccessfully = false;
@@ -2431,6 +2521,7 @@ export const getDiscoverCreators = async () => {
         avatar,
         cover,
         hasPosts,
+        isVerified: isCreatorVerified(u.uid, (u as any).is_verified, (u as any).kyc_status || p?.kyc_status),
         postsCount: postStats?.count || 0,
         createdAt: postStats?.latestDate || u.created_at || new Date().toISOString()
       };
@@ -2574,7 +2665,7 @@ export const getAdminCreators = async () => {
     try {
       const { data: byRole } = await supabase
         .from('users')
-        .select('uid, name, email, avatar, role, created_at')
+        .select('*')
         .in('role', ['creator', 'pending_creator', 'suspended_creator', 'escort']);
       if (byRole) creatorUsers = [...byRole];
     } catch (e) {
@@ -2596,7 +2687,7 @@ export const getAdminCreators = async () => {
       if (missingUids.length > 0) {
         const { data: extraUsers } = await supabase
           .from('users')
-          .select('uid, name, email, avatar, role, created_at')
+          .select('*')
           .in('uid', missingUids);
 
         if (extraUsers) {
@@ -2639,7 +2730,7 @@ export const getAdminCreators = async () => {
       if (postingUids.length > 0) {
         const { data: postingUsers } = await supabase
           .from('users')
-          .select('uid, name, email, avatar, role, created_at')
+          .select('*')
           .in('uid', postingUids);
 
         if (postingUsers) {
@@ -2695,6 +2786,11 @@ export const getAdminCreators = async () => {
       const local = getStoredCreatorProfile(u.uid);
       const name = u.name || p?.display_name || local?.name || local?.display_name || 'Creator';
       const avatar = u.avatar || p?.avatar_url || p?.avatar || local?.avatar || local?.avatar_url || null;
+      const hasId = Boolean((u as any).kyc_id_url || p?.kyc_id_url || (local as any)?.kyc_id_url || (local as any)?.idDocument);
+      const hasSelfie = Boolean((u as any).kyc_selfie_url || p?.kyc_selfie_url || (local as any)?.kyc_selfie_url || (local as any)?.selfie);
+      const isVerified = isCreatorVerified(u.uid, (u as any).is_verified, (u as any).kyc_status || p?.kyc_status);
+      const kycStatus = (u as any).kyc_status || p?.kyc_status || (hasId ? 'pending' : 'not_submitted');
+
       return {
         id: u.uid,
         name,
@@ -2704,13 +2800,43 @@ export const getAdminCreators = async () => {
         subs: p?.total_subscribers || local?.total_subscribers || 0,
         revenue: `KES ${(p?.total_earnings || 0).toLocaleString()}`,
         status: u.role === 'creator' ? 'active' : u.role === 'suspended_creator' ? 'suspended' : 'pending',
-        joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }) : 'Recent'
+        joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }) : 'Recent',
+        hasId,
+        hasSelfie,
+        isVerified,
+        kycStatus,
       };
     });
   } catch (err) {
     console.error("Error fetching admin creators:", err);
     return [];
   }
+};
+
+export const setCreatorVerified = async (creatorId: string, verified: boolean): Promise<boolean> => {
+  if (!creatorId) return false;
+  
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = JSON.parse(localStorage.getItem('tgd_verified_creator_ids') || '[]');
+      const set = new Set(Array.isArray(stored) ? stored : []);
+      if (verified) set.add(creatorId);
+      else set.delete(creatorId);
+      localStorage.setItem('tgd_verified_creator_ids', JSON.stringify(Array.from(set)));
+      window.dispatchEvent(new CustomEvent('creators_updated'));
+      window.dispatchEvent(new CustomEvent('posts_updated'));
+    } catch {}
+  }
+
+  try {
+    await supabase.from('users').update({ is_verified: verified }).eq('uid', creatorId);
+  } catch {}
+
+  try {
+    await supabase.from('creator_profiles').update({ is_verified: verified }).eq('user_id', creatorId);
+  } catch {}
+
+  return true;
 };
 
 export const updateCreatorStatus = async (creatorId: string, newStatus: 'active' | 'pending' | 'suspended') => {
@@ -4204,7 +4330,7 @@ export const getAdminTransactions = async () => {
         id: (t.reference_id || t.id).substring(0, 10).toUpperCase(),
         user: fromUser?.name || 'Fan / Subscriber',
         creator: toCreator?.name || 'Creator',
-        method: t.reference_id?.startsWith('pstk_') ? 'Card' : (t.type === 'subscription' ? 'Card' : 'M-Pesa'),
+        method: getPaymentMethodLabel(t.type, t.reference_id),
         amount: `KES ${(t.gross_amount || 0).toLocaleString()}`,
         fee: `KES ${(t.platform_fee || 0).toLocaleString()}`,
         net: `KES ${(t.net_amount || 0).toLocaleString()}`,

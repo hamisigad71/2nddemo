@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle, ArrowRight } from 'lucide-react';
 import { formatPhone } from '../lib/daraja';
 import { subscribeToCreator, getUserProfile } from '../lib/db';
@@ -70,54 +70,71 @@ export default function SubscribeModal({
     }
   }, [isOpen, user, creatorId, creatorName]);
 
-  // Poll Daraja for STK status
+  const [checkingManual, setCheckingManual] = useState(false);
+
+  const checkPayment = useCallback(async () => {
+    if (!checkoutRequestId) return;
+    setCheckingManual(true);
+    setStatusMsg('Verifying with M-Pesa...');
+    try {
+      const { checkPaymentStatus } = await import('../lib/payments');
+      const status = await checkPaymentStatus(checkoutRequestId);
+
+      if (status.paid) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (price && user) {
+          try {
+            const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays, checkoutRequestId);
+            onSuccess?.({
+              tierName,
+              durationDays,
+              expiresAt: sub.expiresAt
+            });
+          } catch (e) {
+            console.error('DB record error:', e);
+          }
+        }
+        setStep('success');
+        return true;
+      } else if (status.failed) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setErrorMessage(status.error || 'Payment was cancelled or rejected.');
+        setStep('failed');
+        return false;
+      }
+    } catch (err) {
+      console.warn('Payment check error:', err);
+    } finally {
+      setCheckingManual(false);
+    }
+    return false;
+  }, [checkoutRequestId, price, user, creatorId, tierName, durationDays, onSuccess]);
+
+  // Poll Daraja / PayHero for STK status
   useEffect(() => {
     if (step !== 'mpesa_waiting' || !checkoutRequestId) return;
 
     let count = 0;
-    // Polling interval
+    const maxPolls = 35; // 35 * 3.5s ~ 2 minutes
     pollRef.current = setInterval(async () => {
       count++;
       setPollCount(count);
-      setStatusMsg(`Checking payment... (${count}/12)`);
+      setStatusMsg(`Waiting for M-Pesa PIN confirmation... (${count}/${maxPolls})`);
 
-      try {
-        const { checkPaymentStatus } = await import('../lib/payments');
-        const status = await checkPaymentStatus(checkoutRequestId);
+      const isDone = await checkPayment();
+      if (isDone) return;
 
-        if (status.paid) {
-          clearInterval(pollRef.current!);
-          if (price && user) {
-            try {
-              const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
-              onSuccess?.({
-                tierName,
-                durationDays,
-                expiresAt: sub.expiresAt
-              });
-            } catch (e) {
-              console.error('DB record error:', e);
-            }
-          }
-          setStep('success');
-          return;
-        }
-      } catch (err) {
-        console.warn('Payment polling check error:', err);
-      }
-
-      // Give up after 12 polls (~60 seconds)
-      if (count >= 12) {
-        clearInterval(pollRef.current!);
-        setErrorMessage('Payment timed out. Please try again.');
+      if (count >= maxPolls) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setErrorMessage('Payment verification timed out. If you already entered your PIN, tap "Check Status Again" below.');
         setStep('failed');
       }
-    }, 5000);
+    }, 3500);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [step, checkoutRequestId, price, user, creatorId, tierName, durationDays, onSuccess]);
+  }, [step, checkoutRequestId, checkPayment]);
 
   if (!isOpen) return null;
 
@@ -186,7 +203,7 @@ export default function SubscribeModal({
           setStep('success');
           try {
             await verifyPaystackTransaction(reference);
-            const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays);
+            const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays, reference);
             onSuccess?.({
               tierName,
               durationDays,
@@ -385,19 +402,28 @@ export default function SubscribeModal({
                 {statusMsg}
               </p>
               {pollCount > 0 && (
-                <div className="flex gap-1.5 mb-8">
+                <div className="flex gap-1.5 mb-6">
                   {Array.from({ length: 12 }).map((_, i) => (
                     <div
                       key={i}
-                      className={`w-1 h-1 rounded-full transition-all ${i < pollCount ? 'bg-red-500 scale-125' : 'bg-white/10'}`}
+                      className={`w-1 h-1 rounded-full transition-all ${i < (pollCount % 12) ? 'bg-red-500 scale-125' : 'bg-white/10'}`}
                     />
                   ))}
                 </div>
               )}
-              <div className="flex flex-col items-center gap-3">
+              <div className="w-full flex flex-col items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => checkPayment()}
+                  disabled={checkingManual}
+                  className="w-full py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  {checkingManual ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  I Have Entered PIN (Verify Now)
+                </button>
                 <button
                    onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep('method'); }}
-                  className="text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="text-xs text-zinc-400 hover:text-white transition-colors py-1 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -443,16 +469,33 @@ export default function SubscribeModal({
               <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
                 <XCircle className="w-8 h-8" />
               </div>
-              <h3 className="text-base font-bold tracking-tight text-white mb-2">Transaction Failed</h3>
-              <p className="text-zinc-400 text-sm mb-8 text-center max-w-[240px] leading-relaxed">
-                {errorMessage || 'An error interrupted the process.'}
+              <h3 className="text-base font-bold tracking-tight text-white mb-2">Payment Notice</h3>
+              <p className="text-zinc-400 text-sm mb-6 text-center max-w-[260px] leading-relaxed">
+                {errorMessage || 'Payment was not confirmed yet.'}
               </p>
-              <button
-                onClick={() => { setStep('method'); setErrorMessage(null); }}
-                className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 px-4 rounded-xl transition-all border border-white/10"
-              >
-                Try Again
-              </button>
+              <div className="space-y-2.5 w-full">
+                {checkoutRequestId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('mpesa_waiting');
+                      setErrorMessage(null);
+                      setPollCount(0);
+                      checkPayment();
+                    }}
+                    className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] active:scale-95 cursor-pointer text-xs uppercase tracking-wider"
+                  >
+                    I Already Paid (Check Again)
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setStep('method'); setErrorMessage(null); }}
+                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white font-bold py-3 px-4 rounded-xl transition-all border border-white/10 text-xs uppercase tracking-wider cursor-pointer"
+                >
+                  Try Again
+                </button>
+              </div>
             </div>
           )}
 

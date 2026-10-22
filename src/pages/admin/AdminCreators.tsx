@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { CheckCircle, CheckCircle2, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-import { getAdminCreators, updateCreatorStatus, deleteUserAccount } from '../../lib/db';
+import { getAdminCreators, updateCreatorStatus, deleteUserAccount, setCreatorVerified } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
 
 const statusStyles: Record<string, string> = {
@@ -64,6 +64,16 @@ const AdminCreators = () => {
   const handleStatusChange = async (id: string, newStatus: 'active' | 'pending' | 'suspended') => {
     await updateCreatorStatus(id, newStatus);
     await loadCreators(); // Refresh data
+  };
+
+  const handleToggleVerified = async (id: string, verified: boolean) => {
+    try {
+      await setCreatorVerified(id, verified);
+      setCreatorsList(prev => prev.map(c => c.id === id ? { ...c, isVerified: verified } : c));
+      toast.success(verified ? 'Blue verified badge granted!' : 'Verified badge revoked.');
+    } catch {
+      toast.error('Could not update verification status.');
+    }
   };
 
   const filtered = creatorsList.filter(c => {
@@ -179,7 +189,10 @@ const AdminCreators = () => {
                           <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0d0e12] ${c.status === 'active' ? 'bg-emerald-500' : c.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
                         </div>
                         <div>
-                          <div className="font-bold text-white text-sm group-hover:text-red-400 transition-colors">{c.name}</div>
+                          <div className="font-bold text-white text-sm group-hover:text-red-400 transition-colors flex items-center gap-1.5">
+                            {c.name}
+                            {c.isVerified && <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500 shrink-0" title="Verified Creator" />}
+                          </div>
                           <div className="text-[11px] text-zinc-500 font-medium">{c.email}</div>
                         </div>
                       </div>
@@ -215,6 +228,23 @@ const AdminCreators = () => {
                     </td>
                     <td className="px-6 py-4 pr-8 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {c.isVerified ? (
+                          <button 
+                            onClick={() => handleToggleVerified(c.id, false)} 
+                            className="px-2.5 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95"
+                            title="Revoke Blue Verified Badge"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500" /> Verified
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleToggleVerified(c.id, true)} 
+                            className="px-2.5 py-1.5 bg-[#0d0e12] text-zinc-400 border border-zinc-700 hover:text-blue-400 hover:border-blue-500/40 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95"
+                            title="Grant Blue Verified Badge"
+                          >
+                            + Verify
+                          </button>
+                        )}
                         {c.status === 'pending' && (
                           <>
                             <button onClick={() => handleStatusChange(c.id, 'active')} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[11px] uppercase tracking-wider font-black rounded-xl border border-red-500 shadow-lg shadow-red-600/20 transition-all active:scale-95">Approve</button>
@@ -285,12 +315,26 @@ const AdminCreators = () => {
                 <div className="space-y-3 mb-6 relative z-10">
                   <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#0d0e12] p-3 rounded-xl">
                     <span className="text-zinc-400 font-medium tracking-wide">National ID</span>
-                    <span className="text-emerald-400 font-bold flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" /> Uploaded</span>
+                    {p.hasId ? (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" /> Uploaded</span>
+                    ) : (
+                      <span className="text-zinc-500 font-medium flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-zinc-600" /> Not Provided</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#0d0e12] p-3 rounded-xl">
                     <span className="text-zinc-400 font-medium tracking-wide">Selfie Match</span>
-                    <span className="text-yellow-400 font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Pending Review</span>
+                    {p.hasSelfie ? (
+                      <span className="text-yellow-400 font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Pending Review</span>
+                    ) : (
+                      <span className="text-zinc-500 font-medium flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-zinc-600" /> Not Provided</span>
+                    )}
                   </div>
+                  {!p.hasId && !p.hasSelfie && (
+                    <div className="text-[11px] text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                      <span>No KYC verification documents submitted yet.</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 relative z-10">

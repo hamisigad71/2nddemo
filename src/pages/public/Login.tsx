@@ -18,6 +18,10 @@ const Login = () => {
     if (params.get('error') === 'account_suspended') {
       setError('This account has been suspended or deleted by the platform administrator.');
     }
+    const emailParam = params.get('email');
+    if (emailParam) {
+      setEmail(emailParam);
+    }
   }, []);
 
   useEffect(() => {
