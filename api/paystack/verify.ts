@@ -20,7 +20,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ success: false, error: 'Reference query parameter is required' });
   }
 
-  const paystackSecret = (process.env.PAYSTACK_SECRET_KEY || 'sk_test_ef2079f1c89c45fbb1708ca379830a4c507e897d').trim();
+  const paystackSecret = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+  if (!paystackSecret) {
+    return res.status(500).json({ success: false, error: 'Server payment configuration missing: PAYSTACK_SECRET_KEY' });
+  }
 
   try {
     const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {

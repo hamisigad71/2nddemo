@@ -22,6 +22,7 @@ import {
 import type { ChatParticipant, ChatMessage } from '../../lib/db';
 import { validateChatMessage, stripDigits } from '../../lib/chatFilter';
 import { supabase } from '../../lib/supabase';
+import { resolveUserAvatar, getDefaultAvatar } from '../../lib/avatar';
 
 const Messages = () => {
   const { user } = useAuth();
@@ -350,8 +351,11 @@ const Messages = () => {
                   >
                     <div className="relative shrink-0">
                       <img
-                        src={fan.avatar}
+                        src={resolveUserAvatar(fan.avatar, fan.name)}
                         alt={fan.name}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = getDefaultAvatar(fan.name);
+                        }}
                         className="w-12 h-12 rounded-full object-cover shadow-sm ring-1 ring-border"
                       />
                       {fan.isOnline && (
@@ -415,8 +419,11 @@ const Messages = () => {
                   </button>
                   <div className="relative">
                     <img
-                      src={selectedFan.avatar}
+                      src={resolveUserAvatar(selectedFan.avatar, selectedFan.name)}
                       alt={selectedFan.name}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = getDefaultAvatar(selectedFan.name);
+                      }}
                       className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-primary/20"
                     />
                     {selectedFan.isOnline && (

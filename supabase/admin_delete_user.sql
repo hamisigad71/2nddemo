@@ -11,7 +11,26 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, auth
 AS $$
+DECLARE
+  caller_id text := auth.uid()::text;
+  caller_role text;
+  is_admin boolean := false;
 BEGIN
+  -- Strict Authorization Check (OWASP A01: Broken Access Control Prevention)
+  -- Only allow: 1) Account owner deleting own account, OR 2) Platform administrator, OR 3) service_role
+  IF caller_id IS NOT NULL THEN
+    SELECT role INTO caller_role FROM public.users WHERE uid = caller_id;
+    IF caller_role = 'admin' THEN
+      is_admin := true;
+    END IF;
+  ELSIF (current_setting('request.jwt.claim.role', true) = 'service_role') THEN
+    is_admin := true;
+  END IF;
+
+  IF NOT is_admin AND (caller_id IS NULL OR caller_id <> target_uid) THEN
+    RAISE EXCEPTION 'Access Denied: Only platform administrators or the account owner can delete this account.';
+  END IF;
+
   -- 1. Delete associated posts and content
   DELETE FROM public.posts WHERE creator_id = target_uid;
   
@@ -48,6 +67,8 @@ BEGIN
 END;
 $$;
 
--- Grant permission to call this RPC function
-GRANT EXECUTE ON FUNCTION public.admin_delete_user(text) TO authenticated, service_role, anon;
+-- Revoke public & anonymous execute permissions (OWASP A01 Prevention)
+REVOKE ALL ON FUNCTION public.admin_delete_user(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.admin_delete_user(text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(text) TO authenticated, service_role;
 

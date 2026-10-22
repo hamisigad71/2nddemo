@@ -95,34 +95,49 @@ export const createUserProfile = async (uid: string, data: any) => {
 
 export const getUserProfile = async (uid: string) => {
   if (!uid) return null;
+  const cleanUid = uid.replace(/[^a-zA-Z0-9_-]/g, '');
   try {
-    const { data: userRow } = await supabase
+    let { data: userRow } = await supabase
       .from('users')
       .select('*')
-      .eq('uid', uid)
+      .eq('uid', cleanUid)
       .maybeSingle();
 
+    if (!userRow) {
+      const { data: userRowById } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', cleanUid)
+        .maybeSingle();
+      if (userRowById) userRow = userRowById;
+    }
+
+    const currentAvatar = userRow?.avatar || userRow?.avatar_url;
+
     // If user's avatar is missing in users table, check creator_profiles
-    if (!userRow?.avatar) {
+    if (!currentAvatar) {
       const { data: creatorMeta } = await supabase
         .from('creator_profiles')
         .select('*')
-        .eq('user_id', uid)
+        .eq('user_id', cleanUid)
         .maybeSingle();
 
       if (creatorMeta) {
         return {
           ...(userRow || {}),
-          uid,
+          uid: cleanUid,
           name: userRow?.name || creatorMeta.display_name || 'Creator',
-          avatar: creatorMeta.avatar_url || creatorMeta.avatar || userRow?.avatar || null,
+          avatar: creatorMeta.avatar_url || creatorMeta.avatar || null,
           bio: userRow?.bio || creatorMeta.bio,
           cover_image: userRow?.cover_image || creatorMeta.cover_image,
         };
       }
     }
 
-    return userRow;
+    return userRow ? {
+      ...userRow,
+      avatar: currentAvatar || null
+    } : null;
   } catch (err) {
     console.warn('getUserProfile error:', err);
     return null;
@@ -196,19 +211,25 @@ export const getCreatorStorageAssets = async (creatorId: string): Promise<{ avat
 
 export const updateUserProfile = async (uid: string, data: any) => {
   if (!uid) return;
+  const cleanUid = uid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const synchronizedData = {
+    ...data,
+    ...(data.avatar && !data.avatar_url ? { avatar_url: data.avatar } : {}),
+    ...(data.avatar_url && !data.avatar ? { avatar: data.avatar_url } : {})
+  };
   try {
     // 1. Try update on users table
     const { data: updatedRows, error } = await supabase
       .from('users')
-      .update(data)
-      .eq('uid', uid)
+      .update(synchronizedData)
+      .eq('uid', cleanUid)
       .select('uid');
     
     // If no row was updated (e.g. user row does not exist yet in users table), upsert it!
     if (!error && (!updatedRows || updatedRows.length === 0)) {
       const { error: upsertErr } = await supabase
         .from('users')
-        .upsert({ uid, ...data }, { onConflict: 'uid' });
+        .upsert({ uid: cleanUid, ...synchronizedData }, { onConflict: 'uid' });
       if (upsertErr) {
         console.warn('users upsert note:', upsertErr.message);
       }
@@ -221,8 +242,10 @@ export const updateUserProfile = async (uid: string, data: any) => {
     if (error.message?.includes('column') || error.code === '42703' || error.code === 'PGRST204') {
       const safeData: any = {};
       if (data.name !== undefined) safeData.name = data.name;
-      if (data.avatar !== undefined) safeData.avatar = data.avatar;
-      if (data.avatar_url !== undefined) safeData.avatar_url = data.avatar_url;
+      if (data.avatar !== undefined || data.avatar_url !== undefined) {
+        safeData.avatar = data.avatar || data.avatar_url;
+        safeData.avatar_url = data.avatar_url || data.avatar;
+      }
       if (data.phone !== undefined) safeData.phone = data.phone;
       if (data.role !== undefined) safeData.role = data.role;
       if (data.email !== undefined) safeData.email = data.email;
@@ -230,11 +253,11 @@ export const updateUserProfile = async (uid: string, data: any) => {
       const { data: retryRows, error: retryError } = await supabase
         .from('users')
         .update(safeData)
-        .eq('uid', uid)
+        .eq('uid', cleanUid)
         .select('uid');
         
       if (!retryError && (!retryRows || retryRows.length === 0)) {
-        await supabase.from('users').upsert({ uid, ...safeData }, { onConflict: 'uid' });
+        await supabase.from('users').upsert({ uid: cleanUid, ...safeData }, { onConflict: 'uid' });
       }
       if (retryError) {
         console.warn('Retry updating user profile notice:', retryError.message);
@@ -264,10 +287,30 @@ export const updateCreatorProfile = async (uid: string, data: any) => {
 };
 
 export const deleteUserAccount = async (uid: string): Promise<boolean> => {
+  if (!uid) return false;
+
+  // OWASP A01 Access Control: Verify caller is account owner or admin
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const caller = authData?.user;
+    if (!caller) throw new Error('Authentication required to perform account deletion.');
+
+    const isSelf = caller.id === uid;
+    const isAdmin = caller.user_metadata?.role === 'admin' || (caller.email && caller.email.includes('admin'));
+    if (!isSelf && !isAdmin) {
+      throw new Error('Unauthorized: You can only delete your own account.');
+    }
+  } catch (authErr: any) {
+    if (authErr?.message?.includes('Unauthorized')) throw authErr;
+    console.warn('Caller verification note:', authErr);
+  }
+
+  const cleanUid = uid.replace(/[^a-zA-Z0-9_-]/g, '');
+
   try {
     // 1. Try server-side RPC function which deletes from auth.users and public tables
     try {
-      const { data: rpcSuccess, error: rpcErr } = await supabase.rpc('admin_delete_user', { target_uid: uid });
+      const { data: rpcSuccess, error: rpcErr } = await supabase.rpc('admin_delete_user', { target_uid: cleanUid });
       if (!rpcErr && rpcSuccess) {
         // Clear local caches
         if (typeof window !== 'undefined') {
@@ -281,27 +324,27 @@ export const deleteUserAccount = async (uid: string): Promise<boolean> => {
     }
 
     // 2. Direct database table cleanups
-    try { await supabase.from('escort_applications').delete().or(`creator_id.eq.${uid},user_id.eq.${uid}`); } catch {}
-    try { await supabase.from('ad_applications').delete().eq('creator_id', uid); } catch {}
-    try { await supabase.from('notifications').delete().eq('user_id', uid); } catch {}
-    try { await supabase.from('post_likes').delete().eq('user_id', uid); } catch {}
-    try { await supabase.from('comments').delete().eq('user_id', uid); } catch {}
-    try { await supabase.from('subscriptions').delete().or(`fan_id.eq.${uid},creator_id.eq.${uid}`); } catch {}
-    try { await supabase.from('transactions').delete().eq('from_user_id', uid); } catch {}
-    try { await supabase.from('creator_profiles').delete().eq('user_id', uid); } catch {}
-    try { await supabase.from('posts').delete().eq('creator_id', uid); } catch {}
-    try { await supabase.from('messages').delete().or(`sender_id.eq.${uid},receiver_id.eq.${uid}`); } catch {}
+    try { await supabase.from('escort_applications').delete().or(`creator_id.eq.${cleanUid},user_id.eq.${cleanUid}`); } catch {}
+    try { await supabase.from('ad_applications').delete().eq('creator_id', cleanUid); } catch {}
+    try { await supabase.from('notifications').delete().eq('user_id', cleanUid); } catch {}
+    try { await supabase.from('post_likes').delete().eq('user_id', cleanUid); } catch {}
+    try { await supabase.from('comments').delete().eq('user_id', cleanUid); } catch {}
+    try { await supabase.from('subscriptions').delete().or(`fan_id.eq.${cleanUid},creator_id.eq.${cleanUid}`); } catch {}
+    try { await supabase.from('transactions').delete().eq('from_user_id', cleanUid); } catch {}
+    try { await supabase.from('creator_profiles').delete().eq('user_id', cleanUid); } catch {}
+    try { await supabase.from('posts').delete().eq('creator_id', cleanUid); } catch {}
+    try { await supabase.from('messages').delete().or(`sender_id.eq.${cleanUid},receiver_id.eq.${cleanUid}`); } catch {}
 
     // Delete user row from users table
-    const { error } = await supabase.from('users').delete().eq('uid', uid);
+    const { error } = await supabase.from('users').delete().eq('uid', cleanUid);
     if (error) {
-      await supabase.from('users').delete().eq('id', uid);
+      await supabase.from('users').delete().eq('id', cleanUid);
     }
 
     // Clean up local storage
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(`tgd_creator_profile_${uid}`);
-      localStorage.removeItem(`tgd_fan_subs_${uid}`);
+      localStorage.removeItem(`tgd_creator_profile_${cleanUid}`);
+      localStorage.removeItem(`tgd_fan_subs_${cleanUid}`);
       try {
         const cached = JSON.parse(localStorage.getItem('tgd_all_posts') || '[]');
         localStorage.setItem('tgd_all_posts', JSON.stringify(cached.filter((p: any) => p.creator_id !== uid)));
@@ -2027,8 +2070,8 @@ export const getCreatorSubscriberCount = async (creatorId: string): Promise<numb
 };
 
 export const HARDCODED_DISCOVER_CREATORS = [
-  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "12k followers", subscribersCount: 12000, price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
-  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "9.5k followers", subscribersCount: 9500, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
+  { id: 'creator-amina', name: "Amina K.", handle: "@aminak", category: "Fitness", location: "Nairobi, Kenya", subs: "0 subscribers", subscribersCount: 0, price: "KES 500/mo", avatar: "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
+  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "0 subscribers", subscribersCount: 0, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
 ];
 
 export const getDiscoverCreators = async () => {
@@ -2155,13 +2198,15 @@ export const getDiscoverCreators = async () => {
     } catch {}
 
     // Query active subscriptions count per creator for live accurate subscriber stats
+    let activeSubsQueriedSuccessfully = false;
     const creatorSubCounts = new Map<string, number>();
     try {
-      const { data: activeSubs } = await supabase
+      const { data: activeSubs, error } = await supabase
         .from('subscriptions')
         .select('creator_id')
         .eq('status', 'active');
-      if (activeSubs && activeSubs.length > 0) {
+      if (!error && activeSubs) {
+        activeSubsQueriedSuccessfully = true;
         activeSubs.forEach((s: any) => {
           if (s.creator_id) {
             creatorSubCounts.set(s.creator_id, (creatorSubCounts.get(s.creator_id) || 0) + 1);
@@ -2193,7 +2238,9 @@ export const getDiscoverCreators = async () => {
         || (postStats?.latestCover && !isVideoMediaUrl(postStats.latestCover) && !postStats.latestCover.startsWith('blob:') && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null);
 
       const cover = rawCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
-      const realSubs = creatorSubCounts.get(u.uid) ?? (p?.total_subscribers || 0);
+      const realSubs = creatorSubCounts.has(u.uid)
+        ? (creatorSubCounts.get(u.uid) || 0)
+        : (activeSubsQueriedSuccessfully ? 0 : (p?.total_subscribers || 0));
 
       return {
         id: u.uid,
@@ -3982,14 +4029,17 @@ export const sendChatMessage = async (params: {
  */
 export const getChatMessages = async (creatorId: string, fanId: string): Promise<ChatMessage[]> => {
   let messages: ChatMessage[] = [];
+  const cleanCreatorId = (creatorId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  const cleanFanId = (fanId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!cleanCreatorId || !cleanFanId) return [];
 
   // 1. Try Supabase
   try {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .eq('creator_id', creatorId)
-      .or(`sender_id.eq.${fanId},receiver_id.eq.${fanId}`)
+      .eq('creator_id', cleanCreatorId)
+      .or(`sender_id.eq.${cleanFanId},receiver_id.eq.${cleanFanId}`)
       .order('created_at', { ascending: true });
 
     if (!error && data && data.length > 0) {

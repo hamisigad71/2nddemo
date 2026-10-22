@@ -29,7 +29,7 @@ import {
 import type { ChatParticipant, ChatMessage } from '../../lib/db';
 import { validateChatMessage, stripDigits } from '../../lib/chatFilter';
 import { supabase } from '../../lib/supabase';
-import { resolveUserAvatar } from '../../lib/avatar';
+import { resolveUserAvatar, getDefaultAvatar } from '../../lib/avatar';
 
 const UserMessages = () => {
   const { user } = useAuth();
@@ -418,8 +418,11 @@ const UserMessages = () => {
                   >
                     <div className="relative shrink-0">
                       <img
-                        src={c.avatar}
+                        src={resolveUserAvatar(c.avatar, c.name)}
                         alt={c.name}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = getDefaultAvatar(c.name);
+                        }}
                         className="w-12 h-12 rounded-full object-cover ring-2 ring-red-500/30 ring-offset-2 ring-offset-black"
                       />
                       {c.isOnline && (
@@ -485,8 +488,11 @@ const UserMessages = () => {
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <img
-                    src={selectedCreator.avatar}
+                    src={resolveUserAvatar(selectedCreator.avatar, selectedCreator.name)}
                     alt={selectedCreator.name}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = getDefaultAvatar(selectedCreator.name);
+                    }}
                     className="w-10 h-10 rounded-full object-cover ring-2 ring-red-500/40 ring-offset-2 ring-offset-black"
                   />
                   <div>
