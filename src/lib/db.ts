@@ -2680,7 +2680,7 @@ export const getAdminCreators = async () => {
     // Auto-sync: Ensure any users identified as creators have role = 'creator' in database
     const syncUids = creatorUsers.filter(u => u.role !== 'creator' && u.role !== 'suspended_creator' && u.role !== 'pending_creator').map(u => u.uid);
     if (syncUids.length > 0) {
-      supabase.from('users').update({ role: 'creator' }).in('uid', syncUids).then(() => {}).catch(() => {});
+      supabase.from('users').update({ role: 'creator' }).in('uid', syncUids).then(() => {}, () => {});
     }
 
     const uids = creatorUsers.map(u => u.uid);

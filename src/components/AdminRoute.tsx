@@ -85,8 +85,7 @@ export const AdminRoute: React.FC = () => {
         .from('users')
         .update({ role: 'admin' })
         .or(`uid.eq.${user.id},id.eq.${user.id}`)
-        .then(() => {})
-        .catch(() => {});
+        .then(() => {}, () => {});
     }
   }, [user, isAuthorized]);
 
@@ -141,8 +140,7 @@ export const AdminRoute: React.FC = () => {
           .from('users')
           .update({ role: 'admin' })
           .or(`uid.eq.${user.id},id.eq.${user.id}`)
-          .then(() => {})
-          .catch(() => {});
+          .then(() => {}, () => {});
       }
 
       // Log successful security unlock
