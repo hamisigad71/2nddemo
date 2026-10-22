@@ -209,7 +209,17 @@ export default function PPVUnlockModal({
         {/* Header Preview */}
         <div className="flex items-center gap-3.5 mb-5 pb-4 border-b border-white/10">
           <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden relative shrink-0">
-            <img src={mediaItem.url} alt="thumbnail" className="w-full h-full object-cover filter blur-[2px] opacity-70" />
+            {mediaItem.type === 'video' || mediaItem.url?.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
+              <video
+                src={mediaItem.url}
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover filter blur-[2px] opacity-70 pointer-events-none"
+              />
+            ) : (
+              <img src={mediaItem.url} alt="thumbnail" className="w-full h-full object-cover filter blur-[2px] opacity-70" />
+            )}
             <div className="absolute inset-0 flex items-center justify-center bg-black/40">
               <Lock className="w-5 h-5 text-red-500" />
             </div>

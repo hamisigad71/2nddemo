@@ -251,19 +251,39 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
 
         {/* Media */}
         {(post.media_url || shouldLockMedia) && (
-          <div className="relative bg-black overflow-hidden group select-none min-h-[320px] sm:min-h-[400px] flex items-center justify-center">
+          <div className="relative bg-zinc-950 overflow-hidden group select-none min-h-[340px] sm:min-h-[420px] flex items-center justify-center">
             {shouldLockMedia ? (
               <>
-                {/* Safe ambient backdrop using creator avatar/cover only, never secret locked media */}
-                <div 
-                  className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-20 scale-125 pointer-events-none"
-                  style={{ backgroundImage: `url(${avatarUrl})` }}
-                />
-                <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm pointer-events-none" />
+                {/* Ambient aesthetic blurred backdrop using locked video/media or creator avatar */}
+                {post.media_url ? (
+                  post.media_type === 'video' || post.media_url.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
+                    <video
+                      src={post.media_url}
+                      muted
+                      playsInline
+                      autoPlay
+                      loop
+                      preload="metadata"
+                      className="absolute inset-0 w-full h-full object-cover filter blur-2xl scale-125 opacity-70 pointer-events-none"
+                    />
+                  ) : (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center filter blur-2xl scale-125 opacity-70 pointer-events-none"
+                      style={{ backgroundImage: `url(${post.media_url})` }}
+                    />
+                  )
+                ) : (
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center filter blur-2xl scale-125 opacity-50 pointer-events-none"
+                    style={{ backgroundImage: `url(${avatarUrl})` }}
+                  />
+                )}
+                {/* Frosted glass blur overlay */}
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-md pointer-events-none" />
 
-                {/* Secure Locked Paywall Card - raw media tag is completely unmounted */}
-                <div className="relative z-30 flex flex-col items-center justify-center p-4 text-center max-w-[300px] w-full">
-                  <div className="backdrop-blur-md bg-black/85 border border-white/15 rounded-2xl px-6 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col items-center w-full">
+                {/* Secure Locked Paywall Card */}
+                <div className="relative z-30 flex flex-col items-center justify-center p-4 text-center max-w-[320px] w-full">
+                  <div className="backdrop-blur-xl bg-black/75 border border-white/20 rounded-2xl px-6 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col items-center w-full">
                     <div className="w-12 h-12 rounded-2xl bg-black/90 border border-red-500/50 flex items-center justify-center mb-3 shadow-lg text-red-500">
                       <Lock className="w-6 h-6" />
                     </div>
@@ -271,7 +291,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
                     <p className="text-white font-black text-sm tracking-tight mb-1">
                       {isPpvPost ? 'Pay-Per-View Content' : 'Subscribers Only'}
                     </p>
-                    <p className="text-zinc-400 text-xs mb-4 leading-relaxed">
+                    <p className="text-zinc-300 text-xs mb-4 leading-relaxed">
                       {isPpvPost 
                         ? `Unlock this exclusive post for KES ${post.price || 0}.` 
                         : 'Join this creator’s VIP subscription to unlock all posts.'}

@@ -62,17 +62,34 @@ const AdminCreators = () => {
   }, []);
 
   const handleStatusChange = async (id: string, newStatus: 'active' | 'pending' | 'suspended') => {
-    await updateCreatorStatus(id, newStatus);
-    await loadCreators(); // Refresh data
+    try {
+      const creator = creatorsList.find(c => c.id === id);
+      const hasFilledKyc = Boolean((creator?.hasId && creator?.hasSelfie) || creator?.kycStatus === 'pending');
+      
+      await updateCreatorStatus(id, newStatus);
+      
+      if (newStatus === 'active') {
+        if (hasFilledKyc) {
+          toast.success(`${creator?.name || 'Creator'} approved and verified with blue badge! 👑`);
+        } else {
+          toast.success(`${creator?.name || 'Creator'} approved as active. (KYC documents not yet submitted)`);
+        }
+      } else {
+        toast.success(`Creator status changed to ${newStatus}`);
+      }
+      await loadCreators(); // Refresh data
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update creator status');
+    }
   };
 
   const handleToggleVerified = async (id: string, verified: boolean) => {
     try {
       await setCreatorVerified(id, verified);
       setCreatorsList(prev => prev.map(c => c.id === id ? { ...c, isVerified: verified } : c));
-      toast.success(verified ? 'Blue verified badge granted!' : 'Verified badge revoked.');
-    } catch {
-      toast.error('Could not update verification status.');
+      toast.success(verified ? 'Creator identity verified; blue badge granted.' : 'Creator verification revoked.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not update verification status.');
     }
   };
 
@@ -239,8 +256,9 @@ const AdminCreators = () => {
                         ) : (
                           <button 
                             onClick={() => handleToggleVerified(c.id, true)} 
+                            disabled={!c.hasId || !c.hasSelfie}
                             className="px-2.5 py-1.5 bg-[#0d0e12] text-zinc-400 border border-zinc-700 hover:text-blue-400 hover:border-blue-500/40 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95"
-                            title="Grant Blue Verified Badge"
+                            title={c.hasId && c.hasSelfie ? "Approve submitted identity verification" : "Creator must submit ID and selfie first"}
                           >
                             + Verify
                           </button>

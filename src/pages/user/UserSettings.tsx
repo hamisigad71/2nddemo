@@ -339,15 +339,16 @@ const UserSettings = () => {
         throw selfieUploadError;
       }
       try {
-        const { error } = await supabase.from('users').update({
+        const { data: updatedProfile, error } = await supabase.from('users').update({
           legal_name: kycData.legalName,
           national_id_number: kycData.nationalId,
           dob: kycData.dob,
           kyc_id_url: idPath,
           kyc_selfie_url: selfiePath,
           kyc_status: 'pending'
-        }).eq('uid', user.id);
+        }).eq('uid', user.id).select('uid').maybeSingle();
         if (error) throw error;
+        if (!updatedProfile) throw new Error('Your profile could not be updated. Please sign in again and retry.');
       } catch (error) {
         await supabase.storage.from('kyc-documents').remove([idPath, selfiePath]);
         throw error;

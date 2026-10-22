@@ -297,9 +297,15 @@ const CreatorFeed = () => {
                     priority={index < 2}
                   />
                   {(post.is_locked || post.visibility === 'subscribers') && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <Lock className="w-8 h-8 text-white mb-2" />
-                      <span className="text-white font-bold text-sm">{post.visibility === 'subscribers' ? 'Subscribers only' : `Pay-Per-View · KES ${post.price}`}</span>
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md">
+                      <div className="backdrop-blur-xl bg-black/75 border border-white/20 rounded-2xl px-5 py-4 shadow-xl flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-xl bg-black/80 border border-red-500/50 flex items-center justify-center mb-2 shadow text-red-500">
+                          <Lock className="w-5 h-5" />
+                        </div>
+                        <span className="text-white font-bold text-xs uppercase tracking-wider">
+                          {post.visibility === 'subscribers' ? 'Subscribers only' : `Pay-Per-View · KES ${post.price}`}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>

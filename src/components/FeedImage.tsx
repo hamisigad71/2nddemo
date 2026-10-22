@@ -98,7 +98,7 @@ export default function FeedImage({
             onPause={() => setIsPlaying(false)}
             className={`relative z-10 w-full object-cover max-h-[600px] transition-all duration-500 ease-out ${
               isLoaded ? 'opacity-100' : 'opacity-0'
-            } ${isLocked ? 'filter blur-[6px] scale-102 opacity-85 pointer-events-none' : ''} ${className}`}
+            } ${isLocked ? 'filter blur-xl scale-110 opacity-75 pointer-events-none' : ''} ${className}`}
           />
 
           {/* Play / Pause Center Floating Overlay Button (when user pauses) */}
@@ -152,7 +152,7 @@ export default function FeedImage({
             onError={() => setHasError(true)}
             className={`relative z-10 w-full object-cover max-h-[600px] transition-all duration-500 ease-out ${
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'
-            } ${isLocked ? 'filter blur-[6px] scale-102 opacity-90' : ''} ${className}`}
+            } ${isLocked ? 'filter blur-xl scale-110 opacity-75' : ''} ${className}`}
           />
         </>
       )}

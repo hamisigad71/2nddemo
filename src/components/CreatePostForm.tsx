@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { UploadCloud, ImagePlus, Loader2, Video, Save } from 'lucide-react';
+import { UploadCloud, ImagePlus, Loader2, Video, Save, Lock } from 'lucide-react';
 import { createPost, uploadFileToSupabase } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
@@ -247,10 +247,23 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
             isDragging
               ? 'border-primary bg-primary/10 ring-4 ring-primary/20 scale-[1.01]'
               : preview || videoPreview
-                ? 'border-primary/50 bg-black/40'
+                ? 'border-primary/50 bg-black/20 backdrop-blur-sm'
                 : 'border-border hover:border-primary/50 hover:bg-muted/30'
           }`}
         >
+          {/* Overlay when uploading */}
+          {uploading && (
+            <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-white pointer-events-none animate-in fade-in duration-200">
+              <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center animate-pulse">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+              <div className="text-center px-4">
+                <p className="font-bold text-sm text-white">Uploading & Processing {mediaType === 'video' ? 'Video' : 'Media'}...</p>
+                <p className="text-xs text-zinc-300">Applying security & saving post</p>
+              </div>
+            </div>
+          )}
+
           {/* Overlay when dragging over existing preview */}
           {isDragging && (preview || videoPreview) && (
             <div className="absolute inset-0 z-30 bg-black/85 backdrop-blur-sm border-2 border-dashed border-primary flex flex-col items-center justify-center text-primary gap-2 pointer-events-none animate-in fade-in duration-200">
@@ -261,23 +274,59 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
           )}
 
           {videoPreview ? (
-            <div className="w-full flex flex-col items-center p-2 relative">
+            <div className="w-full relative overflow-hidden rounded-xl flex flex-col items-center p-2">
+              {/* Blurred video backdrop to eliminate solid black letterbox background */}
               <video
                 src={videoPreview}
-                controls
+                muted
                 playsInline
-                className="w-full max-h-72 object-contain rounded-lg shadow-md"
+                className="absolute inset-0 w-full h-full object-cover filter blur-2xl scale-125 opacity-40 pointer-events-none"
               />
-              <span className="mt-2 text-xs text-primary font-semibold flex items-center gap-1">
-                <Video className="w-3.5 h-3.5" /> Video attached · Click or drag to change
-              </span>
+              <div className="absolute inset-0 bg-black/30 backdrop-blur-sm pointer-events-none" />
+
+              <div className="relative z-10 w-full flex flex-col items-center">
+                <div className="relative w-full flex justify-center">
+                  <video
+                    src={videoPreview}
+                    controls
+                    playsInline
+                    className="w-full max-h-72 object-contain rounded-lg shadow-md"
+                  />
+                  {visibility !== 'public' && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold shadow-lg">
+                      <Lock className="w-3 h-3 text-red-500" />
+                      <span>{visibility === 'ppv' ? `PPV · KES ${price || '0'}` : 'Subscriber-Only'}</span>
+                    </div>
+                  )}
+                </div>
+                <span className="mt-2 text-xs text-primary font-semibold flex items-center gap-1 bg-black/60 px-3 py-1 rounded-full backdrop-blur-md">
+                  <Video className="w-3.5 h-3.5" /> Video attached · Click or drag to change
+                </span>
+              </div>
             </div>
           ) : preview ? (
-            <div className="w-full relative flex flex-col items-center">
-              <img src={preview} alt="preview" className="w-full max-h-72 object-cover rounded-xl" />
-              <span className="mt-2 text-xs text-muted-foreground font-medium">
-                Click or drag another file to replace
-              </span>
+            <div className="w-full relative overflow-hidden rounded-xl flex flex-col items-center">
+              {/* Blurred ambient backdrop */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center filter blur-2xl scale-125 opacity-40 pointer-events-none"
+                style={{ backgroundImage: `url(${preview})` }}
+              />
+              <div className="absolute inset-0 bg-black/30 backdrop-blur-sm pointer-events-none" />
+
+              <div className="relative z-10 w-full flex flex-col items-center p-2">
+                <div className="relative w-full flex justify-center">
+                  <img src={preview} alt="preview" className="w-full max-h-72 object-contain rounded-xl" />
+                  {visibility !== 'public' && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold shadow-lg">
+                      <Lock className="w-3 h-3 text-red-500" />
+                      <span>{visibility === 'ppv' ? `PPV · KES ${price || '0'}` : 'Subscriber-Only'}</span>
+                    </div>
+                  )}
+                </div>
+                <span className="mt-2 text-xs text-muted-foreground font-medium bg-black/60 px-3 py-1 rounded-full backdrop-blur-md text-white">
+                  Click or drag another file to replace
+                </span>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 text-muted-foreground text-center p-8 group-hover:text-primary transition-colors">

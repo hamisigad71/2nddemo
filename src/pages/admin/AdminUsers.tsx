@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Users, UserX, UserCheck, Check, X, ShieldAlert, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { supabase } from '../../lib/supabase';
-import { getAdminUsers, updateUserStatus, deleteUserAccount } from '../../lib/db';
+import { getAdminUsers, updateUserStatus, deleteUserAccount, setCreatorVerified } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
 import { resolveUserAvatar } from '../../lib/avatar';
 
@@ -113,15 +113,27 @@ const AdminUsers = () => {
       )) {
         throw new Error('Cannot approve KYC until all identity details and proof documents are submitted.');
       }
-      const { error } = await supabase.from('users').update({ kyc_status: newStatus }).eq('uid', id);
+      const { error } = await supabase.from('users').update({ 
+        kyc_status: newStatus,
+        ...(newStatus === 'verified' ? { is_verified: true } : {})
+      }).eq('uid', id);
       if (error) throw error;
+
+      if (newStatus === 'verified') {
+        try {
+          await setCreatorVerified(id, true);
+        } catch (e) {
+          console.warn('Notice setting creator verified cache in AdminUsers:', e);
+        }
+      }
+
       setPendingUsers(prev => prev.filter(u => u.uid !== id));
       setKycDocumentUrls(prev => {
         const next = { ...prev };
         delete next[id];
         return next;
       });
-      toast.success(`User KYC status set to ${newStatus}`);
+      toast.success(newStatus === 'verified' ? 'Identity verified! User granted blue verified badge.' : 'KYC rejected.');
     } catch (err: any) {
       toast.error(err?.message || 'Failed to update KYC status');
     } finally {

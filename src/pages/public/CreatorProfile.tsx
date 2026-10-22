@@ -1038,15 +1038,29 @@ export default function CreatorProfile() {
                       )}
 
                       {/* Thumbnail / Teaser Background */}
-                      <img
-                        src={item.url}
-                        alt={item.title}
-                        className={`w-full h-full object-cover transition-transform duration-500 ${
-                          item.isLocked
-                            ? "filter blur-lg scale-110 opacity-40"
-                            : "group-hover:scale-105"
-                        }`}
-                      />
+                      {item.type === "video" || item.url?.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
+                        <video
+                          src={item.url}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className={`w-full h-full object-cover transition-transform duration-500 pointer-events-none ${
+                            item.isLocked
+                              ? "filter blur-lg scale-110 opacity-60"
+                              : "group-hover:scale-105"
+                          }`}
+                        />
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt={item.title}
+                          className={`w-full h-full object-cover transition-transform duration-500 ${
+                            item.isLocked
+                              ? "filter blur-lg scale-110 opacity-60"
+                              : "group-hover:scale-105"
+                          }`}
+                        />
+                      )}
 
                       {/* Locked State: Centered Padlock & Price Tag (Screenshot 2) */}
                       {item.isLocked ? (
@@ -1165,41 +1179,62 @@ export default function CreatorProfile() {
                     </div>
 
                     {post.media_url && (
-                      <div className="relative w-full bg-zinc-950 flex justify-center items-center overflow-hidden max-h-[550px] border-y border-white/10">
+                      <div className="relative w-full bg-zinc-950 flex justify-center items-center overflow-hidden min-h-[340px] max-h-[550px] border-y border-white/10">
                         {isPostLocked ? (
-                          <div className="relative w-full aspect-video flex flex-col items-center justify-center p-6 text-center bg-black/80 backdrop-blur-md">
-                            <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 mb-3 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-                              <Lock className="w-6 h-6" />
+                          <>
+                            {/* Blurred ambient backdrop for locked video/image */}
+                            {post.media_type === "video" || post.media_url.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
+                              <video
+                                src={post.media_url}
+                                muted
+                                playsInline
+                                autoPlay
+                                loop
+                                preload="metadata"
+                                className="absolute inset-0 w-full h-full object-cover filter blur-2xl scale-125 opacity-70 pointer-events-none"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0 bg-cover bg-center filter blur-2xl scale-125 opacity-70 pointer-events-none"
+                                style={{ backgroundImage: `url(${post.media_url})` }}
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-md pointer-events-none" />
+
+                            <div className="relative z-10 flex flex-col items-center justify-center p-6 text-center max-w-sm w-full backdrop-blur-xl bg-black/75 border border-white/15 rounded-2xl shadow-2xl m-4">
+                              <div className="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 mb-3 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+                                <Lock className="w-6 h-6" />
+                              </div>
+                              <h4 className="text-lg font-black text-white mb-1">
+                                {post.visibility === "subscribers" ? "Subscriber-Only Content" : "Pay-Per-View Content"}
+                              </h4>
+                              <p className="text-xs text-zinc-300 mb-4 max-w-xs leading-relaxed">
+                                {post.visibility === "subscribers"
+                                  ? `Subscribe for KES ${creatorPrice.toLocaleString()}/month to view this post.`
+                                  : `Unlock this post for KES ${post.price}.`}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  if (post.visibility === "subscribers") {
+                                    setIsSubscribeOpen(true);
+                                  } else {
+                                    setSelectedPPVItem({
+                                      id: post.id,
+                                      type: post.media_type === "video" ? "video" : "image",
+                                      url: post.media_url,
+                                      title: post.content || "Exclusive content",
+                                      price: post.price,
+                                      isLocked: true,
+                                      visibility: "ppv",
+                                    });
+                                  }
+                                }}
+                                className="w-full px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-red-600/30 hover:scale-105 cursor-pointer"
+                              >
+                                {post.visibility === "subscribers" ? "Subscribe to Unlock" : "Unlock for KES " + post.price}
+                              </button>
                             </div>
-                            <h4 className="text-lg font-black text-white mb-1">
-                              {post.visibility === "subscribers" ? "Subscriber-Only Content" : "Pay-Per-View Content"}
-                            </h4>
-                            <p className="text-xs text-zinc-400 mb-4 max-w-xs">
-                              {post.visibility === "subscribers"
-                                ? `Subscribe for KES ${creatorPrice.toLocaleString()}/month to view this post.`
-                                : `Unlock this post for KES ${post.price}.`}
-                            </p>
-                            <button
-                              onClick={() => {
-                                if (post.visibility === "subscribers") {
-                                  setIsSubscribeOpen(true);
-                                } else {
-                                  setSelectedPPVItem({
-                                    id: post.id,
-                                    type: post.media_type === "video" ? "video" : "image",
-                                    url: post.media_url,
-                                    title: post.content || "Exclusive content",
-                                    price: post.price,
-                                    isLocked: true,
-                                    visibility: "ppv",
-                                  });
-                                }
-                              }}
-                              className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-red-600/30 hover:scale-105 cursor-pointer"
-                            >
-                              {post.visibility === "subscribers" ? "Subscribe to Unlock" : "Unlock for KES " + post.price}
-                            </button>
-                          </div>
+                          </>
                         ) : post.media_type === "video" ? (
                           <video
                             src={post.media_url}

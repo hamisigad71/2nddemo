@@ -2814,28 +2814,72 @@ export const getAdminCreators = async () => {
 };
 
 export const setCreatorVerified = async (creatorId: string, verified: boolean): Promise<boolean> => {
-  if (!creatorId) return false;
-  
-  if (typeof window !== 'undefined') {
-    try {
-      const stored = JSON.parse(localStorage.getItem('tgd_verified_creator_ids') || '[]');
-      const set = new Set(Array.isArray(stored) ? stored : []);
-      if (verified) set.add(creatorId);
-      else set.delete(creatorId);
-      localStorage.setItem('tgd_verified_creator_ids', JSON.stringify(Array.from(set)));
-      window.dispatchEvent(new CustomEvent('creators_updated'));
-      window.dispatchEvent(new CustomEvent('posts_updated'));
-    } catch {}
+  if (!creatorId) throw new Error('Creator ID is required.');
+
+  const { data: creator, error: lookupError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('uid', creatorId)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!creator) throw new Error('Creator account was not found.');
+
+  const local = getStoredCreatorProfile(creatorId);
+  const { data: creatorProfile } = await supabase
+    .from('creator_profiles')
+    .select('*')
+    .eq('user_id', creatorId)
+    .maybeSingle();
+
+  const hasId = Boolean(creator?.kyc_id_url || creatorProfile?.kyc_id_url || (local as any)?.kyc_id_url || (local as any)?.idDocument);
+  const hasSelfie = Boolean(creator?.kyc_selfie_url || creatorProfile?.kyc_selfie_url || (local as any)?.kyc_selfie_url || (local as any)?.selfie);
+  const hasKycSubmitted = Boolean(
+    (hasId && hasSelfie) ||
+    creator?.kyc_status === 'pending' ||
+    creatorProfile?.kyc_status === 'pending' ||
+    creator?.kyc_status === 'verified'
+  );
+
+  if (verified && !hasKycSubmitted) {
+    throw new Error('The creator must submit their identity details, ID document, and selfie before verification.');
   }
 
-  try {
-    await supabase.from('users').update({ is_verified: verified }).eq('uid', creatorId);
-  } catch {}
+  const { data: updatedCreator, error: updateError } = await supabase
+    .from('users')
+    .update({ 
+      kyc_status: verified ? 'verified' : 'rejected',
+      is_verified: verified
+    })
+    .eq('uid', creatorId)
+    .select('uid')
+    .maybeSingle();
+  if (updateError) throw updateError;
+  if (!updatedCreator) throw new Error('Creator verification could not be updated.');
 
   try {
-    await supabase.from('creator_profiles').update({ is_verified: verified }).eq('user_id', creatorId);
+    await supabase
+      .from('creator_profiles')
+      .update({ 
+        is_verified: verified,
+        kyc_status: verified ? 'verified' : 'rejected'
+      })
+      .eq('user_id', creatorId);
   } catch {}
 
+  if (typeof window !== 'undefined') {
+    try {
+      const verifiedIds = new Set(JSON.parse(localStorage.getItem('tgd_verified_creator_ids') || '[]'));
+      if (verified) {
+        verifiedIds.add(creatorId);
+      } else {
+        verifiedIds.delete(creatorId);
+      }
+      localStorage.setItem('tgd_verified_creator_ids', JSON.stringify(Array.from(verifiedIds)));
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('creators_updated'));
+    window.dispatchEvent(new CustomEvent('posts_updated'));
+  }
   return true;
 };
 
@@ -2855,9 +2899,45 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
 
   if (newStatus === 'active') {
     try {
-      const { data: user } = await supabase.from('users').select('name, avatar').eq('uid', creatorId).single();
+      const [{ data: user }, { data: profile }] = await Promise.all([
+        supabase.from('users').select('*').eq('uid', creatorId).maybeSingle(),
+        supabase.from('creator_profiles').select('*').eq('user_id', creatorId).maybeSingle(),
+      ]);
+
+      const local = getStoredCreatorProfile(creatorId);
+      const hasId = Boolean(user?.kyc_id_url || profile?.kyc_id_url || (local as any)?.kyc_id_url || (local as any)?.idDocument);
+      const hasSelfie = Boolean(user?.kyc_selfie_url || profile?.kyc_selfie_url || (local as any)?.kyc_selfie_url || (local as any)?.selfie);
+      const hasFilledKyc = (hasId && hasSelfie) || user?.kyc_status === 'pending' || profile?.kyc_status === 'pending';
+
+      // When the admin approves any account that has filled KYC, grant them the blue verified badge!
+      if (hasFilledKyc) {
+        await supabase
+          .from('users')
+          .update({ kyc_status: 'verified', is_verified: true })
+          .eq('uid', creatorId);
+
+        try {
+          await supabase
+            .from('creator_profiles')
+            .update({ is_verified: true, kyc_status: 'verified' })
+            .eq('user_id', creatorId);
+        } catch {}
+
+        if (typeof window !== 'undefined') {
+          try {
+            const verifiedIds = new Set(JSON.parse(localStorage.getItem('tgd_verified_creator_ids') || '[]'));
+            verifiedIds.add(creatorId);
+            localStorage.setItem('tgd_verified_creator_ids', JSON.stringify(Array.from(verifiedIds)));
+          } catch {}
+          window.dispatchEvent(new CustomEvent('creators_updated'));
+          window.dispatchEvent(new CustomEvent('posts_updated'));
+        }
+      }
+
       notifySubscribersOfNewCreator(creatorId, user?.name || 'Verified Creator', user?.avatar).catch(() => {});
-    } catch {}
+    } catch (e) {
+      console.warn('Notice updating approved creator verification state:', e);
+    }
   }
 };
 
