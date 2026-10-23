@@ -3,7 +3,7 @@ import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon }
 import { Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
-import { getDiscoverCreators, HARDCODED_DISCOVER_CREATORS } from '../../lib/db';
+import { getDiscoverCreators } from '../../lib/db';
 import { getDefaultAvatar } from '../../lib/avatar';
 import LiveNowTray from '../../components/LiveNowTray';
 import { useTheme } from '../../context/ThemeContext';
@@ -12,8 +12,8 @@ const Discover = () => {
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('trending');
   const [search, setSearch] = useState('');
-  const [creators, setCreators] = useState<any[]>(HARDCODED_DISCOVER_CREATORS);
-  const [loading, setLoading] = useState(false);
+  const [creators, setCreators] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchCreators = async () => {
     try {

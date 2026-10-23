@@ -2533,22 +2533,8 @@ export const getDiscoverCreators = async () => {
       return (b.postsCount || 0) - (a.postsCount || 0);
     });
 
-    // Merge: Real registered creators first, followed by strictly 2 demo mockup creators
-    const existingIds = new Set(realCreators.map(c => c.id));
-    const combined: any[] = [...realCreators];
-
-    // Append exactly the 2 demo mockup creators
-    HARDCODED_DISCOVER_CREATORS.forEach(hc => {
-      if (!existingIds.has(hc.id)) {
-        combined.push({
-          ...hc,
-          isVerified: Boolean(hc.isVerified)
-        });
-        existingIds.add(hc.id);
-      }
-    });
-
-    return combined;
+    // Return only real registered creators (excluding hardcoded demo accounts)
+    return realCreators;
   } catch (err) {
     console.error('getDiscoverCreators error:', err);
     return [];
