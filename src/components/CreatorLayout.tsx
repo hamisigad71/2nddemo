@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
 import { resolveUserAvatar } from '../lib/avatar';
+import { isCreatorProfileComplete } from '../lib/verification';
 import { supabase } from '../lib/supabase';
 
 interface CreatorLayoutProps {
@@ -60,8 +61,8 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
       setCreatorName(prev => (prev === 'Creator' ? (meta.name || meta.full_name) : prev));
     }
 
-    // 2. Fetch from DB & enforce role separation & suspension enforcement
-    getUserProfile(user.id).then(profile => {
+    // 2. Fetch from DB & enforce role separation, suspension enforcement, and profile/KYC requirements
+    getUserProfile(user.id).then(async (profile) => {
       if (profile?.status === 'suspended' || profile?.status === 'banned' || profile?.role === 'suspended_creator') {
         logout();
         navigate('/login?error=account_suspended', { replace: true });
@@ -72,6 +73,20 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         navigate('/user', { replace: true });
         return;
       }
+
+      // Check if creator has uploaded required photos and submitted KYC
+      const { data: creatorProfile } = await supabase
+        .from('creator_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const storedLocal = getStoredCreatorProfile(user.id);
+
+      if (!isCreatorProfileComplete(profile, creatorProfile, storedLocal)) {
+        navigate('/login?update=required', { replace: true });
+        return;
+      }
+
       if (profile?.avatar) setCreatorAvatar(profile.avatar);
       if (profile?.name) setCreatorName(profile.name);
     }).catch(() => {});

@@ -85,3 +85,41 @@ export const resolveKycApprovalPayload = (action: 'verified' | 'rejected') => {
   };
 };
 
+export const isCreatorProfileComplete = (
+  userRow: any,
+  creatorProfileRow?: any,
+  localCache?: any
+): boolean => {
+  const avatar = userRow?.avatar || creatorProfileRow?.avatar || localCache?.avatar;
+  const cover = creatorProfileRow?.cover_image || userRow?.cover_image || localCache?.cover_image;
+  const legalName = userRow?.legal_name || creatorProfileRow?.legal_name || localCache?.legalName;
+  const nationalId = userRow?.national_id_number || creatorProfileRow?.national_id_number || localCache?.nationalId;
+  const dob = userRow?.dob || creatorProfileRow?.dob || localCache?.dob;
+  const idDoc = userRow?.kyc_id_url || creatorProfileRow?.kyc_id_url || localCache?.kyc_id_url || localCache?.idDocument;
+  const selfie = userRow?.kyc_selfie_url || creatorProfileRow?.kyc_selfie_url || localCache?.kyc_selfie_url || localCache?.selfie;
+
+  const hasValidAvatar = Boolean(
+    avatar &&
+    typeof avatar === 'string' &&
+    !avatar.includes('default-avatar') &&
+    !avatar.includes('ui-avatars.com') &&
+    !avatar.startsWith('data:image/svg')
+  );
+
+  const hasValidCover = Boolean(
+    cover &&
+    typeof cover === 'string' &&
+    !cover.includes('photo-1549490349-8643362247b5')
+  );
+
+  const hasValidKyc = Boolean(
+    legalName && String(legalName).trim().length > 0 &&
+    nationalId && String(nationalId).trim().length > 0 &&
+    dob &&
+    idDoc &&
+    selfie
+  );
+
+  return Boolean(hasValidAvatar && hasValidCover && hasValidKyc);
+};
+

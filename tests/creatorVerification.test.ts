@@ -7,7 +7,8 @@ import {
   isKycVerified,
   buildAdminKycSubmissionNotification,
   canApproveKyc,
-  resolveKycApprovalPayload
+  resolveKycApprovalPayload,
+  isCreatorProfileComplete
 } from '../src/lib/verification';
 
 describe('creator verification eligibility and admin approval flow', () => {
@@ -97,5 +98,42 @@ describe('creator verification eligibility and admin approval flow', () => {
       is_verified: false,
     });
     assert.equal(isCreatorVerified('creator-1', rejectedPayload.is_verified, rejectedPayload.kyc_status), false);
+  });
+
+  it('enforces mandatory creator cards on login when profile photos or KYC are missing', () => {
+    // 1. Creator who previously had an account but missing avatar
+    const missingAvatar = isCreatorProfileComplete(
+      { avatar: null, legal_name: 'Jane Doe', national_id_number: '12345678', dob: '1998-01-01', kyc_id_url: 'https://cdn/id.jpg', kyc_selfie_url: 'https://cdn/selfie.jpg' },
+      { cover_image: 'https://cdn/cover.jpg' }
+    );
+    assert.equal(missingAvatar, false, 'Should flag creator missing avatar so update cards are shown on login');
+
+    // 2. Creator missing cover image
+    const missingCover = isCreatorProfileComplete(
+      { avatar: 'https://cdn/avatar.jpg', legal_name: 'Jane Doe', national_id_number: '12345678', dob: '1998-01-01', kyc_id_url: 'https://cdn/id.jpg', kyc_selfie_url: 'https://cdn/selfie.jpg' },
+      { cover_image: null }
+    );
+    assert.equal(missingCover, false, 'Should flag creator missing cover image so update cards are shown on login');
+
+    // 3. Creator missing National ID document
+    const missingIdDoc = isCreatorProfileComplete(
+      { avatar: 'https://cdn/avatar.jpg', legal_name: 'Jane Doe', national_id_number: '12345678', dob: '1998-01-01', kyc_id_url: null, kyc_selfie_url: 'https://cdn/selfie.jpg' },
+      { cover_image: 'https://cdn/cover.jpg' }
+    );
+    assert.equal(missingIdDoc, false, 'Should flag creator missing ID document so update cards are shown on login');
+
+    // 4. Creator missing Selfie
+    const missingSelfie = isCreatorProfileComplete(
+      { avatar: 'https://cdn/avatar.jpg', legal_name: 'Jane Doe', national_id_number: '12345678', dob: '1998-01-01', kyc_id_url: 'https://cdn/id.jpg', kyc_selfie_url: null },
+      { cover_image: 'https://cdn/cover.jpg' }
+    );
+    assert.equal(missingSelfie, false, 'Should flag creator missing selfie so update cards are shown on login');
+
+    // 5. Creator who provided all photos and KYC documents
+    const fullyComplete = isCreatorProfileComplete(
+      { avatar: 'https://cdn/avatar.jpg', legal_name: 'Jane Doe', national_id_number: '12345678', dob: '1998-01-01', kyc_id_url: 'https://cdn/id.jpg', kyc_selfie_url: 'https://cdn/selfie.jpg' },
+      { cover_image: 'https://cdn/cover.jpg' }
+    );
+    assert.equal(fullyComplete, true, 'Should pass creator who provided all 7 required verification details');
   });
 });

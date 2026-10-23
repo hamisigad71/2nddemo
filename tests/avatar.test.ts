@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { resolveUserAvatar, getDefaultAvatar, DEFAULT_AVATAR } from '../src/lib/avatar';
+import { resolveUserAvatar, getDefaultAvatar, DEFAULT_AVATAR, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../src/lib/avatar';
 
 describe('Avatar Resolution & Fallback (avatar)', () => {
   it('returns default luxury SVG when avatarUrl and name are absent', () => {
@@ -39,6 +39,26 @@ describe('Avatar Resolution & Fallback (avatar)', () => {
     // Unless matching old mock blacklist, valid https URLs are preserved
     const cdnUrl = 'https://cdn.example.com/creators/avatar.png';
     assert.strictEqual(resolveUserAvatar(cdnUrl), cdnUrl);
+  });
+
+  it('accurately identifies whether a real profile photo has been provided', () => {
+    assert.strictEqual(hasUploadedProfilePhoto(null), false);
+    assert.strictEqual(hasUploadedProfilePhoto(''), false);
+    assert.strictEqual(hasUploadedProfilePhoto(DEFAULT_AVATAR), false);
+    assert.strictEqual(hasUploadedProfilePhoto('https://ui-avatars.com/api/?name=KENNEDY+NGUGI'), false);
+    assert.strictEqual(hasUploadedProfilePhoto('blob:http://localhost/temp-img'), false);
+    assert.strictEqual(hasUploadedProfilePhoto('https://i.pravatar.cc/300'), false);
+    assert.strictEqual(hasUploadedProfilePhoto('https://i.pinimg.com/736x/63/d3/79/photo.jpg'), true);
+    assert.strictEqual(hasUploadedProfilePhoto('https://gitkzykasegtygoybjhq.supabase.co/storage/v1/object/public/avatars/user1.jpg'), true);
+  });
+
+  it('accurately identifies whether a real cover photo has been provided', () => {
+    assert.strictEqual(hasUploadedCoverPhoto(null), false);
+    assert.strictEqual(hasUploadedCoverPhoto(''), false);
+    assert.strictEqual(hasUploadedCoverPhoto('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80'), false);
+    assert.strictEqual(hasUploadedCoverPhoto('blob:http://localhost/temp-cover'), false);
+    assert.strictEqual(hasUploadedCoverPhoto('https://i.pinimg.com/736x/63/d3/79/cover.jpg'), true);
+    assert.strictEqual(hasUploadedCoverPhoto('https://gitkzykasegtygoybjhq.supabase.co/storage/v1/object/public/covers/creator1.jpg'), true);
   });
 });
 

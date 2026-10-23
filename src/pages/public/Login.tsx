@@ -1,8 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect, useRef } from 'react';
-import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, createNotification, notifyAdmins } from '../../lib/db';
-import { buildAdminKycSubmissionNotification } from '../../lib/verification';
+import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, notifyAdmins } from '../../lib/db';
+import { buildAdminKycSubmissionNotification, isCreatorProfileComplete } from '../../lib/verification';
 import { supabase } from '../../lib/supabase';
 import { 
   Eye, 
@@ -88,57 +88,40 @@ const Login = () => {
         }
 
         // Creator / Pending Creator / Escort
-        const isCreatorRole = role === 'creator' || role === 'pending_creator' || role === 'escort';
+        const { data: creatorProfile } = await supabase
+          .from('creator_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const isCreatorRole = role === 'creator' || role === 'pending_creator' || role === 'escort' || Boolean(creatorProfile);
         if (isCreatorRole) {
-          // Fetch existing creator_profiles row to inspect cover & details
-          const { data: creatorProfile } = await supabase
-            .from('creator_profiles')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
           const storedLocal = getStoredCreatorProfile(user.id);
+          const isComplete = isCreatorProfileComplete(profile, creatorProfile, storedLocal);
 
-          const existingAvatar = profile?.avatar || creatorProfile?.avatar || storedLocal?.avatar || user.user_metadata?.avatar_url || '';
-          const existingCover = creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image || '';
-          const existingIdDoc = profile?.kyc_id_url || creatorProfile?.kyc_id_url || storedLocal?.kyc_id_url || '';
-          const existingSelfie = profile?.kyc_selfie_url || creatorProfile?.kyc_selfie_url || storedLocal?.kyc_selfie_url || '';
-          const existingLegalName = profile?.legal_name || creatorProfile?.legal_name || storedLocal?.legalName || '';
-          const existingNationalId = profile?.national_id_number || creatorProfile?.national_id_number || storedLocal?.nationalId || '';
-          const existingDob = profile?.dob || creatorProfile?.dob || storedLocal?.dob || '';
-
-          const hasValidAvatar = Boolean(
-            existingAvatar && 
-            !existingAvatar.includes('default-avatar') && 
-            !existingAvatar.includes('ui-avatars.com') && 
-            !existingAvatar.startsWith('data:image/svg')
-          );
-          const hasValidCover = Boolean(
-            existingCover && 
-            !existingCover.includes('photo-1549490349-8643362247b5')
-          );
-          const hasValidKyc = Boolean(
-            existingIdDoc && 
-            existingSelfie && 
-            existingLegalName.trim() && 
-            existingNationalId.trim()
-          );
-
-          // If creator is already verified or has completed all required photos and KYC, allow entering dashboard
-          if (profile?.kyc_status === 'verified' || (profile?.is_verified && hasValidAvatar && hasValidCover) || (hasValidAvatar && hasValidCover && hasValidKyc)) {
+          // If creator has completed all required photos and KYC, allow entering dashboard
+          if (isComplete) {
             navigate('/dashboard');
             return;
           }
 
           // Creator is missing required details or identity proofs -> require completion on login
           setCreatorUser({ ...profile, name: profile?.name || user.user_metadata?.name || 'Creator' });
-          if (hasValidAvatar) setAvatarPreview(existingAvatar);
-          if (hasValidCover) setCoverPreview(existingCover);
-          if (existingLegalName) setLegalName(existingLegalName);
-          if (existingNationalId) setNationalId(existingNationalId);
-          if (existingDob) setDob(existingDob);
-          if (existingIdDoc) setIdDocPreview(existingIdDoc);
-          if (existingSelfie) setSelfiePreview(existingSelfie);
+          const existingAvatar = profile?.avatar || creatorProfile?.avatar || storedLocal?.avatar;
+          const existingCover = creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image;
+          const existingLegal = profile?.legal_name || creatorProfile?.legal_name || storedLocal?.legalName;
+          const existingNatId = profile?.national_id_number || creatorProfile?.national_id_number || storedLocal?.nationalId;
+          const existingDobVal = profile?.dob || creatorProfile?.dob || storedLocal?.dob;
+          const existingId = profile?.kyc_id_url || creatorProfile?.kyc_id_url || storedLocal?.kyc_id_url;
+          const existingSelf = profile?.kyc_selfie_url || creatorProfile?.kyc_selfie_url || storedLocal?.kyc_selfie_url;
+
+          if (existingAvatar && !existingAvatar.includes('default-avatar')) setAvatarPreview(existingAvatar);
+          if (existingCover && !existingCover.includes('photo-1549490349-8643362247b5')) setCoverPreview(existingCover);
+          if (existingLegal) setLegalName(existingLegal);
+          if (existingNatId) setNationalId(existingNatId);
+          if (existingDobVal) setDob(existingDobVal);
+          if (existingId) setIdDocPreview(existingId);
+          if (existingSelf) setSelfiePreview(existingSelf);
 
           setNeedsCreatorUpdate(true);
           setIsCheckingProfile(false);

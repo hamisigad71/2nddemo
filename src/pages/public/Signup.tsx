@@ -631,8 +631,9 @@ const Signup = () => {
       }
 
       if (accountType === 'creator') {
+        const creatorUsername = username.trim().toLowerCase() || 'creator';
         notifyAdmins(buildAdminKycSubmissionNotification({
-          username: cleanUsername,
+          username: creatorUsername,
           nationalId: nationalId.trim()
         })).catch(() => {});
       }
