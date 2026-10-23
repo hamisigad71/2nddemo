@@ -60,8 +60,13 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
       setCreatorName(prev => (prev === 'Creator' ? (meta.name || meta.full_name) : prev));
     }
 
-    // 2. Fetch from DB & enforce role separation
+    // 2. Fetch from DB & enforce role separation & suspension enforcement
     getUserProfile(user.id).then(profile => {
+      if (profile?.status === 'suspended' || profile?.status === 'banned' || profile?.role === 'suspended_creator') {
+        logout();
+        navigate('/login?error=account_suspended', { replace: true });
+        return;
+      }
       const role = profile?.role || user.user_metadata?.role || (typeof window !== 'undefined' ? localStorage.getItem('pendingAuthRole') : null);
       if (role === 'subscriber' || role === 'fan') {
         navigate('/user', { replace: true });

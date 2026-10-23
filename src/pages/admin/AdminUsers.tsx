@@ -150,11 +150,12 @@ const AdminUsers = () => {
   };
 
   const handleToggleBan = async (userId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'banned' ? 'active' : 'banned';
+    const isCurrentlySuspended = currentStatus === 'banned' || currentStatus === 'suspended';
+    const newStatus = isCurrentlySuspended ? 'active' : 'suspended';
     try {
       await updateUserStatus(userId, newStatus as any);
       setUsersList(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
-      toast.success(`User marked as ${newStatus}`);
+      toast.success(newStatus === 'suspended' ? 'Account suspended & user signed out' : 'Account restored successfully');
     } catch {
       toast.error('Failed to update user status');
     }

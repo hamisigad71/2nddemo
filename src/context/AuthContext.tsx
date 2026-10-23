@@ -29,8 +29,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const verifyUserStatus = async (uid: string) => {
     try {
-      const { data: dbUser } = await supabase.from('users').select('status').eq('uid', uid).maybeSingle();
-      if (dbUser && (dbUser.status === 'banned' || dbUser.status === 'suspended')) {
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select('status, role')
+        .eq('uid', uid)
+        .maybeSingle();
+
+      const isSuspended = dbUser && (
+        dbUser.status === 'banned' || 
+        dbUser.status === 'suspended' || 
+        dbUser.role === 'suspended_creator'
+      );
+
+      if (isSuspended) {
         await supabase.auth.signOut();
         setUser(null);
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
@@ -41,6 +52,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {}
     return true;
   };
+
+  // Real-time eviction listener: immediately signs out and redirects if account is suspended
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const statusChannel = supabase
+      .channel(`user_account_status_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `uid=eq.${user.id}`,
+        },
+        async (payload: any) => {
+          const newStatus = payload.new?.status;
+          const newRole = payload.new?.role;
+          if (newStatus === 'banned' || newStatus === 'suspended' || newRole === 'suspended_creator') {
+            await supabase.auth.signOut();
+            setUser(null);
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login?error=account_suspended';
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    const handleStatusEviction = (e: any) => {
+      const targetUid = e.detail?.userId || e.detail?.uid;
+      const status = e.detail?.status;
+      if (targetUid === user.id && (status === 'suspended' || status === 'banned')) {
+        supabase.auth.signOut().then(() => {
+          setUser(null);
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login?error=account_suspended';
+          }
+        });
+      }
+    };
+
+    window.addEventListener('account_status_changed', handleStatusEviction);
+
+    return () => {
+      supabase.removeChannel(statusChannel);
+      window.removeEventListener('account_status_changed', handleStatusEviction);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -190,16 +250,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     extraData?: Record<string, any>
   ) => {
     try {
+      // Sanitize extraData so no large base64 strings or payloads > 1KB reach Supabase Auth API
+      // Supabase GoTrue Auth API has a strict 1MB (1,048,576 bytes) request body limit.
+      const safeData: Record<string, any> = {
+        name,
+        phone,
+        role
+      };
+
+      if (extraData) {
+        Object.entries(extraData).forEach(([key, val]) => {
+          if (typeof val === 'string') {
+            // Never send large base64 data URLs or huge strings in Auth user_metadata
+            if (val.startsWith('data:') || val.length > 1024) {
+              return;
+            }
+          }
+          safeData[key] = val;
+        });
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            name,
-            phone,
-            role,
-            ...(extraData || {})
-          }
+          data: safeData
         }
       });
       if (error) throw error;
@@ -253,6 +328,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password
       });
       if (error) throw error;
+      if (data.user) {
+        const isOk = await verifyUserStatus(data.user.id);
+        if (!isOk) {
+          throw new Error('This account has been suspended by the platform administrator.');
+        }
+      }
       return data.user;
     } catch (error) {
       console.error("Error signing in with email", error);

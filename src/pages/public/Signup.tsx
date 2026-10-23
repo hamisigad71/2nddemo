@@ -329,15 +329,13 @@ const Signup = () => {
         {
           username: cleanUsername,
           handle: `@${cleanUsername}`,
-          avatar: uploadedAvatarUrl || null,
-          avatar_url: uploadedAvatarUrl || null,
-          picture: uploadedAvatarUrl || null,
-          cover_image: accountType === 'creator' ? uploadedCoverUrl : null,
+          avatar: uploadedAvatarUrl?.startsWith('http') ? uploadedAvatarUrl : null,
+          avatar_url: uploadedAvatarUrl?.startsWith('http') ? uploadedAvatarUrl : null,
+          picture: uploadedAvatarUrl?.startsWith('http') ? uploadedAvatarUrl : null,
+          cover_image: accountType === 'creator' && uploadedCoverUrl?.startsWith('http') ? uploadedCoverUrl : null,
           legal_name: accountType === 'creator' ? legalName.trim() : null,
           national_id_number: accountType === 'creator' ? nationalId.trim() : null,
           dob: accountType === 'creator' ? dob : null,
-          kyc_id_url: idDocPreview || null,
-          kyc_selfie_url: selfiePreview || null,
           kyc_status: accountType === 'creator' ? 'pending' : 'not_submitted',
           is_verified: false
         }

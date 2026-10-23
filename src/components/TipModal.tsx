@@ -43,7 +43,22 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
         setStep('auth_error');
         return;
       }
+
+      if (creatorId && !creatorId.startsWith('creator-')) {
+        getUserProfile(creatorId).then(cp => {
+          if (cp?.status === 'suspended' || cp?.status === 'banned' || cp?.role === 'suspended_creator') {
+            setErrorMessage('Tipping is disabled because this creator account is currently suspended.');
+            setStep('auth_error');
+          }
+        }).catch(() => {});
+      }
+
       getUserProfile(user.id).then(profile => {
+        if (profile?.status === 'suspended' || profile?.status === 'banned') {
+          setErrorMessage('Your account is currently suspended and cannot send tips.');
+          setStep('auth_error');
+          return;
+        }
         if (profile?.phone) setPhone(profile.phone);
       }).catch(err => console.error('Error fetching user profile phone:', err));
     }

@@ -152,6 +152,11 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     if (cached) setUserAvatar(cached);
 
     getUserProfile(user.id).then(profile => {
+      if (profile?.status === 'suspended' || profile?.status === 'banned') {
+        logout();
+        navigate('/login?error=account_suspended', { replace: true });
+        return;
+      }
       if (profile?.avatar) {
         setUserAvatar(profile.avatar);
         try {

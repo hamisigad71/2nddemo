@@ -65,7 +65,23 @@ export default function SubscribeModal({
         setStep('auth_error');
         return;
       }
+
+      // Check if creator is suspended
+      if (creatorId && !creatorId.startsWith('creator-')) {
+        getUserProfile(creatorId).then(cp => {
+          if (cp?.status === 'suspended' || cp?.status === 'banned' || cp?.role === 'suspended_creator') {
+            setErrorMessage('Subscriptions are disabled because this creator account is currently suspended.');
+            setStep('auth_error');
+          }
+        }).catch(() => {});
+      }
+
       getUserProfile(user.id).then(profile => {
+        if (profile?.status === 'suspended' || profile?.status === 'banned') {
+          setErrorMessage('Your account is currently suspended and cannot purchase subscriptions.');
+          setStep('auth_error');
+          return;
+        }
         if (profile?.phone) {
           setPhone(profile.phone);
           setStep('method');

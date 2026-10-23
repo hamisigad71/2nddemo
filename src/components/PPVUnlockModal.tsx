@@ -50,16 +50,29 @@ export default function PPVUnlockModal({
   const [statusMsg, setStatusMsg] = useState('Waiting for M-Pesa...');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load user's phone on open
+  // Load user's phone on open & check suspension
   useEffect(() => {
     if (isOpen && user) {
       setStep('choose');
       setErrorMessage(null);
+
+      if (creatorId && !creatorId.startsWith('creator-')) {
+        getUserProfile(creatorId).then(cp => {
+          if (cp?.status === 'suspended' || cp?.status === 'banned' || cp?.role === 'suspended_creator') {
+            setErrorMessage('Unlocks are disabled because this creator account is currently suspended.');
+          }
+        }).catch(() => {});
+      }
+
       getUserProfile(user.id).then((profile) => {
-        if (profile?.phone) setPhone(profile.phone);
+        if (profile?.status === 'suspended' || profile?.status === 'banned') {
+          setErrorMessage('Your account is currently suspended and cannot unlock Pay-Per-View items.');
+        } else if (profile?.phone) {
+          setPhone(profile.phone);
+        }
       }).catch(() => {});
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, mediaItem]);
 
   // Poll PayHero for STK payment completion
   useEffect(() => {

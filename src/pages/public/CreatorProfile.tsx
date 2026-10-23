@@ -26,6 +26,7 @@ import {
   FolderHeart,
   Radio,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
@@ -810,6 +811,20 @@ export default function CreatorProfile() {
             <div className="mt-3 pt-2 text-center border-t border-white/5">
               <p className="text-[11px] text-zinc-500">
                 Notice: Visitors and fans see your subscription offer (KES {creatorPrice.toLocaleString()} / 30 days) and tip options in this space.
+              </p>
+            </div>
+          </div>
+        ) : (creator.status === 'suspended' || creator.isSuspended) ? (
+          <div className="bg-red-950/30 border border-red-500/40 rounded-3xl p-6 mb-8 shadow-2xl flex items-start gap-4 text-red-300">
+            <div className="w-10 h-10 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-red-400 uppercase tracking-wide">
+                Account Suspended
+              </h3>
+              <p className="text-xs sm:text-sm text-red-300/80 mt-1 leading-relaxed">
+                This creator account has been suspended by the platform administrator. New subscriptions, tips, Pay-Per-View unlocks, and direct messaging are disabled.
               </p>
             </div>
           </div>

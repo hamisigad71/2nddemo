@@ -72,7 +72,7 @@ export const createUserProfile = async (uid: string, data: any) => {
           bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
           monthly_price: 1000,
           location: 'Nairobi, Kenya',
-          cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
+          cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
           tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
         }, { onConflict: 'user_id' });
       } catch {
@@ -155,7 +155,7 @@ export const createUserProfile = async (uid: string, data: any) => {
         bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
         monthly_price: 1000,
         location: 'Nairobi, Kenya',
-        cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
+        cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
         tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
       }, { onConflict: 'user_id' });
     } catch {
@@ -1273,8 +1273,14 @@ export const getFanFeed = async (fanId: string, page = 0, limit = 30) => {
     subscribedCreatorIds
   );
 
+  // Filter out posts from suspended creators from public feeds
+  const nonSuspendedPosts = enrichedReal.filter((post) => {
+    const creatorStatus = post.users?.status || (typeof window !== 'undefined' ? localStorage.getItem(`tgd_user_status_${post.creator_id}`) : null);
+    return creatorStatus !== 'suspended' && creatorStatus !== 'banned';
+  });
+
   // Return real posts first; if platform has few real posts (initial stage), append fallback feed posts
-  let fullFeed = [...enrichedReal];
+  let fullFeed = [...nonSuspendedPosts];
   if (fullFeed.length < 10) {
     const existingIds = new Set(fullFeed.map(p => p.id));
     const fallbackToAdd = FALLBACK_POSTS.filter(fp => !existingIds.has(fp.id));
@@ -1393,6 +1399,11 @@ export const getPostLikes = async (postId: string, userId?: string) => {
 };
 
 export const toggleLike = async (postId: string, userId: string, currentlyLiked: boolean) => {
+  const { data: userRow } = await supabase.from('users').select('status').eq('uid', userId).maybeSingle();
+  if (userRow?.status === 'suspended' || userRow?.status === 'banned') {
+    throw new Error('Your account is currently suspended and cannot like posts.');
+  }
+
   if (currentlyLiked) {
     await supabase
       .from('post_likes')
@@ -1478,6 +1489,11 @@ export const getComments = async (postId: string) => {
 };
 
 export const addComment = async (postId: string, userId: string, content: string) => {
+  const { data: userRow } = await supabase.from('users').select('status').eq('uid', userId).maybeSingle();
+  if (userRow?.status === 'suspended' || userRow?.status === 'banned') {
+    throw new Error('Your account is currently suspended and cannot post comments.');
+  }
+
   const { data, error } = await supabase
     .from('comments')
     .insert({ post_id: postId, user_id: userId, content })
@@ -2146,6 +2162,12 @@ export const getCreatorProfile = async (id: string) => {
       || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.';
 
     if (userRow || localCreator || creatorMeta || authMeta || appMeta || storageAssets.avatar || storageAssets.cover || hasPosts) {
+      const isSuspended = userRow?.status === 'suspended' || 
+        userRow?.status === 'banned' || 
+        userRow?.role === 'suspended_creator' || 
+        creatorMeta?.status === 'suspended' ||
+        (typeof window !== 'undefined' && localStorage.getItem(`tgd_user_status_${id}`) === 'suspended');
+
       return {
         id: id,
         name: resolvedName,
@@ -2155,7 +2177,7 @@ export const getCreatorProfile = async (id: string) => {
         location: localCreator?.location || creatorMeta?.location || 'Nairobi, Kenya',
         rating: 4.9,
         isVerified: isCreatorVerified(id, userRow?.is_verified, userRow?.kyc_status),
-        isOnline: true,
+        isOnline: isSuspended ? false : true,
         price_hr: localCreator?.monthly_price || creatorMeta?.monthly_price || 1000,
         age: localCreator?.age || creatorMeta?.age || 24,
         services: localCreator?.tags || creatorMeta?.tags || ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
@@ -2164,6 +2186,8 @@ export const getCreatorProfile = async (id: string) => {
         promo_active: localCreator?.promo_active ?? (creatorMeta?.promo_active !== false),
         total_subscribers: creatorMeta?.total_subscribers ?? localCreator?.total_subscribers ?? 0,
         isEscort: false,
+        status: isSuspended ? 'suspended' : 'active',
+        isSuspended: Boolean(isSuspended)
       };
     }
   } catch (err) {
@@ -2322,8 +2346,8 @@ export const HARDCODED_DISCOVER_CREATORS = [
     subs: "512 subscribers", 
     subscribersCount: 512, 
     price: "KES 1,200/mo", 
-    avatar: "https://i.pinimg.com/736x/32/ef/17/32ef172b588761169c0292cc530e73d6.jpg", 
-    cover: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=720&q=75", 
+    avatar: "https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg", 
+    cover: "https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg", 
     hasPosts: true, 
     isVerified: true, 
     isDemo: true,
@@ -2545,8 +2569,19 @@ export const getDiscoverCreators = async () => {
       console.warn('Could not query active subscriptions in getDiscoverCreators:', err);
     }
 
+    // Filter out any suspended or banned creators from public discovery
+    const activeCreatorUsers = creatorUsers.filter(u => {
+      const p = profileMap.get(u.uid);
+      const isSuspended = u.status === 'suspended' || 
+        u.status === 'banned' || 
+        u.role === 'suspended_creator' || 
+        p?.status === 'suspended' ||
+        (typeof window !== 'undefined' && localStorage.getItem(`tgd_user_status_${u.uid}`) === 'suspended');
+      return !isSuspended;
+    });
+
     // Format all real creators with resilient storage assets
-    const realCreators = await Promise.all(creatorUsers.map(async (u) => {
+    const realCreators = await Promise.all(activeCreatorUsers.map(async (u) => {
       const p = profileMap.get(u.uid);
       const postStats = postsByCreator.get(u.uid);
       const hasPosts = (postStats?.count || 0) > 0;
@@ -2962,12 +2997,44 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
     'suspended': 'suspended_creator'
   };
   
+  const userUpdates: Record<string, any> = {
+    role: roleMap[newStatus] as string,
+    status: newStatus === 'suspended' ? 'suspended' : 'active'
+  };
+
   const { error } = await supabase
     .from('users')
-    .update({ role: roleMap[newStatus] as string })
+    .update(userUpdates)
     .eq('uid', creatorId);
     
   if (error) throw error;
+
+  try {
+    await supabase
+      .from('creator_profiles')
+      .update({ status: newStatus })
+      .eq('user_id', creatorId);
+  } catch {}
+
+  if (newStatus === 'suspended') {
+    try {
+      // Terminate any active live streams immediately
+      await supabase
+        .from('live_streams')
+        .update({ is_live: false, ended_at: new Date().toISOString() })
+        .eq('creator_id', creatorId)
+        .eq('is_live', true);
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`tgd_user_status_${creatorId}`, 'suspended');
+      } catch {}
+      window.dispatchEvent(new CustomEvent('account_status_changed', { detail: { userId: creatorId, status: 'suspended' } }));
+      window.dispatchEvent(new CustomEvent('creators_updated'));
+      window.dispatchEvent(new CustomEvent('posts_updated'));
+    }
+  }
 
   if (newStatus === 'active') {
     try {
@@ -3112,6 +3179,28 @@ export const getAdminUsers = async () => {
 export const updateUserStatus = async (userId: string, newStatus: 'active' | 'banned' | 'suspended') => {
   try {
     await supabase.from('users').update({ status: newStatus }).eq('uid', userId);
+    try {
+      await supabase.from('creator_profiles').update({ status: newStatus }).eq('user_id', userId);
+    } catch {}
+
+    if (newStatus === 'banned' || newStatus === 'suspended') {
+      try {
+        await supabase
+          .from('live_streams')
+          .update({ is_live: false, ended_at: new Date().toISOString() })
+          .eq('creator_id', userId)
+          .eq('is_live', true);
+      } catch {}
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`tgd_user_status_${userId}`, newStatus);
+        } catch {}
+        window.dispatchEvent(new CustomEvent('account_status_changed', { detail: { userId, status: newStatus } }));
+        window.dispatchEvent(new CustomEvent('creators_updated'));
+        window.dispatchEvent(new CustomEvent('posts_updated'));
+      }
+    }
   } catch (err) {
     console.error('Error updating user status:', err);
   }
@@ -3135,12 +3224,18 @@ export const requestCreatorPayout = async (
   try {
     const { data: userRow } = await supabase
       .from('users')
-      .select('name, email, phone')
+      .select('name, email, phone, status, role')
       .eq('uid', creatorId)
       .maybeSingle();
+
+    if (userRow?.status === 'suspended' || userRow?.status === 'banned' || userRow?.role === 'suspended_creator') {
+      throw new Error('Withdrawals and payouts are disabled because this creator account is suspended. Please contact platform administration.');
+    }
     if (userRow?.name) creatorName = userRow.name;
     if (userRow?.email) creatorEmail = userRow.email;
-  } catch {}
+  } catch (checkErr: any) {
+    if (checkErr?.message?.includes('suspended')) throw checkErr;
+  }
 
   let payoutTx: any = {
     id: `payout_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -4546,6 +4641,16 @@ export const sendChatMessage = async (params: {
   ppv_price?: number;
   ppv_unlocked?: boolean;
 }): Promise<ChatMessage> => {
+  // Check if sender is suspended
+  try {
+    const { data: senderUser } = await supabase.from('users').select('status').eq('uid', params.sender_id).maybeSingle();
+    if (senderUser?.status === 'suspended' || senderUser?.status === 'banned') {
+      throw new Error('Your account is currently suspended and cannot send messages.');
+    }
+  } catch (checkErr: any) {
+    if (checkErr?.message?.includes('suspended')) throw checkErr;
+  }
+
   // Strip all digits to prevent sharing of phone numbers
   const sanitizedContent = (params.content || '').replace(/[0-9]/g, '').trim();
 
@@ -4874,7 +4979,7 @@ export const getUserChatConversations = async (userId: string): Promise<ChatPart
   if (list.length === 0) {
     const defaults = [
       { id: 'creator-wairimu', name: 'Wairimu K. ✨', avatar: 'https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg', handle: '@wairimuk', price: 1000 },
-      { id: 'creator-chebet', name: 'Chebet Fit & Spice 🔥', avatar: 'https://i.pinimg.com/736x/32/ef/17/32ef172b588761169c0292cc530e73d6.jpg', handle: '@chebetfit', price: 1200 },
+      { id: 'creator-chebet', name: 'Chebet Fit & Spice 🔥', avatar: 'https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg', handle: '@chebetfit', price: 1200 },
     ];
     for (const d of defaults) {
       const sub = await checkUserSubscription(userId, d.id);
