@@ -289,6 +289,11 @@ export default function CreatorProfile() {
 
   // Check if this is a hardcoded demo/escort profile vs a real registered creator
   const isEscortDemo = Boolean(creator?.isEscort || String(creator?.id || '').startsWith('escort-'));
+  const isDemoAccount = Boolean(
+    creator?.isDemo ||
+    String(creator?.id || '').startsWith('creator-') ||
+    String(id || '').startsWith('creator-')
+  );
 
   // Check if current user is signed up/logged in as a subscriber (role 'user' or 'subscriber')
   const userRole = currentUserProfile?.role || user?.user_metadata?.role || (typeof window !== 'undefined' ? localStorage.getItem('pendingAuthRole') : null);
@@ -498,6 +503,18 @@ export default function CreatorProfile() {
         </div>
       )}
 
+      {/* Demo Account Top Warning Banner */}
+      {isDemoAccount && (
+        <aside aria-label="Demo Account Notice" className="bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 border-b border-amber-500/40 px-4 py-2.5 text-center text-xs sm:text-sm font-bold text-amber-200 flex items-center justify-center gap-2.5 z-40 sticky top-0 backdrop-blur-xl shadow-lg">
+          <span className="bg-amber-500 text-black px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 shadow-sm">
+            DEMO ACCOUNT
+          </span>
+          <span className="truncate sm:overflow-visible">
+            This is a sample creator profile for preview purposes only. Subscriptions and payments are for demonstration.
+          </span>
+        </aside>
+      )}
+
       {/* Cover Image & Top Navigation Bar */}
       <div className="h-52 md:h-72 lg:h-80 w-full relative bg-zinc-900 overflow-hidden">
         <img
@@ -576,6 +593,11 @@ export default function CreatorProfile() {
                   {creator.name}
                   {creator.isVerified && (
                     <CheckCircle2 className="w-5 h-5 text-white fill-blue-500 shrink-0" />
+                  )}
+                  {isDemoAccount && (
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm">
+                      Demo Account
+                    </span>
                   )}
                 </h1>
                 {isSubscribed && (

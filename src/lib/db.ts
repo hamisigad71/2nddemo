@@ -2165,6 +2165,7 @@ export const getCreatorProfile = async (id: string) => {
       location: 'Nairobi, Kenya',
       rating: 4.9,
       isVerified: false,
+      isDemo: true,
       isOnline: true,
       price_hr: fallbackPost.price || 1000,
       age: 23,
@@ -2188,6 +2189,7 @@ export const getCreatorProfile = async (id: string) => {
       location: hardcodedMatch.location,
       rating: 4.9,
       isVerified: false,
+      isDemo: true,
       isOnline: true,
       price_hr: parseInt(String(hardcodedMatch.price).replace(/\D/g, ''), 10) || 1000,
       age: 24,
@@ -2250,17 +2252,40 @@ export const getCreatorSubscriberCount = async (creatorId: string): Promise<numb
 };
 
 export const HARDCODED_DISCOVER_CREATORS = [
-  { id: 'creator-wairimu', name: "Wairimu K. ✨", handle: "@wairimuk", category: "Swimwear & BTS", location: "Nairobi, Kenya", subs: "342 subscribers", subscribersCount: 342, price: "KES 1,000/mo", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T12:00:00Z' },
-  { id: 'creator-chebet', name: "Chebet Fit & Spice 🔥", handle: "@chebetfit", category: "Fitness & Spice", location: "Eldoret / Nairobi", subs: "512 subscribers", subscribersCount: 512, price: "KES 1,200/mo", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80", cover: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=720&q=75", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T11:00:00Z' },
-  { id: 'creator-chloe', name: "Chloe Vibe 💋", handle: "@chloevibe", category: "Lifestyle & Music", location: "Nairobi, Kenya", subs: "890 subscribers", subscribersCount: 890, price: "KES 1,500/mo", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/07/e6/cf/07e6cf77a0f77ad57c801c7d47bfeb6b.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T10:30:00Z' },
-  { id: 'creator-amina', name: "Chef Amina Seductive", handle: "@chefamina", category: "Culinary & Romance", location: "Mombasa, Kenya", subs: "420 subscribers", subscribersCount: 420, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/b7/75/0b/b7750b0872ecc70a467ef3e193047f21.jpg", cover: "https://i.pinimg.com/736x/b7/75/0b/b7750b0872ecc70a467ef3e193047f21.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T10:00:00Z' },
-  { id: 'creator-vanessa', name: "Vanessa VIP 💎", handle: "@vanessavip", category: "Luxury & Travel", location: "Diani Beach", subs: "1,240 subscribers", subscribersCount: 1240, price: "KES 2,000/mo", avatar: "https://i.pinimg.com/736x/89/f9/f6/89f9f6530bb2948cf90037ada5dc6625.jpg", cover: "https://i.pinimg.com/736x/89/f9/f6/89f9f6530bb2948cf90037ada5dc6625.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T09:30:00Z' },
-  { id: 'creator-stacy', name: "Stacy Temptation", handle: "@stacyt", category: "Lingerie & Fashion", location: "Nairobi, Kenya", subs: "675 subscribers", subscribersCount: 675, price: "KES 1,000/mo", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/1200x/4d/bf/10/4dbf1060dbefbb66bf90f1e104d95aa3.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
-  { id: 'creator-maya', name: "Maya Secrets 🌹", handle: "@mayasecrets", category: "Sensual & Boudoir", location: "Nairobi, Kenya", subs: "980 subscribers", subscribersCount: 980, price: "KES 1,500/mo", avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/98/31/13/983113cb5055f3a435b0eda12a31c5fb.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T08:30:00Z' },
-  { id: 'creator-zola', name: "Zola Allure 🖤", handle: "@zolaallure", category: "Safari & Glamour", location: "Maasai Mara / Nairobi", subs: "1,530 subscribers", subscribersCount: 1530, price: "KES 1,800/mo", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/f9/6c/ff/f96cff8bc21c4d23cba1cfbbc19f0aac.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T08:00:00Z' },
-  { id: 'creator-samantha', name: "Samantha Seduction 💋", handle: "@samanthaseduction", category: "Glamour & 4K Sets", location: "Nairobi, Kenya", subs: "730 subscribers", subscribersCount: 730, price: "KES 1,200/mo", avatar: "https://i.pinimg.com/736x/db/fc/0c/dbfc0ce39862d0dc21444df706e75de2.jpg", cover: "https://i.pinimg.com/1200x/36/a2/dc/36a2dc31c77aa8245e14a976919c0e13.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T07:30:00Z' },
-  { id: 'creator-njeri', name: "Njeri Sweetness 🍯", handle: "@njerisweet", category: "Cozy & Bedtime", location: "Nakuru / Nairobi", subs: "1,120 subscribers", subscribersCount: 1120, price: "KES 900/mo", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80", cover: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T07:00:00Z' },
-  { id: 'creator-sarah', name: "Sarah M.", handle: "@sarahm", category: "Lifestyle", location: "Mombasa", subs: "950 subscribers", subscribersCount: 950, price: "KES 800/mo", avatar: "https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg", cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80", hasPosts: true, isVerified: true, postsCount: 1, createdAt: '2026-10-18T09:00:00Z' },
+  { 
+    id: 'creator-wairimu', 
+    name: "Wairimu K. ✨", 
+    handle: "@wairimuk", 
+    category: "Swimwear & BTS", 
+    location: "Nairobi, Kenya", 
+    subs: "342 subscribers", 
+    subscribersCount: 342, 
+    price: "KES 1,000/mo", 
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80", 
+    cover: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg", 
+    hasPosts: true, 
+    isVerified: true, 
+    isDemo: true,
+    postsCount: 1, 
+    createdAt: '2026-10-18T12:00:00Z' 
+  },
+  { 
+    id: 'creator-chebet', 
+    name: "Chebet Fit & Spice 🔥", 
+    handle: "@chebetfit", 
+    category: "Fitness & Spice", 
+    location: "Eldoret / Nairobi", 
+    subs: "512 subscribers", 
+    subscribersCount: 512, 
+    price: "KES 1,200/mo", 
+    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80", 
+    cover: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=720&q=75", 
+    hasPosts: true, 
+    isVerified: true, 
+    isDemo: true,
+    postsCount: 1, 
+    createdAt: '2026-10-18T11:00:00Z' 
+  },
 ];
 
 export const getDiscoverCreators = async () => {
@@ -2533,8 +2558,22 @@ export const getDiscoverCreators = async () => {
       return (b.postsCount || 0) - (a.postsCount || 0);
     });
 
-    // Return only real registered creators (excluding hardcoded demo accounts)
-    return realCreators;
+    // Real registered creators first, followed by strictly 2 sample demo accounts clearly tagged
+    const existingIds = new Set(realCreators.map(c => c.id));
+    const combined: any[] = [...realCreators];
+
+    HARDCODED_DISCOVER_CREATORS.slice(0, 2).forEach(demo => {
+      if (!existingIds.has(demo.id)) {
+        combined.push({
+          ...demo,
+          isVerified: Boolean(demo.isVerified),
+          isDemo: true,
+        });
+        existingIds.add(demo.id);
+      }
+    });
+
+    return combined;
   } catch (err) {
     console.error('getDiscoverCreators error:', err);
     return [];

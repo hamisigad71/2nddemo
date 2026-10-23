@@ -317,6 +317,15 @@ export default function SubscribeModal({
                 Subscribe to {creatorName} for <span className="text-red-500 font-extrabold">KES {price}</span> ({durationDays} days access)
               </p>
               
+              {creatorId.startsWith('creator-') && (
+                <div className="mb-4 p-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs rounded-xl flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                  <span className="leading-snug">
+                    <strong className="text-amber-200">Demo Account:</strong> This is an official sample creator profile for preview purposes. Subscriptions are simulated without real billing.
+                  </span>
+                </div>
+              )}
+
               {errorMessage && (
                 <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />

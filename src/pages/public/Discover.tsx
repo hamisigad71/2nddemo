@@ -135,7 +135,7 @@ const Discover = () => {
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground space-y-2">
-              <p className="font-bold text-lg text-white">No creators found</p>
+              <p className="font-bold text-lg text-foreground">No creators found</p>
               <p className="text-sm">Try searching with a different name or category.</p>
             </div>
           ) : (
@@ -145,81 +145,110 @@ const Discover = () => {
                  to={`/creator/${creator.id}`} 
                  state={{ creator }} 
                  key={creator.id || i} 
-                 className="group relative flex flex-col aspect-[3/4] sm:aspect-[4/5] bg-muted border border-border rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                 className="group relative flex flex-col bg-card border border-border/80 rounded-2xl overflow-hidden hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_6px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:shadow-[0_0_24px_rgba(225,29,72,0.12)]"
                >
-                  {/* Full Background Cover */}
-                  <img 
-                    src={creator.cover && !/\.(mp4|webm|mov|m4v)/i.test(creator.cover) ? creator.cover : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"} 
-                    alt="cover" 
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
-                    }}
-                    className="absolute inset-0 w-full h-full object-cover object-top opacity-90 group-hover:scale-110 group-hover:blur-[2px] transition-all duration-500" 
-                    loading="lazy" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent" />
-                  
-                  {/* Lock Overlay on Hover */}
-                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-background/20 backdrop-blur-sm pointer-events-none">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-2xl shadow-primary/40 transform scale-75 group-hover:scale-100 transition-transform duration-500 mb-2">
-                      <Lock className="w-5 h-5 sm:w-7 sm:h-7" />
+                  {/* Media Cover Showcase */}
+                  <div className="relative aspect-[16/11] sm:aspect-[4/3] w-full overflow-hidden bg-muted">
+                    <img 
+                      src={creator.cover && !/\.(mp4|webm|mov|m4v)/i.test(creator.cover) ? creator.cover : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"} 
+                      alt={creator.name} 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
+                      }}
+                      className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500 ease-out" 
+                      loading="lazy" 
+                    />
+                    
+                    {/* Subtle top vignette for badge contrast */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent pointer-events-none" />
+                    
+                    {/* Top Badges */}
+                    <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
+                      {creator.isDemo ? (
+                        <span className="bg-amber-500 text-black text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md border border-amber-300">
+                          DEMO ACCOUNT
+                        </span>
+                      ) : creator.hasPosts ? (
+                        <span className="bg-rose-600 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                          <Flame className="w-3 h-3 text-amber-300" /> Active Feed
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <span className="text-[9px] sm:text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md uppercase tracking-wider border border-white/10 shadow-sm truncate max-w-[120px]">
+                        {creator.isDemo ? 'SAMPLE PREVIEW' : creator.category}
+                      </span>
                     </div>
-                    <span className="font-bold text-white text-xs sm:text-sm drop-shadow-md">View Profile</span>
+
+                    {/* Subtle hover overlay hint */}
+                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
+                      <span className="px-3 py-1.5 rounded-full bg-white/95 dark:bg-black/85 text-foreground text-xs font-bold shadow-lg backdrop-blur-md transform scale-95 group-hover:scale-100 transition-transform duration-300 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-primary" /> View Profile
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Top Badges (Active Feed Badge & Lock) */}
-                  <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none">
-                    {creator.hasPosts ? (
-                      <span className="bg-red-600/90 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
-                        <Flame className="w-3 h-3 text-yellow-300" /> Active Feed
-                      </span>
-                    ) : (
-                      <span />
-                    )}
-                    <div className="bg-black/50 backdrop-blur-md p-1.5 sm:p-2 rounded-full border border-white/10 shadow-sm">
-                      <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-white/90" />
-                    </div>
-                  </div>
-                  
-                  {/* Info Container Placed over Gradient */}
-                  <div className="relative z-10 px-3 pb-3 sm:px-5 sm:pb-5 pt-10 mt-auto flex flex-col text-white transition-transform duration-300 group-hover:translate-y-2 group-hover:opacity-40">
-                    {/* Avatar & Category */}
-                    <div className="flex items-end justify-between mb-2 sm:mb-3">
-                      <img 
-                        src={creator.avatar} 
-                        alt="avatar" 
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = getDefaultAvatar(creator.name);
-                        }}
-                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-primary/50 shadow-md object-cover bg-background" 
-                        loading="lazy" 
-                      />
-                      <div className="text-[10px] sm:text-xs font-semibold text-secondary uppercase tracking-wider backdrop-blur-sm bg-black/30 px-2 py-0.5 rounded border border-white/10">{creator.category}</div>
-                    </div>
-                    
-                    {/* Name & Handle */}
-                    <h3 className="text-sm sm:text-xl font-bold flex items-center gap-1 text-white truncate w-full shadow-sm">
-                      <span className="truncate">{creator.name}</span>
-                      {creator.isVerified && (
-                        <span title="Verified Creator"><CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white fill-blue-500 shrink-0 drop-shadow-md" /></span>
-                      )}
-                    </h3>
-                    <p className="text-[10px] sm:text-sm text-gray-300 font-medium truncate drop-shadow-sm">{creator.handle}</p>
-                    
-                    {/* Location */}
-                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-300 mt-1 sm:mt-2 truncate drop-shadow-sm">
-                      <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{creator.location}</span>
-                    </div>
-                    
-                    {/* Stats & Price Bottom bar */}
-                    <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/20 flex flex-row items-center justify-between mt-auto gap-1">
-                      <div className="text-[10px] sm:text-xs font-medium text-gray-300 drop-shadow-sm flex items-center gap-1.5">
-                        <span>{creator.subs}</span>
-                        {creator.postsCount > 0 && (
-                          <span className="text-zinc-400">• {creator.postsCount} posts</span>
+                  {/* Card Content Surface (Clean Solid Surface: No Fog, High Contrast) */}
+                  <div className="p-3 sm:p-4 pt-1 sm:pt-1.5 flex flex-col flex-1 relative bg-card">
+                    {/* Avatar & Price Row */}
+                    <div className="-mt-7 sm:-mt-8 mb-2 flex items-end justify-between relative z-10">
+                      <div className="relative">
+                        <img 
+                          src={creator.avatar} 
+                          alt={creator.name} 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = getDefaultAvatar(creator.name);
+                          }}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-card shadow-md object-cover bg-muted" 
+                          loading="lazy" 
+                        />
+                        {creator.hasPosts && (
+                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-card rounded-full" title="Active Feed" />
                         )}
                       </div>
-                      <div className="text-[11px] sm:text-sm font-black text-primary drop-shadow-sm">{creator.price}</div>
+
+                      <div className="text-right pl-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 block">Access</span>
+                        <span className="text-xs sm:text-sm font-black text-primary leading-none block">{creator.price}</span>
+                      </div>
+                    </div>
+
+                    {/* Name & Verified Badge */}
+                    <div className="min-w-0 mb-0.5">
+                      <h3 className="text-sm sm:text-base font-bold text-foreground truncate flex items-center gap-1 group-hover:text-primary transition-colors">
+                        <span className="truncate">{creator.name}</span>
+                        {creator.isVerified && (
+                          <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0 fill-blue-500/10" />
+                        )}
+                        {creator.isDemo && (
+                          <span className="ml-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30 shrink-0">
+                            Demo
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[11px] sm:text-xs text-muted-foreground truncate font-medium mt-0.5">
+                        {creator.handle}
+                      </p>
+                    </div>
+
+                    {/* Location */}
+                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground/80 truncate mb-2.5">
+                      <MapPin className="w-3 h-3 shrink-0 text-muted-foreground/60" />
+                      <span className="truncate">{creator.location}</span>
+                    </div>
+
+                    {/* Stats & Link Footer */}
+                    <div className="mt-auto pt-2 sm:pt-2.5 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5 font-medium truncate">
+                        <span className="font-semibold text-foreground/85">{creator.subs}</span>
+                        {creator.postsCount > 0 && (
+                          <span className="text-muted-foreground/70">• {creator.postsCount} posts</span>
+                        )}
+                      </div>
+
+                      <span className="text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform shrink-0">
+                        Explore &rarr;
+                      </span>
                     </div>
                   </div>
                </Link>

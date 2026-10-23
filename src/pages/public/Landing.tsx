@@ -494,27 +494,27 @@ const Landing = () => {
               className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6"
             >
               {creators.map((creator, i) => (
-                <div key={i} className="flex-shrink-0 group relative bg-[#0d0e12] border border-zinc-800 rounded-2xl sm:rounded-3xl overflow-hidden hover:border-red-500/50 transition-all duration-300 shadow-xl flex flex-col justify-between">
-                  <div className="relative aspect-square overflow-hidden bg-zinc-900">
+                <div key={i} className="flex-shrink-0 group relative bg-card border border-border/80 rounded-2xl sm:rounded-3xl overflow-hidden hover:border-primary/50 transition-all duration-300 shadow-md hover:shadow-xl flex flex-col justify-between">
+                  <div className="relative aspect-square overflow-hidden bg-muted">
                     <img src={creator.img} alt={creator.name} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     {/* Category badge */}
-                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2 sm:px-3 py-1 rounded-full bg-zinc-950/80 backdrop-blur-md border border-zinc-800 text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-red-400">
+                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2.5 sm:px-3 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-rose-400 shadow-sm">
                       {creator.category}
                     </div>
                   </div>
-                  <div className="p-3 sm:p-5 flex flex-col flex-1 justify-between gap-3 sm:gap-4">
+                  <div className="p-3 sm:p-5 flex flex-col flex-1 justify-between gap-3 sm:gap-4 bg-card">
                     <div>
-                      <h3 className="text-sm sm:text-lg font-black text-white mb-1 flex items-center gap-1.5 truncate">
+                      <h3 className="text-sm sm:text-lg font-black text-foreground mb-1 flex items-center gap-1.5 truncate">
                         {creator.name}
-                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 shrink-0 fill-red-500/10" />
+                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary shrink-0 fill-primary/10" />
                       </h3>
                       <div className="flex flex-col sm:flex-row justify-between text-[10px] sm:text-sm font-bold mt-1.5 sm:mt-2 gap-0.5 sm:gap-0">
-                        <span className="text-zinc-400 font-medium">{creator.subs} subs</span>
-                        <span className="text-red-500 font-extrabold">{creator.price}</span>
+                        <span className="text-muted-foreground font-medium">{creator.subs} subs</span>
+                        <span className="text-primary font-extrabold">{creator.price}</span>
                       </div>
                     </div>
 
-                    <button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[11px] sm:text-sm font-black transition-all active:scale-95 shadow-lg shadow-red-600/20">
+                    <button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[11px] sm:text-sm font-black transition-all active:scale-95 shadow-md shadow-primary/20">
                       Subscribe
                     </button>
                   </div>

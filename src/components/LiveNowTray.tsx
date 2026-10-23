@@ -55,7 +55,7 @@ export const LiveNowTray: React.FC<LiveNowTrayProps> = ({ className = '', showTi
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600" />
             </span>
-            <h2 className="text-sm font-black uppercase tracking-wider text-white">Live Broadcasts</h2>
+            <h2 className="text-sm font-black uppercase tracking-wider text-foreground">Live Broadcasts</h2>
           </div>
           <span className="text-[11px] font-bold text-red-500 bg-red-600/10 border border-red-500/20 px-2 py-0.5 rounded-full">
             {liveStreams.length} Broadcasting
@@ -73,7 +73,7 @@ export const LiveNowTray: React.FC<LiveNowTrayProps> = ({ className = '', showTi
           >
             {/* Avatar Ring */}
             <div className="relative p-[2.5px] rounded-full bg-gradient-to-tr from-red-600 via-rose-500 to-amber-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-600/20">
-              <div className="p-0.5 rounded-full bg-black">
+              <div className="p-0.5 rounded-full bg-card">
                 <img
                   src={stream.creatorAvatar || '/logo.svg'}
                   alt={stream.creatorName}
@@ -82,14 +82,14 @@ export const LiveNowTray: React.FC<LiveNowTrayProps> = ({ className = '', showTi
               </div>
 
               {/* Pulsing LIVE Pill */}
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-600 border border-black text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-md">
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-600 border border-card text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-md">
                 LIVE
               </div>
             </div>
 
             {/* Creator Name & Status */}
             <div className="text-center w-20">
-              <span className="text-xs font-bold text-zinc-200 block truncate group-hover:text-red-400 transition-colors">
+              <span className="text-xs font-bold text-foreground block truncate group-hover:text-primary transition-colors">
                 {stream.creatorName}
               </span>
               <span className="text-[10px] text-zinc-500 font-mono block">

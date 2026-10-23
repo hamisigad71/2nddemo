@@ -62,28 +62,28 @@ export default function EscortsPage() {
           <Link
             key={profile.id}
             to={`/creator/${profile.id}`} 
-            className="group block bg-zinc-950 rounded-[2rem] overflow-hidden border border-white/10 hover:border-red-500/50 transition-colors duration-300 relative"
+            className="group block bg-card rounded-2xl overflow-hidden border border-border/80 hover:border-primary/50 shadow-sm hover:shadow-lg transition-all duration-300 relative"
           >
             {/* Header Image Area */}
-            <div className="relative aspect-[4/5] overflow-hidden bg-zinc-900 border-b border-white/10">
+            <div className="relative aspect-[4/5] overflow-hidden bg-muted border-b border-border/60">
               <img 
                 src={profile.avatar} 
                 alt={profile.name} 
                 loading="lazy"
                 decoding="async"
-                className="w-full h-full object-cover object-center group-hover:scale-105 group-hover:opacity-90 transition-all duration-700 ease-out grayscale-[15%] group-hover:grayscale-0"
+                className="w-full h-full object-cover object-center group-hover:scale-105 group-hover:opacity-95 transition-all duration-700 ease-out"
               />
               
               {/* Online Indicator Dot and Rating - strictly top aligned, rounded edges */}
               <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
-                <div className="flex items-center gap-2 bg-black/80 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                <div className="flex items-center gap-2 bg-black/75 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10 shadow-sm">
                   <span className={`h-1.5 w-1.5 rounded-full ${profile.isOnline ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-zinc-600'}`} />
                   <span className="text-[10px] font-bold tracking-widest uppercase text-white">
                     {profile.isOnline ? 'Online' : 'Offline'}
                   </span>
                 </div>
 
-                <div className="flex bg-black/80 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                <div className="flex bg-black/75 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10 shadow-sm">
                   <span className="flex items-center gap-1.5 text-[10px] font-bold text-white tracking-widest uppercase">
                     <Star className="w-3 h-3 text-red-500 fill-red-500" />
                     {profile.rating.toFixed(1)}
@@ -93,32 +93,32 @@ export default function EscortsPage() {
             </div>
 
             {/* Content Area */}
-            <div className="p-5 flex flex-col relative z-10">
+            <div className="p-4 sm:p-5 flex flex-col relative z-10 bg-card">
               
               {/* Name & Badges */}
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold text-white tracking-tight truncate">
+                <div className="flex items-center gap-2 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate group-hover:text-primary transition-colors">
                     {profile.name}
                   </h3>
                   {profile.isVerified && (
-                    <ShieldCheck className="w-4 h-4 text-white shrink-0" />
+                    <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />
                   )}
                 </div>
                 <div className="shrink-0 text-right">
-                  <span className="text-red-500 font-bold tracking-tight">KES {profile.price_hr.toLocaleString()}</span>
-                  <span className="text-xs text-zinc-500"> /hr</span>
+                  <span className="text-primary font-bold tracking-tight">KES {profile.price_hr.toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground"> /hr</span>
                 </div>
               </div>
 
               {/* Location */}
-              <div className="flex items-center gap-1.5 mb-3 text-[11px] text-red-500 uppercase tracking-widest font-bold">
-                <MapPin className="w-3.5 h-3.5 text-white" />
-                <span>{profile.location}</span>
+              <div className="flex items-center gap-1.5 mb-2.5 text-[11px] text-primary uppercase tracking-widest font-bold">
+                <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <span className="truncate">{profile.location}</span>
               </div>
 
               {/* Bio */}
-              <p className="text-sm leading-relaxed text-zinc-400 line-clamp-2">
+              <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground line-clamp-2">
                 {profile.bio}
               </p>
             </div>

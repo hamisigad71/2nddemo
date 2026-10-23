@@ -16,6 +16,7 @@ import {
   type NotificationItem 
 } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
+import { adminNotificationPopoverClassName } from '../../lib/adminNotificationLayout';
 import { toast } from '../../context/ToastContext';
 import { lockAdminSession } from '../../components/AdminRoute';
 
@@ -263,7 +264,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-[#0c0d12] border border-zinc-800 rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[500px] animate-in fade-in zoom-in-95 duration-150">
+                  <div className={`${adminNotificationPopoverClassName} bg-[#0c0d12] border border-zinc-800 rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[500px] animate-in fade-in zoom-in-95 duration-150`}>
                     {/* Header */}
                     <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60">
                       <div className="flex items-center gap-2">

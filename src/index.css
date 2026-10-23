@@ -128,7 +128,7 @@ html.light, .light {
   }
 
   /* 6. Text contrast for light theme */
-  .text-white:not(.bg-primary *, .bg-red-600 *, .bg-red-500 *, .bg-emerald-500 *, .bg-emerald-600 *, .bg-blue-600 *, .btn-solid *, [class*="bg-red-"] *, [class*="bg-emerald-"] *),
+  .text-white:not(.bg-primary *, .bg-red-600 *, .bg-red-500 *, .bg-emerald-500 *, .bg-emerald-600 *, .bg-blue-600 *, .btn-solid *, [class*="bg-red-"] *, [class*="bg-rose-"] *, [class*="bg-emerald-"] *, [class*="bg-black"] *, [class*="bg-zinc-9"] *, [class*="bg-zinc-8"] *),
   .text-zinc-100,
   .text-zinc-200,
   .text-zinc-300 {
