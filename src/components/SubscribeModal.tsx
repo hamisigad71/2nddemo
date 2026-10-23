@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle, ArrowRight } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle, ArrowRight, Lock } from 'lucide-react';
 import { formatPhone } from '../lib/daraja';
 import { subscribeToCreator, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
@@ -9,9 +10,11 @@ interface SubscribeModalProps {
   onClose: () => void;
   creatorName: string;
   creatorId?: string;
+  creatorAvatar?: string;
   price?: number;
   durationDays?: number;
   tierName?: string;
+  subtitle?: string;
   onSuccess?: (sub: { tierName: string; durationDays: number; expiresAt: string }) => void;
 }
 
@@ -31,12 +34,15 @@ export default function SubscribeModal({
   onClose,
   creatorName,
   creatorId = 'creator-default',
+  creatorAvatar,
   price = 1000,
   durationDays = 30,
   tierName = 'VIP Tier',
+  subtitle,
   onSuccess
 }: SubscribeModalProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('method');
   const [phone, setPhone] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -264,15 +270,41 @@ export default function SubscribeModal({
           {step === 'auth_error' && (
             <div className="animate-in slide-in-from-right-4 duration-500 py-2 fade-in">
               <div className="w-12 h-12 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                <ShieldAlert className="w-6 h-6" />
+                <Lock className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-white tracking-tight mb-2">Access Denied</h2>
-              <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
-                {errorMessage || 'You must be signed in to perform this action.'}
+              <h2 className="text-xl font-bold text-white tracking-tight mb-2">VIP Profile Locked</h2>
+              <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+                {errorMessage || `Subscribe to ${creatorName} to unlock full access to their profile, exclusive posts, and private messaging. Please sign in or create an account to continue.`}
               </p>
-              <button onClick={handleClose} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold tracking-wide py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.3)]">
-                Dismiss
-              </button>
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClose();
+                    navigate('/login', { state: { returnUrl: `/creator/${creatorId}` } });
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-500 text-white font-bold tracking-wide py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.3)] block text-center text-sm cursor-pointer"
+                >
+                  Sign In to Subscribe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClose();
+                    navigate('/signup', { state: { returnUrl: `/creator/${creatorId}` } });
+                  }}
+                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/10 font-semibold tracking-wide py-3 px-4 rounded-xl transition-all block text-center text-sm cursor-pointer"
+                >
+                  Create an Account
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="w-full text-zinc-500 hover:text-zinc-300 font-medium text-xs py-2 text-center transition-colors cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           )}
 
@@ -310,19 +342,74 @@ export default function SubscribeModal({
           {/* Payment Method */}
           {step === 'method' && (
             <div className="animate-in slide-in-from-right-4 duration-500 fade-in pb-2">
+              {creatorAvatar && (
+                <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-zinc-950 border border-white/10 mb-4 shadow-inner">
+                  <div className="relative shrink-0">
+                    <img
+                      src={creatorAvatar}
+                      alt={creatorName}
+                      className="w-12 h-12 rounded-full object-cover border border-white/10"
+                    />
+                    <div className="absolute -bottom-1 -right-1 bg-red-600 rounded-full p-1 text-white shadow-md">
+                      <Lock className="w-2.5 h-2.5" />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                      <span>{creatorName}</span>
+                    </h4>
+                    <span className="text-[11px] text-zinc-400 block truncate font-medium">
+                      VIP Locked Profile
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <h2 className="text-2xl font-bold tracking-tight text-white mb-1">
                 {tierName}
               </h2>
-              <p className="text-zinc-400 text-sm mb-6">
-                Subscribe to {creatorName} for <span className="text-red-500 font-extrabold">KES {price}</span> ({durationDays} days access)
+              <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+                {subtitle || (
+                  <>
+                    Subscribe to <span className="text-white font-semibold">{creatorName}</span> for{' '}
+                    <span className="text-red-500 font-extrabold">KES {price}</span> ({durationDays} days access) to unlock their profile, posts & private chat.
+                  </>
+                )}
               </p>
               
               {creatorId.startsWith('creator-') && (
-                <div className="mb-4 p-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs rounded-xl flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                  <span className="leading-snug">
-                    <strong className="text-amber-200">Demo Account:</strong> This is an official sample creator profile for preview purposes. Subscriptions are simulated without real billing.
-                  </span>
+                <div className="mb-4 space-y-2">
+                  <div className="p-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs rounded-xl flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <span className="leading-snug">
+                      <strong className="text-amber-200">Demo Account:</strong> This is a sample creator profile for preview. You can simulate instant subscription without real billing.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!user) {
+                        setErrorMessage('Please sign in to test demo subscription.');
+                        setStep('auth_error');
+                        return;
+                      }
+                      try {
+                        const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays, `DEMO-${Date.now()}`);
+                        onSuccess?.({
+                          tierName,
+                          durationDays,
+                          expiresAt: sub.expiresAt
+                        });
+                        setStep('success');
+                      } catch (e) {
+                        console.error('Demo sub error:', e);
+                        setStep('success');
+                      }
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs uppercase tracking-wider border border-amber-500/40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    ⚡ Instant Demo Subscribe (Free Simulation)
+                  </button>
                 </div>
               )}
 
@@ -514,12 +601,16 @@ export default function SubscribeModal({
               <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(239,68,68,0.25)]">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-extrabold tracking-tight text-white mb-2">Subscribed</h3>
-              <p className="text-zinc-400 text-sm mb-8 text-center max-w-[220px] leading-relaxed">
-                You now hold premium access to {creatorName}.
+              <h3 className="text-2xl font-extrabold tracking-tight text-white mb-2">Subscribed!</h3>
+              <p className="text-zinc-400 text-sm mb-8 text-center max-w-[240px] leading-relaxed">
+                Profile unlocked! You now hold VIP access to {creatorName}.
               </p>
-              <button onClick={handleClose} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold tracking-wide py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] hover:scale-[1.02] active:scale-[0.98]">
-                Done
+              <button 
+                onClick={handleClose} 
+                className="w-full bg-red-600 hover:bg-red-500 text-white font-bold tracking-wide py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>View Profile</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           )}

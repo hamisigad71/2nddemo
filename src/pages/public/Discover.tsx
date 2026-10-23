@@ -1,19 +1,52 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
-import { getDiscoverCreators } from '../../lib/db';
+import { getDiscoverCreators, getFanSubscriptions, checkUserSubscription, getUserProfile } from '../../lib/db';
 import { getDefaultAvatar } from '../../lib/avatar';
 import LiveNowTray from '../../components/LiveNowTray';
+import SubscribeModal from '../../components/SubscribeModal';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 const Discover = () => {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('trending');
   const [search, setSearch] = useState('');
   const [creators, setCreators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSubscribedIds, setActiveSubscribedIds] = useState<Set<string>>(new Set());
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [subscribeModalCreator, setSubscribeModalCreator] = useState<any | null>(null);
+
+  const fetchUserSubscriptions = useCallback(async () => {
+    if (!user?.id) {
+      setActiveSubscribedIds(new Set());
+      setUserRole(null);
+      return;
+    }
+
+    try {
+      const up = await getUserProfile(user.id);
+      if (up?.role) setUserRole(up.role);
+    } catch {}
+
+    try {
+      const subs = await getFanSubscriptions(user.id);
+      const activeIds = new Set<string>();
+      subs.forEach((s: any) => {
+        if (s.status === 'active' && (!s.expires_at || new Date(s.expires_at) > new Date())) {
+          activeIds.add(s.creator_id);
+        }
+      });
+      setActiveSubscribedIds(activeIds);
+    } catch (e) {
+      console.warn('Could not load user active subscriptions:', e);
+    }
+  }, [user?.id]);
 
   const fetchCreators = async () => {
     try {
@@ -28,9 +61,14 @@ const Discover = () => {
 
   useEffect(() => {
     fetchCreators();
+    fetchUserSubscriptions();
 
-    const handleUpdate = () => fetchCreators();
+    const handleUpdate = () => {
+      fetchCreators();
+      fetchUserSubscriptions();
+    };
     window.addEventListener('posts_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
 
     // Real-time listener for newly registered creators or new posts
     const channel = supabase
@@ -41,13 +79,52 @@ const Discover = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
         fetchCreators();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subscriptions' }, () => {
+        fetchUserSubscriptions();
+      })
       .subscribe();
 
     return () => {
       window.removeEventListener('posts_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchUserSubscriptions]);
+
+  const handleCreatorCardClick = async (e: React.MouseEvent, creator: any) => {
+    e.preventDefault();
+
+    // 1. If current user owns this creator account, allow viewing directly
+    if (user && (user.id === creator.id || user.email === creator.email)) {
+      navigate(`/creator/${creator.id}`, { state: { creator } });
+      return;
+    }
+
+    // 2. If current user is platform admin, allow inspecting directly
+    if (userRole === 'admin') {
+      navigate(`/creator/${creator.id}`, { state: { creator } });
+      return;
+    }
+
+    // 3. If user is actively subscribed, allow viewing
+    if (activeSubscribedIds.has(creator.id)) {
+      navigate(`/creator/${creator.id}`, { state: { creator } });
+      return;
+    }
+
+    // 4. Double check live subscription in case newly purchased
+    if (user?.id) {
+      const liveSub = await checkUserSubscription(user.id, creator.id);
+      if (liveSub && (!liveSub.expires_at || new Date(liveSub.expires_at) > new Date())) {
+        setActiveSubscribedIds(prev => new Set([...prev, creator.id]));
+        navigate(`/creator/${creator.id}`, { state: { creator } });
+        return;
+      }
+    }
+
+    // 5. Creator is locked - prompt to subscribe and pay before viewing profile
+    setSubscribeModalCreator(creator);
+  };
   
   // Tab-based sorting
   const sorted = [...creators].sort((a, b) => {
@@ -140,13 +217,22 @@ const Discover = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-             {filtered.map((creator, i) => (
-               <Link 
-                 to={`/creator/${creator.id}`} 
-                 state={{ creator }} 
-                 key={creator.id || i} 
-                 className="group relative flex flex-col bg-card border border-border/80 rounded-2xl overflow-hidden hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_6px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:shadow-[0_0_24px_rgba(225,29,72,0.12)]"
-               >
+             {filtered.map((creator, i) => {
+               const isSubscribed = activeSubscribedIds.has(creator.id) || Boolean(user && (user.id === creator.id || user.email === creator.email)) || userRole === 'admin';
+               return (
+                <div 
+                  key={creator.id || i}
+                  onClick={(e) => handleCreatorCardClick(e, creator)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCreatorCardClick(e as any, creator);
+                    }
+                  }}
+                  className="group relative flex flex-col bg-card border border-border/80 rounded-2xl overflow-hidden hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_6px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:shadow-[0_0_24px_rgba(225,29,72,0.12)] cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/60"
+                >
                   {/* Media Cover Showcase */}
                   <div className="relative aspect-[16/11] sm:aspect-[4/3] w-full overflow-hidden bg-muted">
                     <img 
@@ -181,9 +267,17 @@ const Discover = () => {
                     </div>
 
                     {/* Subtle hover overlay hint */}
-                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
-                      <span className="px-3 py-1.5 rounded-full bg-white/95 dark:bg-black/85 text-foreground text-xs font-bold shadow-lg backdrop-blur-md transform scale-95 group-hover:scale-100 transition-transform duration-300 flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-primary" /> View Profile
+                    <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
+                      <span className="px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-black/85 text-foreground text-xs font-bold shadow-lg backdrop-blur-md transform scale-95 group-hover:scale-100 transition-transform duration-300 flex items-center gap-1.5">
+                        {isSubscribed ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> View Profile
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-3.5 h-3.5 text-primary" /> Subscribe to View
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -246,17 +340,45 @@ const Discover = () => {
                         )}
                       </div>
 
-                      <span className="text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform shrink-0">
-                        Explore &rarr;
+                      <span className="text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform shrink-0 flex items-center gap-1">
+                        {isSubscribed ? (
+                          <>View Profile &rarr;</>
+                        ) : (
+                          <>
+                            <Lock className="w-3 h-3 text-primary inline" /> Subscribe to View &rarr;
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
-               </Link>
-             ))}
+                </div>
+               );
+             })}
           </div>
           )}
         </div>
       </main>
+
+      {/* Subscribe Modal for Locked Creators */}
+      {subscribeModalCreator && (
+        <SubscribeModal
+          isOpen={Boolean(subscribeModalCreator)}
+          onClose={() => setSubscribeModalCreator(null)}
+          creatorName={subscribeModalCreator.name}
+          creatorId={subscribeModalCreator.id}
+          creatorAvatar={subscribeModalCreator.avatar}
+          price={parseInt(String(subscribeModalCreator.price).replace(/[^0-9]/g, ''), 10) || 1000}
+          durationDays={30}
+          tierName="VIP Profile Access"
+          subtitle={`Subscribe to ${subscribeModalCreator.name} to unlock full access to their profile, exclusive posts, and private messaging.`}
+          onSuccess={() => {
+            const target = subscribeModalCreator;
+            setActiveSubscribedIds(prev => new Set([...prev, target.id]));
+            setSubscribeModalCreator(null);
+            navigate(`/creator/${target.id}`, { state: { creator: target } });
+          }}
+        />
+      )}
     </div>
     <BottomNav />
     </>
