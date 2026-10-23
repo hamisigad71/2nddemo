@@ -20,6 +20,9 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const useAuth = () => useContext(AuthContext);
 
+// System-wide auth epoch version. Bumping this value automatically logs out every user and creator across all browsers
+const GLOBAL_AUTH_EPOCH = '2026-10-23_mandatory_kyc_epoch_v1';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,15 +43,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const isOk = await verifyUserStatus(session.user.id);
-        if (isOk) setUser(session.user);
-      } else {
-        setUser(null);
+    let isCancelled = false;
+
+    const enforceGlobalLogout = async (): Promise<boolean> => {
+      try {
+        const storedEpoch = localStorage.getItem('tgd_auth_epoch');
+        if (storedEpoch !== GLOBAL_AUTH_EPOCH) {
+          localStorage.setItem('tgd_auth_epoch', GLOBAL_AUTH_EPOCH);
+          // Invalidate existing sessions across all browsers
+          await supabase.auth.signOut();
+          localStorage.removeItem('pendingAuthRole');
+          localStorage.removeItem('tgd_session_user');
+          if (!isCancelled) {
+            setUser(null);
+            setLoading(false);
+          }
+          return false;
+        }
+      } catch (err) {
+        console.warn('Notice enforcing global logout:', err);
       }
-      setLoading(false);
+      return true;
+    };
+
+    enforceGlobalLogout().then(async (canProceed) => {
+      if (!canProceed || isCancelled) return;
+
+      // Check initial session
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (isCancelled) return;
+        if (session?.user) {
+          const isOk = await verifyUserStatus(session.user.id);
+          if (isOk && !isCancelled) setUser(session.user);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      });
     });
 
     // Listen to normal auth state changes.
@@ -56,9 +87,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // this callback (it runs while the auth lock is held), so DB work is deferred.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setTimeout(async () => {
+        if (isCancelled) return;
         if (session?.user) {
           const isOk = await verifyUserStatus(session.user.id);
-          if (isOk) setUser(session.user);
+          if (isOk && !isCancelled) setUser(session.user);
         } else {
           setUser(null);
         }
@@ -81,6 +113,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               phone,
               role
             });
+
+            if (avatar && typeof window !== 'undefined') {
+              try {
+                localStorage.setItem(`tgd_user_avatar_${session.user.id}`, avatar);
+                if (role === 'creator') {
+                  const currentLocal = JSON.parse(localStorage.getItem(`tgd_creator_profile_${session.user.id}`) || '{}');
+                  localStorage.setItem(`tgd_creator_profile_${session.user.id}`, JSON.stringify({
+                    ...currentLocal,
+                    avatar,
+                    avatar_url: avatar,
+                    name
+                  }));
+                }
+                window.dispatchEvent(new CustomEvent('profile_updated', { detail: { avatar, name } }));
+              } catch {}
+            }
           } catch (err) {
             console.error('Error ensuring profile after sign-in:', err);
           }
@@ -90,6 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => {
+      isCancelled = true;
       subscription.unsubscribe();
     };
   }, []);
@@ -159,13 +208,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const hasSession = !!data.session;
 
       if (data.user && !isExistingUser) {
+        const userAvatar = extraData?.avatar || extraData?.avatar_url || extraData?.picture || null;
         await createUserProfile(data.user.id, {
           name,
           email,
           phone,
           role,
+          avatar: userAvatar,
           ...(extraData || {})
         });
+
+        if (userAvatar && typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(`tgd_user_avatar_${data.user.id}`, userAvatar);
+            if (role === 'creator') {
+              const currentLocal = JSON.parse(localStorage.getItem(`tgd_creator_profile_${data.user.id}`) || '{}');
+              localStorage.setItem(`tgd_creator_profile_${data.user.id}`, JSON.stringify({
+                ...currentLocal,
+                avatar: userAvatar,
+                avatar_url: userAvatar,
+                name
+              }));
+            }
+            window.dispatchEvent(new CustomEvent('profile_updated', { detail: { avatar: userAvatar, name } }));
+          } catch {}
+        }
       }
       return {
         ...data.user,
