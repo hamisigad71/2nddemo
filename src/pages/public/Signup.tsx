@@ -628,7 +628,7 @@ const Signup = () => {
       if (accountType === 'subscriber') {
         try {
           localStorage.setItem('show_subscriber_verification_popup', 'true');
-          const finalUid = verifiedId || verifiedUser?.id || verifiedUser?.uid || user?.id;
+          const finalUid = verifiedUser?.id || verifiedUser?.uid || user?.id;
           if (finalUid) {
             createNotification(finalUid, {
               title: 'Verified Creator Trust Guarantee 🛡️',
