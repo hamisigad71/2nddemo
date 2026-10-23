@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, CheckCircle2, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { CheckCircle, CheckCircle2, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle, Eye, X, ExternalLink } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAdminCreators, updateCreatorStatus, deleteUserAccount, setCreatorVerified } from '../../lib/db';
+import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 
 const statusStyles: Record<string, string> = {
@@ -24,6 +25,20 @@ const AdminCreators = () => {
   const [filter, setFilter] = useState('all');
   const [deleteModalCreator, setDeleteModalCreator] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [kycModalCreator, setKycModalCreator] = useState<any | null>(null);
+  const [resolvedDocs, setResolvedDocs] = useState<Record<string, { id: string | null; selfie: string | null }>>({});
+
+  const resolveDocUrl = async (rawUrl: string | null | undefined): Promise<string | null> => {
+    if (!rawUrl) return null;
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:')) {
+      return rawUrl;
+    }
+    const cleanPath = rawUrl.replace(/^kyc-documents\//, '');
+    const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(cleanPath, 60 * 60);
+    if (!error && data?.signedUrl) return data.signedUrl;
+    const { data: pubData } = supabase.storage.from('kyc-documents').getPublicUrl(cleanPath);
+    return pubData?.publicUrl || null;
+  };
 
   const handleDeleteCreator = async () => {
     if (!deleteModalCreator) return;
@@ -48,7 +63,19 @@ const AdminCreators = () => {
     setIsLoading(true);
     try {
       const data = await getAdminCreators();
-      setCreatorsList(data || []);
+      const list = data || [];
+      setCreatorsList(list);
+
+      const docsEntries = await Promise.all(
+        list.map(async (c: any) => {
+          const [idUrl, selfieUrl] = await Promise.all([
+            resolveDocUrl(c.idDocUrl),
+            resolveDocUrl(c.selfieUrl),
+          ]);
+          return [c.id, { id: idUrl, selfie: selfieUrl }] as const;
+        })
+      );
+      setResolvedDocs(Object.fromEntries(docsEntries));
     } catch (err) {
       console.error('Error loading admin creators:', err);
       setCreatorsList([]);
@@ -70,6 +97,7 @@ const AdminCreators = () => {
       
       if (newStatus === 'active') {
         if (hasFilledKyc) {
+          await setCreatorVerified(id, true);
           toast.success(`${creator?.name || 'Creator'} approved and verified with blue badge! 👑`);
         } else {
           toast.success(`${creator?.name || 'Creator'} approved as active. (KYC documents not yet submitted)`);
@@ -86,7 +114,10 @@ const AdminCreators = () => {
   const handleToggleVerified = async (id: string, verified: boolean) => {
     try {
       await setCreatorVerified(id, verified);
-      setCreatorsList(prev => prev.map(c => c.id === id ? { ...c, isVerified: verified } : c));
+      setCreatorsList(prev => prev.map(c => c.id === id ? { ...c, isVerified: verified, kycStatus: verified ? 'verified' : 'rejected' } : c));
+      if (kycModalCreator?.id === id) {
+        setKycModalCreator((prev: any) => prev ? { ...prev, isVerified: verified, kycStatus: verified ? 'verified' : 'rejected' } : null);
+      }
       toast.success(verified ? 'Creator identity verified; blue badge granted.' : 'Creator verification revoked.');
     } catch (err: any) {
       toast.error(err?.message || 'Could not update verification status.');
@@ -100,7 +131,9 @@ const AdminCreators = () => {
     return matchFilter && matchSearch;
   });
 
-  const pendingCreators = creatorsList.filter(c => c.status === 'pending');
+  const pendingCreators = creatorsList.filter(
+    c => c.status === 'pending' || (!c.isVerified && (c.hasId || c.hasSelfie || c.kycStatus === 'pending'))
+  );
 
   return (
     <AdminLayout>
@@ -249,6 +282,17 @@ const AdminCreators = () => {
                     </td>
                     <td className="px-6 py-4 pr-8 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setKycModalCreator(c)}
+                          className={`px-2.5 py-1.5 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95 border ${
+                            c.hasId || c.hasSelfie
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+                              : 'bg-[#0d0e12] text-zinc-500 border-zinc-800 hover:text-zinc-300'
+                          }`}
+                          title="Inspect Creator ID & Selfie Documents"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> View KYC
+                        </button>
                         {c.isVerified ? (
                           <button 
                             onClick={() => handleToggleVerified(c.id, false)} 
@@ -302,73 +346,235 @@ const AdminCreators = () => {
               <h2 className="text-xl font-black text-white flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-yellow-500" /> Compliance Queue
               </h2>
-              <p className="text-zinc-500 text-sm mt-1">Review applicant KYC and verification documents.</p>
+              <p className="text-zinc-500 text-sm mt-1">Review applicant KYC and verification documents (National ID &amp; Selfie).</p>
             </div>
             <button
-              onClick={() => navigate('/admin/escorts')}
+              onClick={() => navigate('/admin/users?view=kyc')}
               className="text-red-500 text-sm font-bold hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
             >
-              View All Applications &rarr;
+              View All KYC Verifications &rarr;
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {pendingCreators.length === 0 ? (
               <div className="col-span-full py-8 text-center text-zinc-500 font-medium bg-[#0d0e12] border border-zinc-800 rounded-3xl">No pending applications in the queue.</div>
-            ) : pendingCreators.map((p, i) => (
-              <div key={p.id} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition-all group relative overflow-hidden shadow-xl">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                
-                <div className="flex items-start justify-between relative z-10 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="relative shrink-0 w-14 h-14">
-                      <img src={p.img} className="w-full h-full rounded-full object-cover border-2 border-zinc-700 group-hover:border-yellow-500/50 transition-colors" />
-                      <div className="absolute -bottom-1 -right-1 bg-yellow-500/20 border border-yellow-500/40 text-yellow-500 w-5 h-5 rounded-full flex items-center justify-center">
-                        <Clock className="w-3 h-3" />
+            ) : pendingCreators.map((p, i) => {
+              const docIdUrl = resolvedDocs[p.id]?.id || p.idDocUrl;
+              const docSelfieUrl = resolvedDocs[p.id]?.selfie || p.selfieUrl;
+              return (
+                <div key={p.id} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition-all group relative overflow-hidden shadow-xl flex flex-col justify-between">
+                  <div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                    
+                    <div className="flex items-start justify-between relative z-10 mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative shrink-0 w-14 h-14">
+                          <img src={p.img} className="w-full h-full rounded-full object-cover border-2 border-zinc-700 group-hover:border-yellow-500/50 transition-colors" />
+                          <div className="absolute -bottom-1 -right-1 bg-yellow-500/20 border border-yellow-500/40 text-yellow-500 w-5 h-5 rounded-full flex items-center justify-center">
+                            <Clock className="w-3 h-3" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-bold text-white text-base">{p.name || `Applicant ${i+1}`}</div>
+                          <div className="text-xs text-zinc-500">{p.email}</div>
+                          <div className="text-[11px] text-zinc-500 mt-1 font-medium bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-md inline-block uppercase tracking-wider">Niche: {p.category}</div>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="font-bold text-white text-base">{p.name || `Applicant ${i+1}`}</div>
-                      <div className="text-[11px] text-zinc-500 mt-1 font-medium bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-md inline-block uppercase tracking-wider">Niche: {p.category}</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-3 mb-6 relative z-10">
-                  <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#0d0e12] p-3 rounded-xl">
-                    <span className="text-zinc-400 font-medium tracking-wide">National ID</span>
-                    {p.hasId ? (
-                      <span className="text-emerald-400 font-bold flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5" /> Uploaded</span>
-                    ) : (
-                      <span className="text-zinc-500 font-medium flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-zinc-600" /> Not Provided</span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between text-xs border border-zinc-800/50 bg-[#0d0e12] p-3 rounded-xl">
-                    <span className="text-zinc-400 font-medium tracking-wide">Selfie Match</span>
-                    {p.hasSelfie ? (
-                      <span className="text-yellow-400 font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Pending Review</span>
-                    ) : (
-                      <span className="text-zinc-500 font-medium flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-zinc-600" /> Not Provided</span>
-                    )}
-                  </div>
-                  {!p.hasId && !p.hasSelfie && (
-                    <div className="text-[11px] text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl flex items-center gap-2">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                      <span>No KYC verification documents submitted yet.</span>
-                    </div>
-                  )}
-                </div>
 
-                <div className="flex gap-3 relative z-10">
-                  <button onClick={() => handleStatusChange(p.id, 'active')} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 transition-all border border-red-500 active:scale-95">Approve Now</button>
-                  <button className="w-14 flex items-center justify-center bg-[#0d0e12] hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl border border-zinc-700 transition-all active:scale-95">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
+                    {/* Legal Identity Summary */}
+                    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-3 mb-4 space-y-1.5 text-xs relative z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-500 font-bold uppercase text-[10px]">Legal Name</span>
+                        <span className="text-white font-bold">{p.legalName || 'Not provided'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-500 font-bold uppercase text-[10px]">National ID / Passport</span>
+                        <span className="text-amber-400 font-mono font-bold">{p.nationalId || 'Not provided'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-500 font-bold uppercase text-[10px]">Date of Birth</span>
+                        <span className="text-zinc-300 font-semibold">{p.dob || 'Not provided'}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Uploaded ID & Selfie Visual Previews */}
+                    <div className="grid grid-cols-2 gap-3 mb-5 relative z-10">
+                      <div className="border border-zinc-800 bg-zinc-900/60 rounded-2xl p-2.5 flex flex-col items-center">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-1.5">National ID Photo</span>
+                        {docIdUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setKycModalCreator(p)}
+                            className="w-full h-28 rounded-xl overflow-hidden border border-zinc-700 hover:border-red-500 transition-all relative group/img cursor-pointer"
+                          >
+                            <img src={docIdUrl} alt="National ID" className="w-full h-full object-cover" />
+                            <span className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-bold text-white">
+                              Click to Enlarge
+                            </span>
+                          </button>
+                        ) : (
+                          <div className="w-full h-28 rounded-xl border border-dashed border-zinc-800 flex flex-col items-center justify-center text-zinc-500 text-[11px] gap-1">
+                            <XCircle className="w-4 h-4 text-zinc-600" />
+                            <span>Not Provided</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border border-zinc-800 bg-zinc-900/60 rounded-2xl p-2.5 flex flex-col items-center">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-1.5">Selfie with ID</span>
+                        {docSelfieUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setKycModalCreator(p)}
+                            className="w-full h-28 rounded-xl overflow-hidden border border-zinc-700 hover:border-red-500 transition-all relative group/img cursor-pointer"
+                          >
+                            <img src={docSelfieUrl} alt="Selfie with ID" className="w-full h-full object-cover" />
+                            <span className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-bold text-white">
+                              Click to Enlarge
+                            </span>
+                          </button>
+                        ) : (
+                          <div className="w-full h-28 rounded-xl border border-dashed border-zinc-800 flex flex-col items-center justify-center text-zinc-500 text-[11px] gap-1">
+                            <XCircle className="w-4 h-4 text-zinc-600" />
+                            <span>Not Provided</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 relative z-10">
+                    <button
+                      onClick={() => handleStatusChange(p.id, 'active')}
+                      disabled={!p.hasId || !p.hasSelfie}
+                      className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 transition-all border border-red-500 active:scale-95 cursor-pointer"
+                    >
+                      Approve &amp; Verify
+                    </button>
+                    <button
+                      onClick={() => setKycModalCreator(p)}
+                      className="px-4 flex items-center justify-center gap-1.5 bg-[#0d0e12] hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl border border-zinc-700 text-[11px] font-bold transition-all active:scale-95 cursor-pointer"
+                      title="Inspect Full KYC Details"
+                    >
+                      <Eye className="w-4 h-4" /> Inspect
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
+
+        {/* KYC & Identity Documents Inspection Modal */}
+        {kycModalCreator && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl relative my-8">
+              <button
+                type="button"
+                onClick={() => setKycModalCreator(null)}
+                className="absolute top-5 right-5 w-9 h-9 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <img src={kycModalCreator.img} alt={kycModalCreator.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-zinc-700" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-black text-white">{kycModalCreator.name}</h3>
+                    {kycModalCreator.isVerified && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                        <CheckCircle2 className="w-3 h-3" /> Verified
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-0.5">{kycModalCreator.email} {kycModalCreator.phone ? `• ${kycModalCreator.phone}` : ''}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 mb-6">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Legal Full Name</div>
+                  <div className="text-sm font-bold text-white mt-0.5">{kycModalCreator.legalName || 'Not submitted'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500">National ID / Passport</div>
+                  <div className="text-sm font-mono font-bold text-amber-400 mt-0.5">{kycModalCreator.nationalId || 'Not submitted'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Date of Birth</div>
+                  <div className="text-sm font-bold text-zinc-200 mt-0.5">{kycModalCreator.dob || 'Not submitted'}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                {[
+                  ['National ID / Passport Document', resolvedDocs[kycModalCreator.id]?.id || kycModalCreator.idDocUrl],
+                  ['Verification Selfie with ID', resolvedDocs[kycModalCreator.id]?.selfie || kycModalCreator.selfieUrl],
+                ].map(([label, url]) => (
+                  <div key={label} className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3 flex flex-col">
+                    <div className="text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">{label}</div>
+                    {url ? (
+                      <>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-full h-52 rounded-xl overflow-hidden border border-zinc-700 hover:border-red-500 transition-all block bg-black"
+                        >
+                          <img src={url} alt={label || 'Document'} className="w-full h-full object-contain" />
+                        </a>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" /> Open Full Resolution in New Tab
+                        </a>
+                      </>
+                    ) : (
+                      <div className="w-full h-52 rounded-xl border border-dashed border-zinc-800 flex flex-col items-center justify-center text-zinc-500 text-xs gap-2">
+                        <XCircle className="w-6 h-6 text-zinc-600" />
+                        <span>No document uploaded yet</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setKycModalCreator(null)}
+                  className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                {kycModalCreator.isVerified ? (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleVerified(kycModalCreator.id, false)}
+                    className="px-5 py-2.5 rounded-xl bg-red-600/15 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    Revoke Verification Badge
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!kycModalCreator.hasId || !kycModalCreator.hasSelfie}
+                    onClick={() => handleToggleVerified(kycModalCreator.id, true)}
+                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Approve KYC &amp; Grant Blue Badge
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Creator Confirmation Modal */}
         {deleteModalCreator && (

@@ -18,7 +18,13 @@ const AdminUsers = () => {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-  const [view, setView] = useState<'list' | 'kyc'>('list');
+  const [view, setView] = useState<'list' | 'kyc'>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('view') === 'kyc' ? 'kyc' : 'list';
+    } catch {
+      return 'list';
+    }
+  });
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [kycDocumentUrls, setKycDocumentUrls] = useState<Record<string, { id: string | null; selfie: string | null }>>({});
   const [loading, setLoading] = useState(false);
@@ -69,16 +75,26 @@ const AdminUsers = () => {
   const fetchPending = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('users').select('*').eq('kyc_status', 'pending');
+      const { data, error } = await supabase.from('users').select('*');
       if (error) throw error;
-      const users = [...(data || [])];
+      const users = (data || []).filter((u: any) =>
+        u.kyc_status === 'pending' ||
+        ((u.kyc_id_url || u.kyc_selfie_url) && u.kyc_status !== 'verified')
+      );
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key && key.startsWith('tgd_creator_profile_')) {
             const uid = key.replace('tgd_creator_profile_', '');
             const local = JSON.parse(localStorage.getItem(key) || '{}');
-            if (local.kyc_status === 'pending' && !users.find(u => u.uid === uid)) {
+            const existing = users.find((u: any) => u.uid === uid);
+            if (existing) {
+              if (!existing.kyc_id_url && local.kyc_id_url) existing.kyc_id_url = local.kyc_id_url;
+              if (!existing.kyc_selfie_url && local.kyc_selfie_url) existing.kyc_selfie_url = local.kyc_selfie_url;
+              if (!existing.legal_name && local.legalName) existing.legal_name = local.legalName;
+              if (!existing.national_id_number && local.nationalId) existing.national_id_number = local.nationalId;
+              if (!existing.dob && local.dob) existing.dob = local.dob;
+            } else if ((local.kyc_status === 'pending' || local.kyc_id_url || local.kyc_selfie_url) && local.kyc_status !== 'verified') {
               users.push({
                 uid,
                 name: local.name || local.display_name || 'Creator',
@@ -90,6 +106,33 @@ const AdminUsers = () => {
                 kyc_status: 'pending',
                 avatar: local.avatar,
                 created_at: new Date().toISOString()
+              });
+            }
+          }
+        }
+        const pendingQueue = JSON.parse(localStorage.getItem('pending_creator_kyc') || '[]');
+        if (Array.isArray(pendingQueue)) {
+          for (const item of pendingQueue) {
+            if (!item?.uid) continue;
+            const existing = users.find((u: any) => u.uid === item.uid);
+            if (existing) {
+              if (!existing.kyc_id_url && item.kyc_id_url) existing.kyc_id_url = item.kyc_id_url;
+              if (!existing.kyc_selfie_url && item.kyc_selfie_url) existing.kyc_selfie_url = item.kyc_selfie_url;
+              if (!existing.legal_name && item.legal_name) existing.legal_name = item.legal_name;
+              if (!existing.national_id_number && item.national_id) existing.national_id_number = item.national_id;
+              if (!existing.dob && item.dob) existing.dob = item.dob;
+            } else {
+              users.push({
+                uid: item.uid,
+                name: item.display_name || 'Creator',
+                legal_name: item.legal_name,
+                national_id_number: item.national_id,
+                dob: item.dob,
+                kyc_id_url: item.kyc_id_url,
+                kyc_selfie_url: item.kyc_selfie_url,
+                kyc_status: 'pending',
+                avatar: item.avatar_url,
+                created_at: item.submitted_at || new Date().toISOString()
               });
             }
           }

@@ -2904,8 +2904,14 @@ export const getAdminCreators = async () => {
       const local = getStoredCreatorProfile(u.uid);
       const name = u.name || p?.display_name || local?.name || local?.display_name || 'Creator';
       const avatar = u.avatar || p?.avatar_url || p?.avatar || local?.avatar || local?.avatar_url || null;
-      const hasId = Boolean((u as any).kyc_id_url || p?.kyc_id_url || (local as any)?.kyc_id_url || (local as any)?.idDocument);
-      const hasSelfie = Boolean((u as any).kyc_selfie_url || p?.kyc_selfie_url || (local as any)?.kyc_selfie_url || (local as any)?.selfie);
+      const coverUrl = p?.cover_image || (u as any).cover_image || (local as any)?.cover_image || null;
+      const idDocUrl = (u as any).kyc_id_url || p?.kyc_id_url || (local as any)?.kyc_id_url || (local as any)?.idDocument || null;
+      const selfieUrl = (u as any).kyc_selfie_url || p?.kyc_selfie_url || (local as any)?.kyc_selfie_url || (local as any)?.selfie || null;
+      const legalName = (u as any).legal_name || p?.legal_name || (local as any)?.legalName || (local as any)?.legal_name || null;
+      const nationalId = (u as any).national_id_number || p?.national_id_number || (local as any)?.nationalId || (local as any)?.national_id_number || null;
+      const dob = (u as any).dob || p?.dob || (local as any)?.dob || null;
+      const hasId = Boolean(idDocUrl);
+      const hasSelfie = Boolean(selfieUrl);
       const kycStatus = (u as any).kyc_status || p?.kyc_status || (local as any)?.kyc_status || (hasId ? 'pending' : 'unverified');
       const isVerified = isCreatorVerified(
         u.uid,
@@ -2913,11 +2919,25 @@ export const getAdminCreators = async () => {
         kycStatus
       );
 
+      // Auto-sync locally stored KYC details to public.users if DB row was missing them
+      if ((idDocUrl || selfieUrl) && (!(u as any).kyc_id_url || !(u as any).kyc_selfie_url)) {
+        supabase.from('users').update({
+          ...(legalName ? { legal_name: legalName } : {}),
+          ...(nationalId ? { national_id_number: nationalId } : {}),
+          ...(dob ? { dob } : {}),
+          ...(idDocUrl ? { kyc_id_url: idDocUrl } : {}),
+          ...(selfieUrl ? { kyc_selfie_url: selfieUrl } : {}),
+          kyc_status: kycStatus === 'verified' ? 'verified' : 'pending'
+        }).eq('uid', u.uid).then(() => {}, () => {});
+      }
+
       return {
         id: u.uid,
         name,
         email: u.email || 'No email',
+        phone: (u as any).phone || (local as any)?.phone || null,
         img: resolveUserAvatar(avatar, name),
+        coverUrl,
         category: p?.niche || local?.category || (p?.tags && p.tags[0]) || 'Various',
         subs: p?.total_subscribers || local?.total_subscribers || 0,
         revenue: `KES ${(p?.total_earnings || 0).toLocaleString()}`,
@@ -2925,6 +2945,11 @@ export const getAdminCreators = async () => {
         joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }) : 'Recent',
         hasId,
         hasSelfie,
+        idDocUrl,
+        selfieUrl,
+        legalName,
+        nationalId,
+        dob,
         isVerified,
         kycStatus,
       };
