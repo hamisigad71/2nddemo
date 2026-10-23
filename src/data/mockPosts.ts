@@ -34,7 +34,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     id: 'demo-post-2',
     creator_id: 'creator-chebet',
     content: 'Just finished my late-night workout & stretch session 🍑💦 Lock in KES 300 to unlock my private routine video & spicy workout set!',
-    media_url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=720&q=75',
+    media_url: 'https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg',
     is_locked: true,
     price: 300,
     likes_count: 512,
@@ -42,7 +42,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     is_featured: true,
     users: {
       name: 'Chebet Fit & Spice 🔥',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80'
+      avatar: 'https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg'
     }
   },
   {

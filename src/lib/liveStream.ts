@@ -55,7 +55,7 @@ const DEFAULT_SHOWCASE_STREAMS: LiveStream[] = [
     creatorId: 'creator-chebet',
     creatorName: 'Chebet Fit & Spice 🔥',
     creatorHandle: '@chebetfit',
-    creatorAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
+    creatorAvatar: 'https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg',
     title: 'Mombasa Beach Sunset & Fitness Preview 🏋️‍♀️',
     description: 'VIP subscribers only live hangout before my weekend private show.',
     category: 'Fitness & Spice',

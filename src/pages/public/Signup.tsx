@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2, User as UserIcon, ImagePlus } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
-import { uploadFileToSupabase, getStoredCreatorProfile } from '../../lib/db';
+import { uploadFileToSupabase, getStoredCreatorProfile, createNotification } from '../../lib/db';
+import { compressAvatarImage } from '../../lib/avatar';
+import { validateSignupImages } from '../../lib/creatorSignupImages';
 
 const DISPOSABLE_OR_DUMMY_DOMAINS = new Set([
   'test.com', 'example.com', 'dummy.com', 'fake.com', 'invalid.com', 'none.com',
@@ -47,7 +49,7 @@ function validateEmailAddress(rawEmail: string): string | null {
   return null;
 }
 
-function formatSignupErrorMessage(err: any, email: string): string {
+function formatSignupErrorMessage(err: any, email: string, accountType: string): string {
   const raw = String(err?.message || err || '').trim();
   const lower = raw.toLowerCase();
 
@@ -55,7 +57,9 @@ function formatSignupErrorMessage(err: any, email: string): string {
     lower.includes('error sending confirmation email') ||
     lower.includes('error sending confirmation mail')
   ) {
-    return `Supabase email delivery rate limit reached for "${email.trim()}". Supabase's free built-in email service only allows 3 emails per hour. To fix this: sign up with Google above, or turn off "Confirm email" in your Supabase Dashboard (Authentication → Providers → Email) for instant registration.`;
+    return accountType === 'creator'
+      ? `Supabase email delivery rate limit reached for "${email.trim()}". Please wait before trying again or contact support for help completing creator registration.`
+      : `Supabase email delivery rate limit reached for "${email.trim()}". Supabase's free built-in email service only allows 3 emails per hour. To fix this: sign up with Google above, or turn off "Confirm email" in your Supabase Dashboard (Authentication → Providers → Email) for instant registration.`;
   }
 
   if (
@@ -73,7 +77,9 @@ function formatSignupErrorMessage(err: any, email: string): string {
   }
 
   if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('over_email_send_rate_limit')) {
-    return 'Too many email attempts in the last hour (Supabase limit). Please wait a few minutes, use Google Sign-In, or log in if you already have an account.';
+    return accountType === 'creator'
+      ? 'Too many email attempts in the last hour (Supabase limit). Please wait a few minutes or log in if you already have an account.'
+      : 'Too many email attempts in the last hour (Supabase limit). Please wait a few minutes, use Google Sign-In, or log in if you already have an account.';
   }
 
   return raw || 'Registration failed. Please check your details and try again.';
@@ -93,6 +99,15 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Profile photo state (for both creators and subscribers)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const [avatarCompressing, setAvatarCompressing] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState('');
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   // Mandatory Creator KYC verification fields
   const [legalName, setLegalName] = useState('');
@@ -130,6 +145,55 @@ const Signup = () => {
       reader.onload = () => setSelfiePreview(reader.result as string);
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type || !file.type.startsWith('image/')) {
+      setError('Please select a valid image file (JPEG, PNG, or WebP).');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Image size exceeds 15MB. Please choose a smaller photo.');
+      return;
+    }
+
+    try {
+      setAvatarCompressing(true);
+      setError('');
+      const { file: compressedFile, dataUrl } = await compressAvatarImage(file, 512, 0.85);
+      setAvatarFile(compressedFile);
+      setAvatarPreview(dataUrl);
+    } catch (err) {
+      console.warn('Avatar compression fallback:', err);
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setAvatarPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } finally {
+      setAvatarCompressing(false);
+    }
+  };
+
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file for your cover photo.');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Cover photo exceeds 15MB. Please choose a smaller image.');
+      return;
+    }
+
+    setError('');
+    setCoverFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setCoverPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   // Only auto-redirect if OTP step is not active or user is confirmed
@@ -182,6 +246,12 @@ const Signup = () => {
       return;
     }
 
+    const imageError = validateSignupImages(accountType, avatarFile, coverFile);
+    if (imageError && !(avatarPreview && !avatarFile && accountType !== 'creator')) {
+      setError(imageError);
+      return;
+    }
+
     if (accountType === 'creator') {
       if (!legalName.trim()) {
         setError("Legal Full Name is strictly required (must match your government ID & M-Pesa).");
@@ -215,6 +285,41 @@ const Signup = () => {
       setLoading(true);
       const cleanEmail = email.trim();
       const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
+
+      let uploadedAvatarUrl = avatarPreview;
+      if (avatarFile) {
+        try {
+          const ext = avatarFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+          const avatarPath = `avatars/signup_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+          const uploaded = await uploadFileToSupabase(avatarFile, 'avatars', avatarPath);
+          if (uploaded) {
+            uploadedAvatarUrl = uploaded;
+          }
+        } catch (uploadErr) {
+          console.warn('Avatar upload fallback to compressed preview:', uploadErr);
+        }
+      }
+
+      let uploadedCoverUrl = '';
+      if (accountType === 'creator' && coverFile) {
+        const coverExt = coverFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+        const coverPath = `covers/signup_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${coverExt}`;
+        uploadedCoverUrl = (await uploadFileToSupabase(coverFile, 'Daysman Gad', coverPath)) || '';
+        if (!uploadedCoverUrl.startsWith('http')) {
+          throw new Error('Could not upload your cover photo. Please try again before creating your account.');
+        }
+      }
+
+      if (accountType === 'creator' && !uploadedAvatarUrl.startsWith('http')) {
+        throw new Error('Could not upload your profile photo. Please try again before creating your account.');
+      }
+
+      if (uploadedAvatarUrl) {
+        try {
+          localStorage.setItem('pending_signup_avatar', uploadedAvatarUrl);
+        } catch {}
+      }
+
       const result: any = await signUpWithEmail(
         cleanEmail, 
         password, 
@@ -224,6 +329,10 @@ const Signup = () => {
         {
           username: cleanUsername,
           handle: `@${cleanUsername}`,
+          avatar: uploadedAvatarUrl || null,
+          avatar_url: uploadedAvatarUrl || null,
+          picture: uploadedAvatarUrl || null,
+          cover_image: accountType === 'creator' ? uploadedCoverUrl : null,
           legal_name: accountType === 'creator' ? legalName.trim() : null,
           national_id_number: accountType === 'creator' ? nationalId.trim() : null,
           dob: accountType === 'creator' ? dob : null,
@@ -241,6 +350,45 @@ const Signup = () => {
       }
 
       const uid = result?.id || result?.uid || result?.user?.id || user?.id;
+      if (accountType === 'creator' && !uid) {
+        throw new Error('Your creator account could not be completed. Please try again.');
+      }
+
+      if (uid && uploadedAvatarUrl) {
+        try {
+          await supabase.from('users').update({
+            avatar: uploadedAvatarUrl
+          }).eq('uid', uid);
+
+          if (accountType === 'creator') {
+            const { error: profileError } = await supabase.from('creator_profiles').upsert({
+              user_id: uid,
+              avatar: uploadedAvatarUrl,
+              avatar_url: uploadedAvatarUrl,
+              cover_image: uploadedCoverUrl
+            }, { onConflict: 'user_id' });
+            if (profileError) throw profileError;
+
+            const local = getStoredCreatorProfile(uid) || {};
+            localStorage.setItem(`tgd_creator_profile_${uid}`, JSON.stringify({
+              ...local,
+              avatar: uploadedAvatarUrl,
+              avatar_url: uploadedAvatarUrl,
+              cover_image: uploadedCoverUrl,
+              name: cleanUsername
+            }));
+          }
+
+          localStorage.setItem('pending_signup_cover', uploadedCoverUrl);
+          localStorage.setItem(`tgd_user_avatar_${uid}`, uploadedAvatarUrl);
+          window.dispatchEvent(new CustomEvent('profile_updated', { detail: { avatar: uploadedAvatarUrl, cover_image: uploadedCoverUrl, name: cleanUsername } }));
+        } catch (avatarSyncErr) {
+          console.error('Required creator image sync failed:', avatarSyncErr);
+          if (accountType === 'creator') {
+            throw new Error('Your account may have been created, but the profile and cover photos could not be saved. Please sign in and try again.');
+          }
+        }
+      }
 
       if (accountType === 'creator') {
         let uploadedIdUrl = idDocPreview;
@@ -311,6 +459,23 @@ const Signup = () => {
 
       // If session exists (email confirmation disabled in Supabase), user is already logged in!
       if (result?.hasSession || result?.session) {
+        if (accountType === 'subscriber') {
+          try {
+            localStorage.setItem('show_subscriber_verification_popup', 'true');
+            if (uid) {
+              createNotification(uid, {
+                title: 'Verified Creator Trust Guarantee 🛡️',
+                message: 'Notice: All creators with the Blue Verified Badge (✓) are authentic and real. Their government ID and live selfie verification have been officially approved.',
+                type: 'system',
+                badge: 'Verified',
+                link: '/user',
+                action_label: 'Explore Feed',
+                action_url: '/user'
+              }).catch(() => {});
+            }
+          } catch {}
+        }
+
         toast.success(
           accountType === 'creator'
             ? 'Creator application submitted! Documents are pending admin review.'
@@ -323,7 +488,7 @@ const Signup = () => {
       // Move to confirmation / OTP step
       setOtpStep(true);
     } catch (err: any) {
-      setError(formatSignupErrorMessage(err, email));
+      setError(formatSignupErrorMessage(err, email, accountType));
     } finally {
       setLoading(false);
     }
@@ -357,6 +522,61 @@ const Signup = () => {
       setError('');
       setLoading(true);
       const verifiedUser: any = await verifyOtp(email, cleanToken);
+
+      // Flush pending signup avatar if available
+      try {
+        const pendingAvatar = localStorage.getItem('pending_signup_avatar');
+        const vUid = verifiedUser?.id || verifiedUser?.uid || user?.id;
+        if (pendingAvatar && vUid) {
+          await supabase.from('users').update({
+            avatar: pendingAvatar
+          }).eq('uid', vUid);
+
+          if (accountType === 'creator') {
+            await supabase.from('creator_profiles').upsert({
+              user_id: vUid,
+              avatar: pendingAvatar,
+              avatar_url: pendingAvatar
+            }, { onConflict: 'user_id' });
+
+            const local = getStoredCreatorProfile(vUid) || {};
+            localStorage.setItem(`tgd_creator_profile_${vUid}`, JSON.stringify({
+              ...local,
+              avatar: pendingAvatar,
+              avatar_url: pendingAvatar
+            }));
+          }
+
+          localStorage.setItem(`tgd_user_avatar_${vUid}`, pendingAvatar);
+          window.dispatchEvent(new CustomEvent('profile_updated', { detail: { avatar: pendingAvatar } }));
+          localStorage.removeItem('pending_signup_avatar');
+        }
+      } catch (avErr) {
+        console.warn('Could not flush pending avatar after OTP:', avErr);
+      }
+
+      // Ensure the required cover is attached after email confirmation as well.
+      try {
+        const pendingCover = localStorage.getItem('pending_signup_cover');
+        const verifiedId = verifiedUser?.id || verifiedUser?.uid || user?.id;
+        if (accountType === 'creator' && pendingCover && verifiedId) {
+          const { error: coverError } = await supabase.from('creator_profiles').upsert({
+            user_id: verifiedId,
+            cover_image: pendingCover
+          }, { onConflict: 'user_id' });
+          if (coverError) throw coverError;
+          const local = getStoredCreatorProfile(verifiedId) || {};
+          localStorage.setItem(`tgd_creator_profile_${verifiedId}`, JSON.stringify({
+            ...local,
+            cover_image: pendingCover
+          }));
+          localStorage.removeItem('pending_signup_cover');
+        }
+      } catch (coverErr) {
+        console.error('Could not save creator cover photo after OTP:', coverErr);
+        setError('Your account was verified, but your cover photo could not be saved. Please sign in and upload it from Edit Profile.');
+        return;
+      }
 
       // Flush pending KYC if available
       try {
@@ -405,6 +625,24 @@ const Signup = () => {
         console.warn('Could not flush pending KYC after OTP:', flushErr);
       }
 
+      if (accountType === 'subscriber') {
+        try {
+          localStorage.setItem('show_subscriber_verification_popup', 'true');
+          const finalUid = verifiedId || verifiedUser?.id || verifiedUser?.uid || user?.id;
+          if (finalUid) {
+            createNotification(finalUid, {
+              title: 'Verified Creator Trust Guarantee 🛡️',
+              message: 'Notice: All creators with the Blue Verified Badge (✓) are authentic and real. Their government ID and live selfie verification have been officially approved.',
+              type: 'system',
+              badge: 'Verified',
+              link: '/user',
+              action_label: 'Explore Feed',
+              action_url: '/user'
+            }).catch(() => {});
+          }
+        } catch {}
+      }
+
       toast.success(
         accountType === 'creator'
           ? 'Registration and verification documents submitted! Awaiting admin approval.'
@@ -427,7 +665,7 @@ const Signup = () => {
         description: `A new verification code was sent to ${email.trim()}.`
       });
     } catch (err: any) {
-      setError(formatSignupErrorMessage(err, email));
+      setError(formatSignupErrorMessage(err, email, accountType));
     }
   };
   
@@ -575,7 +813,7 @@ const Signup = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            {accountType === 'subscriber' ? <div className="grid grid-cols-2 gap-3 mb-6">
                <button onClick={handleGoogleSignIn} className="w-full flex items-center justify-center gap-2 border border-zinc-800 bg-[#0d0e12] py-3 rounded-xl hover:bg-zinc-800 font-bold transition-colors text-sm text-white">
                   <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.993 10.993 0 0012 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                   <span>Google</span>
@@ -584,14 +822,135 @@ const Signup = () => {
                   <img src="https://i.pinimg.com/736x/0f/16/7c/0f167cb2b6ffa10d8672c17ec8aea8f5.jpg" alt="Facebook" className="w-5 h-5 flex-shrink-0 rounded-full object-cover" />
                   <span>Facebook</span>
                </button>
-            </div>
+            </div> : (
+              <p className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-center text-xs text-zinc-400">
+                Creator signup requires your profile and cover photos. Use the form below to create your account.
+              </p>
+            )}
 
             <div className="relative mb-6">
                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800"></div></div>
                <div className="relative flex justify-center text-sm"><span className="bg-[#0d0e12] px-2 text-zinc-500 font-medium">or</span></div>
             </div>
-            
+
             <form className="flex flex-col gap-4" onSubmit={handleSignup}>
+              {/* Profile Photo Uploader (Mandatory for both Creators & Subscribers) */}
+              <div className="flex flex-col items-center justify-center pt-1 pb-2">
+                <div className="relative group">
+                  <div
+                    onClick={() => avatarInputRef.current?.click()}
+                    className={`w-24 h-24 rounded-full overflow-hidden border-2 transition-all duration-200 flex items-center justify-center bg-zinc-900 cursor-pointer ${
+                      avatarPreview
+                        ? 'border-red-500 shadow-lg shadow-red-500/20 ring-4 ring-red-500/10'
+                        : 'border-dashed border-zinc-700 hover:border-red-500/70 group-hover:bg-zinc-800/80'
+                    }`}
+                  >
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Profile Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                        <UserIcon className="w-10 h-10 stroke-[1.5]" />
+                      </div>
+                    )}
+
+                    {avatarCompressing && (
+                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center rounded-full">
+                        <RefreshCw className="w-6 h-6 text-red-500 animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Camera Badge Button */}
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-lg border-2 border-[#0d0e12] transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                    title="Upload profile photo"
+                    aria-label="Upload profile photo"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleAvatarSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="text-center mt-2.5">
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-white">
+                    <span>Profile Photo</span>
+                    <span className="text-red-500">*</span>
+                    {avatarPreview && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                        <CheckCircle2 className="w-3 h-3" /> Attached
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {avatarPreview ? (
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="text-red-400 hover:text-red-300 font-semibold underline underline-offset-2 cursor-pointer"
+                      >
+                        Change photo
+                      </button>
+                    ) : (
+                      accountType === 'creator'
+                        ? 'Upload your creator avatar (shown on feeds & page)'
+                        : 'Upload your photo (shown across Mali)'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {accountType === 'creator' && (
+                <div className="flex flex-col gap-2">
+                  <label className="block text-xs font-black uppercase text-zinc-400">
+                    Creator Cover Photo <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    className={`relative h-36 w-full overflow-hidden rounded-2xl border-2 border-dashed transition-colors ${
+                      coverPreview ? 'border-red-500' : 'border-zinc-700 hover:border-red-500/70'
+                    }`}
+                  >
+                    {coverPreview ? (
+                      <img src={coverPreview} alt="Cover photo preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex flex-col items-center gap-2 text-zinc-400">
+                        <ImagePlus className="h-7 w-7" />
+                        <span className="text-xs font-bold">Upload a cover photo</span>
+                      </span>
+                    )}
+                    {coverPreview && (
+                      <span className="absolute bottom-2 right-2 rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold text-white">
+                        Change cover
+                      </span>
+                    )}
+                  </button>
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleCoverSelect}
+                    className="hidden"
+                  />
+                  <span className="text-[11px] text-zinc-500">
+                    {coverPreview ? 'Cover photo attached' : 'Choose a photo to display at the top of your creator page.'}
+                  </span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">
                   Username <span className="text-red-500">*</span>

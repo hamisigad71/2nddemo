@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile } from '../lib/db';
 import { resolveUserAvatar } from '../lib/avatar';
 import { supabase } from '../lib/supabase';
+import VerifiedCreatorNoticeModal from './VerifiedCreatorNoticeModal';
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -50,7 +51,37 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  const [showVerifiedNotice, setShowVerifiedNotice] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Trigger verification notice popup when opening account or if new subscriber hasn't seen it yet
+    const pendingNotice = localStorage.getItem('show_subscriber_verification_popup') === 'true';
+    const seenNotice = localStorage.getItem(`mali_verified_creators_popup_seen_${user.id}`);
+
+    if (pendingNotice || !seenNotice) {
+      const timer = setTimeout(() => {
+        setShowVerifiedNotice(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    const handleOpenNotice = () => setShowVerifiedNotice(true);
+    window.addEventListener('open_verified_creator_notice', handleOpenNotice);
+    return () => window.removeEventListener('open_verified_creator_notice', handleOpenNotice);
+  }, []);
+
+  const handleCloseVerifiedNotice = () => {
+    setShowVerifiedNotice(false);
+    if (user?.id) {
+      localStorage.setItem(`mali_verified_creators_popup_seen_${user.id}`, 'true');
+    }
+    localStorage.removeItem('show_subscriber_verification_popup');
+  };
 
   useEffect(() => {
     if (!user?.id) {
@@ -357,6 +388,12 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
 
       {/* Mobile Bottom Navigation - hides whenever mobile sidebar menu is opened */}
       <BottomNav scrollRef={mainRef} hidden={isMobileMenuOpen} />
+
+      {/* Verified Creator Trust & Safety Modal Notice */}
+      <VerifiedCreatorNoticeModal 
+        isOpen={showVerifiedNotice} 
+        onClose={handleCloseVerifiedNotice} 
+      />
     </div>
   );
 };

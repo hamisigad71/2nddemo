@@ -379,7 +379,19 @@ const UserNotifications = () => {
 
                     {/* Actions */}
                     <div className="pt-2 flex items-center gap-3 flex-wrap">
-                      {targetUrl && (
+                      {item.badge === 'Verified' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isUnread) handleMarkAsRead(item.id);
+                            window.dispatchEvent(new CustomEvent('open_verified_creator_notice'));
+                          }}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-200 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500" />
+                          <span>View Trust & Verification Notice</span>
+                        </button>
+                      ) : targetUrl ? (
                         <Link
                           to={targetUrl}
                           onClick={() => {
@@ -390,7 +402,7 @@ const UserNotifications = () => {
                           <span>{targetLabel}</span>
                           <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-300" />
                         </Link>
-                      )}
+                      ) : null}
 
                       {isUnread && (
                         <button

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle, ArrowRight, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, AlertCircle, XCircle, ArrowRight, Lock } from 'lucide-react';
 import { formatPhone } from '../lib/daraja';
 import { subscribeToCreator, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';

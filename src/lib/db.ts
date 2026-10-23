@@ -26,6 +26,8 @@ export const calculateFeeSplit = (grossAmount: number, feeRate: number = PLATFOR
 // ========================
 
 export const createUserProfile = async (uid: string, data: any) => {
+  const initialAvatar = data.avatar || getDefaultAvatar(data.name);
+
   // Check by uid first (same auth session)
   const { data: byUid } = await supabase.from('users').select('uid, role, created_at').eq('uid', uid).maybeSingle();
   if (byUid) {
@@ -58,6 +60,8 @@ export const createUserProfile = async (uid: string, data: any) => {
           user_id: uid,
           display_name: data.name,
           handle: data.handle || (data.name ? `@${data.name.replace(/\s+/g, '').toLowerCase()}` : undefined),
+          avatar: data.avatar || initialAvatar,
+          avatar_url: data.avatar || initialAvatar,
           legal_name: data.legal_name || null,
           national_id_number: data.national_id_number || null,
           dob: data.dob || null,
@@ -68,7 +72,7 @@ export const createUserProfile = async (uid: string, data: any) => {
           bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
           monthly_price: 1000,
           location: 'Nairobi, Kenya',
-          cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
+          cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
           tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
         }, { onConflict: 'user_id' });
       } catch {
@@ -106,8 +110,6 @@ export const createUserProfile = async (uid: string, data: any) => {
     }
   }
 
-  const initialAvatar = data.avatar || getDefaultAvatar(data.name);
-
   const insertPayload: Record<string, any> = {
     uid,
     name: data.name,
@@ -141,6 +143,8 @@ export const createUserProfile = async (uid: string, data: any) => {
         user_id: uid,
         display_name: data.name,
         handle: data.handle || (data.name ? `@${data.name.replace(/\s+/g, '').toLowerCase()}` : undefined),
+        avatar: data.avatar || initialAvatar,
+        avatar_url: data.avatar || initialAvatar,
         legal_name: data.legal_name || null,
         national_id_number: data.national_id_number || null,
         dob: data.dob || null,
@@ -151,7 +155,7 @@ export const createUserProfile = async (uid: string, data: any) => {
         bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
         monthly_price: 1000,
         location: 'Nairobi, Kenya',
-        cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
+        cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
         tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
       }, { onConflict: 'user_id' });
     } catch {
@@ -2318,7 +2322,7 @@ export const HARDCODED_DISCOVER_CREATORS = [
     subs: "512 subscribers", 
     subscribersCount: 512, 
     price: "KES 1,200/mo", 
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80", 
+    avatar: "https://i.pinimg.com/736x/32/ef/17/32ef172b588761169c0292cc530e73d6.jpg", 
     cover: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=720&q=75", 
     hasPosts: true, 
     isVerified: true, 
@@ -4870,7 +4874,7 @@ export const getUserChatConversations = async (userId: string): Promise<ChatPart
   if (list.length === 0) {
     const defaults = [
       { id: 'creator-wairimu', name: 'Wairimu K. ✨', avatar: 'https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg', handle: '@wairimuk', price: 1000 },
-      { id: 'creator-chebet', name: 'Chebet Fit & Spice 🔥', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80', handle: '@chebetfit', price: 1200 },
+      { id: 'creator-chebet', name: 'Chebet Fit & Spice 🔥', avatar: 'https://i.pinimg.com/736x/32/ef/17/32ef172b588761169c0292cc530e73d6.jpg', handle: '@chebetfit', price: 1200 },
     ];
     for (const d of defaults) {
       const sub = await checkUserSubscription(userId, d.id);
