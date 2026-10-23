@@ -1,11 +1,12 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
 import InstallAppPrompt from "./components/InstallAppPrompt";
 import CreatorSupportChat from "./components/CreatorSupportChat";
@@ -72,7 +73,6 @@ const RouteLoading = () => (
 );
 
 const AppRoutes = () => {
-  /* LOADER TEMPORARILY DISABLED - UNCOMMENT TO RESTORE
   const location = useLocation();
   const { user } = useAuth();
   const [displayLocation, setDisplayLocation] = useState(location);
@@ -103,21 +103,18 @@ const AppRoutes = () => {
     setIsTransitioning(false);
     if (initialLoad) setInitialLoad(false);
   }, [initialLoad]);
-  */
 
   return (
     <>
-      {/* LOADER TEMPORARILY DISABLED - UNCOMMENT TO RESTORE
       {(isTransitioning || initialLoad) && (
         <PageLoader onReady={handleLoaderReady} onComplete={handleLoaderComplete} />
       )}
-      */}
       <div className="min-h-screen bg-background text-foreground font-sans">
         <InstallAppPrompt />
         <CreatorSupportChat />
         <ErrorBoundary>
           <Suspense fallback={<RouteLoading />}>
-            <Routes>
+            <Routes location={displayLocation}>
               <Route path="/" element={<Landing />} />
               <Route path="/discover" element={<Discover />} />
               <Route path="/login" element={<Login />} />
