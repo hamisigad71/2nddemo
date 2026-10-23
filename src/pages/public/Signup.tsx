@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2, FileCheck, Check } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
+import { supabase } from '../../lib/supabase';
+import { uploadFileToSupabase, getStoredCreatorProfile } from '../../lib/db';
 
 const DISPOSABLE_OR_DUMMY_DOMAINS = new Set([
   'test.com', 'example.com', 'dummy.com', 'fake.com', 'invalid.com', 'none.com',
@@ -93,6 +95,44 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Mandatory Creator KYC verification fields
+  const [legalName, setLegalName] = useState('');
+  const [nationalId, setNationalId] = useState('');
+  const [dob, setDob] = useState('');
+  const [idDocFile, setIdDocFile] = useState<File | null>(null);
+  const [idDocPreview, setIdDocPreview] = useState<string>('');
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [selfiePreview, setSelfiePreview] = useState<string>('');
+
+  const calculateAge = (birthDateString: string): number => {
+    if (!birthDateString) return 0;
+    const birth = new Date(birthDateString);
+    if (isNaN(birth.getTime())) return 0;
+    const diffMs = Date.now() - birth.getTime();
+    const ageDate = new Date(diffMs);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
+  const handleIdDocSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIdDocFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setIdDocPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSelfieSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelfieFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setSelfiePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Only auto-redirect if OTP step is not active or user is confirmed
   useEffect(() => {
     if (user && !otpStep) {
@@ -133,6 +173,34 @@ const Signup = () => {
       return;
     }
 
+    if (accountType === 'creator') {
+      if (!legalName.trim()) {
+        setError("Legal Full Name is strictly required (must match your government ID & M-Pesa).");
+        return;
+      }
+      if (!nationalId.trim()) {
+        setError("National ID or Passport number is strictly required.");
+        return;
+      }
+      if (!dob) {
+        setError("Please enter your Date of Birth. Creators must be 18+.");
+        return;
+      }
+      const age = calculateAge(dob);
+      if (age < 18) {
+        setError("You must be at least 18 years of age to register as a creator.");
+        return;
+      }
+      if (!idDocFile) {
+        setError("Strict verification required: Please upload a clear photo of your National ID or Passport.");
+        return;
+      }
+      if (!selfieFile) {
+        setError("Strict verification required: Please upload a live selfie photo holding your ID next to your face.");
+        return;
+      }
+    }
+
     try {
       setError('');
       setLoading(true);
@@ -146,9 +214,82 @@ const Signup = () => {
         return;
       }
 
+      const uid = result?.id || result?.uid || result?.user?.id || user?.id;
+
+      if (accountType === 'creator') {
+        let uploadedIdUrl = idDocPreview;
+        let uploadedSelfieUrl = selfiePreview;
+
+        if (uid && idDocFile && selfieFile) {
+          try {
+            const idExt = idDocFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+            const selfieExt = selfieFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+            const idPath = `kyc/${uid}/${Date.now()}-id.${idExt}`;
+            const selfiePath = `kyc/${uid}/${Date.now()}-selfie.${selfieExt}`;
+
+            const [idUploaded, selfieUploaded] = await Promise.all([
+              uploadFileToSupabase(idDocFile, 'kyc-documents', idPath),
+              uploadFileToSupabase(selfieFile, 'kyc-documents', selfiePath)
+            ]);
+
+            if (idUploaded) uploadedIdUrl = idUploaded;
+            if (selfieUploaded) uploadedSelfieUrl = selfieUploaded;
+
+            await supabase.from('users').update({
+              legal_name: legalName.trim(),
+              national_id_number: nationalId.trim(),
+              dob: dob,
+              kyc_id_url: uploadedIdUrl,
+              kyc_selfie_url: uploadedSelfieUrl,
+              kyc_status: 'pending',
+              is_verified: false
+            }).eq('uid', uid);
+
+            await supabase.from('creator_profiles').upsert({
+              user_id: uid,
+              legal_name: legalName.trim(),
+              national_id_number: nationalId.trim(),
+              dob: dob,
+              kyc_id_url: uploadedIdUrl,
+              kyc_selfie_url: uploadedSelfieUrl,
+              kyc_status: 'pending',
+              is_verified: false
+            }, { onConflict: 'user_id' });
+
+            const local = getStoredCreatorProfile(uid) || {};
+            localStorage.setItem(`tgd_creator_profile_${uid}`, JSON.stringify({
+              ...local,
+              legalName: legalName.trim(),
+              nationalId: nationalId.trim(),
+              dob: dob,
+              kyc_id_url: uploadedIdUrl,
+              kyc_selfie_url: uploadedSelfieUrl,
+              kyc_status: 'pending',
+              is_verified: false
+            }));
+          } catch (uploadErr) {
+            console.warn('KYC file persistence notice:', uploadErr);
+          }
+        }
+
+        // Cache pending KYC for email OTP/link fallback
+        localStorage.setItem('pending_creator_kyc', JSON.stringify({
+          legalName: legalName.trim(),
+          nationalId: nationalId.trim(),
+          dob,
+          idUrl: uploadedIdUrl,
+          selfieUrl: uploadedSelfieUrl,
+          email: cleanEmail
+        }));
+      }
+
       // If session exists (email confirmation disabled in Supabase), user is already logged in!
       if (result?.hasSession || result?.session) {
-        toast.success('Registration successful! Welcome.');
+        toast.success(
+          accountType === 'creator'
+            ? 'Creator application submitted! Documents are pending admin review.'
+            : 'Registration successful! Welcome.'
+        );
         navigate(accountType === 'creator' ? '/dashboard' : '/user');
         return;
       }
@@ -189,7 +330,60 @@ const Signup = () => {
     try {
       setError('');
       setLoading(true);
-      await verifyOtp(email, cleanToken);
+      const verifiedUser: any = await verifyOtp(email, cleanToken);
+
+      // Flush pending KYC if available
+      try {
+        const pendingKycRaw = localStorage.getItem('pending_creator_kyc');
+        if (pendingKycRaw) {
+          const kyc = JSON.parse(pendingKycRaw);
+          const vUid = verifiedUser?.id || verifiedUser?.uid || user?.id;
+          if (vUid) {
+            await supabase.from('users').update({
+              legal_name: kyc.legalName,
+              national_id_number: kyc.nationalId,
+              dob: kyc.dob,
+              kyc_id_url: kyc.idUrl,
+              kyc_selfie_url: kyc.selfieUrl,
+              kyc_status: 'pending',
+              is_verified: false
+            }).eq('uid', vUid);
+
+            await supabase.from('creator_profiles').upsert({
+              user_id: vUid,
+              legal_name: kyc.legalName,
+              national_id_number: kyc.nationalId,
+              dob: kyc.dob,
+              kyc_id_url: kyc.idUrl,
+              kyc_selfie_url: kyc.selfieUrl,
+              kyc_status: 'pending',
+              is_verified: false
+            }, { onConflict: 'user_id' });
+
+            const local = getStoredCreatorProfile(vUid) || {};
+            localStorage.setItem(`tgd_creator_profile_${vUid}`, JSON.stringify({
+              ...local,
+              legalName: kyc.legalName,
+              nationalId: kyc.nationalId,
+              dob: kyc.dob,
+              kyc_id_url: kyc.idUrl,
+              kyc_selfie_url: kyc.selfieUrl,
+              kyc_status: 'pending',
+              is_verified: false
+            }));
+
+            localStorage.removeItem('pending_creator_kyc');
+          }
+        }
+      } catch (flushErr) {
+        console.warn('Could not flush pending KYC after OTP:', flushErr);
+      }
+
+      toast.success(
+        accountType === 'creator'
+          ? 'Registration and verification documents submitted! Awaiting admin approval.'
+          : 'Registration successful! Welcome.'
+      );
       navigate(accountType === 'creator' ? '/dashboard' : '/user');
     } catch (err: any) {
       setError('Invalid or expired OTP code: ' + (err?.message || err));
@@ -410,9 +604,124 @@ const Signup = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Creator-only Mandatory Identity Verification Fields */}
+              {accountType === 'creator' && (
+                <div className="pt-4 mt-2 border-t border-zinc-800 space-y-4">
+                  <div className="bg-zinc-900/60 border border-zinc-800 p-3.5 rounded-2xl">
+                    <div className="flex items-center gap-2 text-xs font-black text-amber-400 uppercase tracking-wider mb-1">
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                      Mandatory Creator Verification (KYC)
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed font-medium">
+                      Under Kenya regulations and platform trust policy, creators must provide government identity and a selfie holding their ID to unlock the official <strong>Blue Verification Badge 👑</strong>.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">
+                        Legal Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={legalName} 
+                        onChange={e => setLegalName(e.target.value)} 
+                        className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm" 
+                        placeholder="As on National ID" 
+                      />
+                      <span className="text-[10px] text-zinc-500 mt-1 block">Must match M-Pesa registered name</span>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">
+                        National ID / Passport <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={nationalId} 
+                        onChange={e => setNationalId(e.target.value)} 
+                        className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm" 
+                        placeholder="e.g. 12345678" 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">
+                      Date of Birth <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="date" 
+                      value={dob} 
+                      onChange={e => setDob(e.target.value)} 
+                      max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                      className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none text-sm" 
+                    />
+                    <span className="text-[10px] text-zinc-500 mt-1 block">You must be 18+ to register as a creator</span>
+                  </div>
+
+                  {/* Required Uploads: ID Document & Selfie holding ID */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    {/* 1. National ID Upload */}
+                    <div className="border border-dashed border-zinc-700 hover:border-red-500/60 rounded-2xl p-4 bg-zinc-900/40 relative flex flex-col items-center justify-center text-center transition-all group overflow-hidden min-h-[140px]">
+                      <input 
+                        type="file" 
+                        accept="image/*,.pdf" 
+                        onChange={handleIdDocSelect} 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" 
+                      />
+                      {idDocPreview ? (
+                        <div className="relative w-full h-full flex flex-col items-center justify-center">
+                          <img src={idDocPreview} alt="ID preview" className="w-full h-24 object-cover rounded-xl mb-1.5" />
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> ID Attached
+                          </div>
+                          <span className="text-[10px] text-zinc-400 mt-0.5">Click to replace</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                            <UploadCloud className="w-5 h-5" />
+                          </div>
+                          <div className="text-xs font-bold text-white mb-0.5">Upload ID Document <span className="text-red-500">*</span></div>
+                          <div className="text-[10px] text-zinc-400">Front & Back of National ID or Passport</div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* 2. Selfie Upload */}
+                    <div className="border border-dashed border-zinc-700 hover:border-red-500/60 rounded-2xl p-4 bg-zinc-900/40 relative flex flex-col items-center justify-center text-center transition-all group overflow-hidden min-h-[140px]">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="user" 
+                        onChange={handleSelfieSelect} 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" 
+                      />
+                      {selfiePreview ? (
+                        <div className="relative w-full h-full flex flex-col items-center justify-center">
+                          <img src={selfiePreview} alt="Selfie preview" className="w-full h-24 object-cover rounded-xl mb-1.5" />
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Selfie Attached
+                          </div>
+                          <span className="text-[10px] text-zinc-400 mt-0.5">Click to replace</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                            <Camera className="w-5 h-5" />
+                          </div>
+                          <div className="text-xs font-bold text-white mb-0.5">Upload Selfie with ID <span className="text-red-500">*</span></div>
+                          <div className="text-[10px] text-zinc-400">Holding ID next to your face clearly</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <button disabled={loading} className="w-full bg-red-600 hover:bg-red-700 text-white font-black rounded-xl py-3.5 mt-2 transition-all shadow-lg shadow-red-600/20 border border-red-500 flex items-center justify-center gap-2">
-                {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : (accountType === 'creator' ? 'Apply as Creator' : 'Create Account')}
+                {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : (accountType === 'creator' ? 'Apply & Submit Verification' : 'Create Account')}
               </button>
             </form>
             

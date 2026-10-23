@@ -73,20 +73,28 @@ const AdminUsers = () => {
       if (error) throw error;
       const users = data || [];
       setPendingUsers(users);
+      const resolveDocUrl = async (rawUrl: string | null | undefined) => {
+        if (!rawUrl) return null;
+        if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:')) {
+          return rawUrl;
+        }
+        const cleanPath = rawUrl.replace(/^kyc-documents\//, '').replace(/^kyc\//, '');
+        const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(cleanPath, 60 * 60);
+        if (error) {
+          const { data: pubData } = supabase.storage.from('kyc-documents').getPublicUrl(cleanPath);
+          return pubData?.publicUrl || null;
+        }
+        return data?.signedUrl || null;
+      };
+
       const documentUrls = await Promise.all(users.map(async user => {
-        const [idResult, selfieResult] = await Promise.all([
-          user.kyc_id_url
-            ? supabase.storage.from('kyc-documents').createSignedUrl(user.kyc_id_url, 60 * 10)
-            : Promise.resolve({ data: null, error: null }),
-          user.kyc_selfie_url
-            ? supabase.storage.from('kyc-documents').createSignedUrl(user.kyc_selfie_url, 60 * 10)
-            : Promise.resolve({ data: null, error: null }),
+        const [idUrl, selfieUrl] = await Promise.all([
+          resolveDocUrl(user.kyc_id_url),
+          resolveDocUrl(user.kyc_selfie_url),
         ]);
-        if (idResult.error) console.error(`Failed to access KYC ID document for ${user.uid}:`, idResult.error);
-        if (selfieResult.error) console.error(`Failed to access KYC selfie for ${user.uid}:`, selfieResult.error);
         return [user.uid, {
-          id: idResult.data?.signedUrl || null,
-          selfie: selfieResult.data?.signedUrl || null,
+          id: idUrl,
+          selfie: selfieUrl,
         }] as const;
       }));
       setKycDocumentUrls(Object.fromEntries(documentUrls));
