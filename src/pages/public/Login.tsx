@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, notifyAdmins } from '../../lib/db';
 import { buildAdminKycSubmissionNotification, isCreatorProfileComplete } from '../../lib/verification';
+import { hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../../lib/avatar';
 import { supabase } from '../../lib/supabase';
 import { 
   Eye, 
@@ -94,9 +95,15 @@ const Login = () => {
           .eq('user_id', user.id)
           .maybeSingle();
 
-        const isCreatorRole = role === 'creator' || role === 'pending_creator' || role === 'escort' || Boolean(creatorProfile);
+        const storedLocal = getStoredCreatorProfile(user.id);
+        const isCreatorRole = role === 'creator' || 
+          role === 'pending_creator' || 
+          role === 'escort' || 
+          Boolean(creatorProfile) ||
+          user.user_metadata?.accountType === 'creator' ||
+          Boolean(storedLocal);
+
         if (isCreatorRole) {
-          const storedLocal = getStoredCreatorProfile(user.id);
           const isComplete = isCreatorProfileComplete(profile, creatorProfile, storedLocal);
 
           // If creator has completed all required photos and KYC, allow entering dashboard
@@ -107,7 +114,7 @@ const Login = () => {
 
           // Creator is missing required details or identity proofs -> require completion on login
           setCreatorUser({ ...profile, name: profile?.name || user.user_metadata?.name || 'Creator' });
-          const existingAvatar = profile?.avatar || creatorProfile?.avatar || storedLocal?.avatar;
+          const existingAvatar = profile?.avatar || creatorProfile?.avatar || creatorProfile?.avatar_url || storedLocal?.avatar || storedLocal?.avatar_url;
           const existingCover = creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image;
           const existingLegal = profile?.legal_name || creatorProfile?.legal_name || storedLocal?.legalName;
           const existingNatId = profile?.national_id_number || creatorProfile?.national_id_number || storedLocal?.nationalId;
@@ -115,8 +122,8 @@ const Login = () => {
           const existingId = profile?.kyc_id_url || creatorProfile?.kyc_id_url || storedLocal?.kyc_id_url;
           const existingSelf = profile?.kyc_selfie_url || creatorProfile?.kyc_selfie_url || storedLocal?.kyc_selfie_url;
 
-          if (existingAvatar && !existingAvatar.includes('default-avatar')) setAvatarPreview(existingAvatar);
-          if (existingCover && !existingCover.includes('photo-1549490349-8643362247b5')) setCoverPreview(existingCover);
+          if (existingAvatar && hasUploadedProfilePhoto(existingAvatar)) setAvatarPreview(existingAvatar);
+          if (existingCover && hasUploadedCoverPhoto(existingCover)) setCoverPreview(existingCover);
           if (existingLegal) setLegalName(existingLegal);
           if (existingNatId) setNationalId(existingNatId);
           if (existingDobVal) setDob(existingDobVal);
@@ -305,9 +312,13 @@ const Login = () => {
         if (uploadedSelfie) finalSelfieUrl = uploadedSelfie;
       }
 
-      // 5. Update users table
+      const creatorName = creatorUser?.name || user.user_metadata?.name || user.user_metadata?.full_name || 'Creator';
+
+      // 5. Update users table with profile photo, cover photo, creator role and KYC details
       const { error: userUpdateError } = await supabase.from('users').update({
         avatar: finalAvatarUrl,
+        cover_image: finalCoverUrl,
+        role: 'creator',
         legal_name: legalName.trim(),
         national_id_number: nationalId.trim(),
         dob: dob,
@@ -327,6 +338,8 @@ const Login = () => {
         avatar: finalAvatarUrl,
         avatar_url: finalAvatarUrl,
         cover_image: finalCoverUrl,
+        name: creatorName,
+        display_name: creatorName,
         legal_name: legalName.trim(),
         national_id_number: nationalId.trim(),
         dob: dob,
@@ -343,8 +356,12 @@ const Login = () => {
       // 7. Update local cache & dispatch profile update
       localStorage.setItem(`tgd_user_avatar_${user.id}`, finalAvatarUrl);
       const local = getStoredCreatorProfile(user.id) || {};
-      localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify({
+      const updatedProfilePayload = {
         ...local,
+        user_id: user.id,
+        uid: user.id,
+        name: creatorName,
+        display_name: creatorName,
         avatar: finalAvatarUrl,
         avatar_url: finalAvatarUrl,
         cover_image: finalCoverUrl,
@@ -355,16 +372,22 @@ const Login = () => {
         kyc_selfie_url: finalSelfieUrl,
         kyc_status: 'pending',
         is_verified: false
-      }));
+      };
+      localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(updatedProfilePayload));
+      localStorage.setItem('creator_profile_data', JSON.stringify(updatedProfilePayload));
 
+      // Broadcast updates so Discover page & Creator feeds immediately reflect the new card
       window.dispatchEvent(new CustomEvent('profile_updated', {
-        detail: { avatar: finalAvatarUrl, name: creatorUser?.name }
+        detail: updatedProfilePayload
       }));
+      window.dispatchEvent(new CustomEvent('creators_updated'));
+      window.dispatchEvent(new CustomEvent('posts_updated'));
 
-      // 8. Dispatch notification directly to Platform Admins for KYC review
+      // 8. Dispatch notification directly to Platform Admins for KYC review with photos & ID
       notifyAdmins(buildAdminKycSubmissionNotification({
-        name: creatorUser?.name || 'A creator',
-        nationalId: nationalId.trim()
+        name: creatorName,
+        nationalId: nationalId.trim(),
+        avatar: finalAvatarUrl
       })).catch(() => {});
 
       // Success -> navigate to dashboard

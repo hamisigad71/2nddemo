@@ -68,6 +68,8 @@ const Discover = () => {
       fetchUserSubscriptions();
     };
     window.addEventListener('posts_updated', handleUpdate);
+    window.addEventListener('profile_updated', handleUpdate);
+    window.addEventListener('creators_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
 
     // Real-time listener for newly registered creators or new posts
@@ -79,6 +81,9 @@ const Discover = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
         fetchCreators();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'creator_profiles' }, () => {
+        fetchCreators();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'subscriptions' }, () => {
         fetchUserSubscriptions();
       })
@@ -86,6 +91,8 @@ const Discover = () => {
 
     return () => {
       window.removeEventListener('posts_updated', handleUpdate);
+      window.removeEventListener('profile_updated', handleUpdate);
+      window.removeEventListener('creators_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
       supabase.removeChannel(channel);
     };

@@ -2601,10 +2601,12 @@ export const getDiscoverCreators = async () => {
         local?.display_name,
         u.uid === 'b3bdd443-103e-45cb-986b-1d3d32659b3a' ? 'Joy Mwangi' : null,
       );
-      const rawAvatar = u.avatar || p?.avatar_url || p?.avatar || storageAssets.avatar;
+      const rawAvatar = u.avatar || p?.avatar_url || p?.avatar || local?.avatar || local?.avatar_url || storageAssets.avatar;
       const avatar = resolveUserAvatar(rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null, creatorName);
       
       const rawCover = (p?.cover_image && !isVideoMediaUrl(p.cover_image) && !p.cover_image.startsWith('blob:') && !p.cover_image.includes('photo-1549490349-8643362247b5') ? p.cover_image : null)
+        || (u.cover_image && !isVideoMediaUrl(u.cover_image) && !u.cover_image.startsWith('blob:') && !u.cover_image.includes('photo-1549490349-8643362247b5') ? u.cover_image : null)
+        || (local?.cover_image && !isVideoMediaUrl(local.cover_image) && !local.cover_image.startsWith('blob:') && !local.cover_image.includes('photo-1549490349-8643362247b5') ? local.cover_image : null)
         || (storageAssets.cover && !isVideoMediaUrl(storageAssets.cover) ? storageAssets.cover : null)
         || (postStats?.latestCover && !isVideoMediaUrl(postStats.latestCover) && !postStats.latestCover.startsWith('blob:') && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null);
 

@@ -71,7 +71,30 @@ const AdminUsers = () => {
     try {
       const { data, error } = await supabase.from('users').select('*').eq('kyc_status', 'pending');
       if (error) throw error;
-      const users = data || [];
+      const users = [...(data || [])];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('tgd_creator_profile_')) {
+            const uid = key.replace('tgd_creator_profile_', '');
+            const local = JSON.parse(localStorage.getItem(key) || '{}');
+            if (local.kyc_status === 'pending' && !users.find(u => u.uid === uid)) {
+              users.push({
+                uid,
+                name: local.name || local.display_name || 'Creator',
+                legal_name: local.legalName,
+                national_id_number: local.nationalId,
+                dob: local.dob,
+                kyc_id_url: local.kyc_id_url,
+                kyc_selfie_url: local.kyc_selfie_url,
+                kyc_status: 'pending',
+                avatar: local.avatar,
+                created_at: new Date().toISOString()
+              });
+            }
+          }
+        }
+      } catch {}
       setPendingUsers(users);
       const resolveDocUrl = async (rawUrl: string | null | undefined) => {
         if (!rawUrl) return null;

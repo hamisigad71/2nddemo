@@ -3,11 +3,12 @@ import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCl
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase, deleteUserAccount } from '../../lib/db';
+import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase, deleteUserAccount, notifyAdmins } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import CreatePostForm from '../../components/CreatePostForm';
 import { resolveUserAvatar, compressAvatarImage } from '../../lib/avatar';
+import { buildAdminKycSubmissionNotification } from '../../lib/verification';
 
 const EditProfile = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
@@ -349,7 +350,10 @@ const EditProfile = () => {
         await supabase.from('creator_profiles').update({
           kyc_status: 'pending',
           kyc_id_url: idPath,
-          kyc_selfie_url: selfiePath
+          kyc_selfie_url: selfiePath,
+          legal_name: kycData.legalName.trim(),
+          national_id_number: kycData.nationalId.trim(),
+          dob: kycData.dob,
         }).eq('user_id', user.id);
       } catch {}
 
@@ -365,8 +369,16 @@ const EditProfile = () => {
         localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(local));
       } catch {}
 
+      // Dispatch notification directly to Platform Admins for KYC review with photos & ID
+      notifyAdmins(buildAdminKycSubmissionNotification({
+        name: profileData.displayName || user.user_metadata?.name || 'A creator',
+        nationalId: kycData.nationalId.trim(),
+        avatar: avatarPreview || profileData.avatarUrl
+      })).catch(() => {});
+
       setKycStatus('pending');
       window.dispatchEvent(new CustomEvent('creators_updated'));
+      window.dispatchEvent(new CustomEvent('profile_updated'));
       toast.success('KYC Submitted Successfully!', {
         description: 'Your documents have been submitted to admin for verification.'
       });
@@ -556,6 +568,7 @@ const EditProfile = () => {
 
       // 8. Broadcast profile and posts update events across windows/tabs
       window.dispatchEvent(new CustomEvent('profile_updated', { detail: profilePayload }));
+      window.dispatchEvent(new CustomEvent('creators_updated'));
       window.dispatchEvent(new CustomEvent('posts_updated'));
 
       toast.success('Changes saved', {

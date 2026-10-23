@@ -1,3 +1,5 @@
+import { hasUploadedProfilePhoto, hasUploadedCoverPhoto } from './avatar';
+
 export interface KycSubmission {
   legalName: string;
   nationalId: string;
@@ -22,6 +24,7 @@ export interface AdminKycNotification {
   link: string;
   action_label: string;
   action_url: string;
+  avatar?: string;
 }
 
 export const isKycVerified = (status: unknown): boolean => status === 'verified';
@@ -45,6 +48,7 @@ export const buildAdminKycSubmissionNotification = (creator: {
   username?: string | null;
   name?: string | null;
   nationalId?: string | null;
+  avatar?: string | null;
 }): AdminKycNotification => {
   const displayName = creator.name || creator.username || 'A creator';
   const idSnippet = creator.nationalId?.trim() ? ` (National ID: ${creator.nationalId.trim()})` : '';
@@ -56,6 +60,7 @@ export const buildAdminKycSubmissionNotification = (creator: {
     link: '/admin/users?view=kyc',
     action_label: 'Review KYC',
     action_url: '/admin/users?view=kyc',
+    avatar: creator.avatar || undefined,
   };
 };
 
@@ -90,7 +95,7 @@ export const isCreatorProfileComplete = (
   creatorProfileRow?: any,
   localCache?: any
 ): boolean => {
-  const avatar = userRow?.avatar || creatorProfileRow?.avatar || localCache?.avatar;
+  const avatar = userRow?.avatar || creatorProfileRow?.avatar || creatorProfileRow?.avatar_url || localCache?.avatar || localCache?.avatar_url;
   const cover = creatorProfileRow?.cover_image || userRow?.cover_image || localCache?.cover_image;
   const legalName = userRow?.legal_name || creatorProfileRow?.legal_name || localCache?.legalName;
   const nationalId = userRow?.national_id_number || creatorProfileRow?.national_id_number || localCache?.nationalId;
@@ -98,19 +103,8 @@ export const isCreatorProfileComplete = (
   const idDoc = userRow?.kyc_id_url || creatorProfileRow?.kyc_id_url || localCache?.kyc_id_url || localCache?.idDocument;
   const selfie = userRow?.kyc_selfie_url || creatorProfileRow?.kyc_selfie_url || localCache?.kyc_selfie_url || localCache?.selfie;
 
-  const hasValidAvatar = Boolean(
-    avatar &&
-    typeof avatar === 'string' &&
-    !avatar.includes('default-avatar') &&
-    !avatar.includes('ui-avatars.com') &&
-    !avatar.startsWith('data:image/svg')
-  );
-
-  const hasValidCover = Boolean(
-    cover &&
-    typeof cover === 'string' &&
-    !cover.includes('photo-1549490349-8643362247b5')
-  );
+  const hasValidAvatar = hasUploadedProfilePhoto(avatar);
+  const hasValidCover = hasUploadedCoverPhoto(cover);
 
   const hasValidKyc = Boolean(
     legalName && String(legalName).trim().length > 0 &&

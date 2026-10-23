@@ -135,5 +135,34 @@ describe('creator verification eligibility and admin approval flow', () => {
       { cover_image: 'https://cdn/cover.jpg' }
     );
     assert.equal(fullyComplete, true, 'Should pass creator who provided all 7 required verification details');
+
+    // 6. Creator who logged back in with an auto-generated initials avatar (must be prompted to upload real photo)
+    const initialsAvatar = isCreatorProfileComplete(
+      { avatar: 'https://ui-avatars.com/api/?name=Jane+Doe', legal_name: 'Jane Doe', national_id_number: '12345678', dob: '1998-01-01', kyc_id_url: 'https://cdn/id.jpg', kyc_selfie_url: 'https://cdn/selfie.jpg' },
+      { cover_image: 'https://cdn/cover.jpg' }
+    );
+    assert.equal(initialsAvatar, false, 'Should flag creator with initials avatar to upload a real custom photo');
+
+    // 7. Creator who logged back in with fallback wave placeholder cover (must be prompted to upload real cover)
+    const fallbackWaveCover = isCreatorProfileComplete(
+      { avatar: 'https://cdn/avatar.jpg', legal_name: 'Jane Doe', national_id_number: '12345678', dob: '1998-01-01', kyc_id_url: 'https://cdn/id.jpg', kyc_selfie_url: 'https://cdn/selfie.jpg' },
+      { cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80' }
+    );
+    assert.equal(fallbackWaveCover, false, 'Should flag creator with fallback wave cover to upload real cover photo');
+  });
+
+  it('notifies admin with creator identity, avatar and document verification link when KYC is submitted', () => {
+    const notif = buildAdminKycSubmissionNotification({
+      name: 'Kennedy Ngugi',
+      nationalId: '39482011',
+      avatar: 'https://cdn/kennedy-avatar.jpg'
+    });
+
+    assert.equal(notif.title, 'New Creator KYC Verification Submitted 🛡️');
+    assert.match(notif.message, /Kennedy Ngugi/);
+    assert.match(notif.message, /39482011/);
+    assert.equal(notif.avatar, 'https://cdn/kennedy-avatar.jpg');
+    assert.equal(notif.link, '/admin/users?view=kyc');
+    assert.equal(notif.action_url, '/admin/users?view=kyc');
   });
 });
