@@ -34,34 +34,53 @@ export const createUserProfile = async (uid: string, data: any) => {
       await supabase.from('users').update({ role: data.role }).eq('uid', uid);
       byUid.role = data.role;
     }
-    if (data.name || data.avatar) {
-      await supabase.from('users').update({
-        ...(data.name ? { name: data.name } : {}),
-        ...(data.avatar ? { avatar: data.avatar } : {}),
-      }).eq('uid', uid);
+    const userUpdates: Record<string, any> = {
+      ...(data.name ? { name: data.name } : {}),
+      ...(data.avatar ? { avatar: data.avatar } : {}),
+      ...(data.phone ? { phone: data.phone } : {}),
+      ...(data.username ? { username: data.username } : {}),
+      ...(data.handle ? { handle: data.handle } : {}),
+      ...(data.legal_name ? { legal_name: data.legal_name } : {}),
+      ...(data.national_id_number ? { national_id_number: data.national_id_number } : {}),
+      ...(data.dob ? { dob: data.dob } : {}),
+      ...(data.kyc_id_url ? { kyc_id_url: data.kyc_id_url } : {}),
+      ...(data.kyc_selfie_url ? { kyc_selfie_url: data.kyc_selfie_url } : {}),
+      ...(data.kyc_status ? { kyc_status: data.kyc_status } : {}),
+      ...(data.is_verified !== undefined ? { is_verified: data.is_verified } : {}),
+    };
+    if (Object.keys(userUpdates).length > 0) {
+      await supabase.from('users').update(userUpdates).eq('uid', uid);
     }
 
     if (data.role === 'creator') {
       try {
         await supabase.from('creator_profiles').upsert({
           user_id: uid,
+          display_name: data.name,
+          handle: data.handle || (data.name ? `@${data.name.replace(/\s+/g, '').toLowerCase()}` : undefined),
+          legal_name: data.legal_name || null,
+          national_id_number: data.national_id_number || null,
+          dob: data.dob || null,
+          kyc_id_url: data.kyc_id_url || null,
+          kyc_selfie_url: data.kyc_selfie_url || null,
+          kyc_status: data.kyc_status || 'pending',
+          is_verified: data.is_verified || false,
           bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
           monthly_price: 1000,
           location: 'Nairobi, Kenya',
           cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
           tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
-        }, { onConflict: 'user_id', ignoreDuplicates: true });
+        }, { onConflict: 'user_id' });
       } catch {
         // non-fatal if table not configured
       }
 
-      // Announce only once, and only for accounts created in the last 24h
-      // (the row is usually pre-created by the on_auth_user_created DB trigger).
+      // Announce only once, and only for verified creators created in the last 24h
       const flagKey = `tgd_new_creator_notified_${uid}`;
       const createdAt = byUid.created_at ? new Date(byUid.created_at).getTime() : 0;
       const isFresh = Date.now() - createdAt < 24 * 60 * 60 * 1000;
       const alreadyNotified = typeof window !== 'undefined' && localStorage.getItem(flagKey);
-      if (isFresh && !alreadyNotified) {
+      if (isFresh && !alreadyNotified && data.is_verified) {
         if (typeof window !== 'undefined') localStorage.setItem(flagKey, '1');
         notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
           console.warn('Could not dispatch new creator notification:', err);
@@ -89,14 +108,25 @@ export const createUserProfile = async (uid: string, data: any) => {
 
   const initialAvatar = data.avatar || getDefaultAvatar(data.name);
 
-  await supabase.from('users').insert({
+  const insertPayload: Record<string, any> = {
     uid,
     name: data.name,
     email: data.email,
     avatar: initialAvatar,
     phone: data.phone,
     role: data.role || 'subscriber',
-  }).then(({ error }) => {
+    ...(data.username ? { username: data.username } : {}),
+    ...(data.handle ? { handle: data.handle } : {}),
+    ...(data.legal_name ? { legal_name: data.legal_name } : {}),
+    ...(data.national_id_number ? { national_id_number: data.national_id_number } : {}),
+    ...(data.dob ? { dob: data.dob } : {}),
+    ...(data.kyc_id_url ? { kyc_id_url: data.kyc_id_url } : {}),
+    ...(data.kyc_selfie_url ? { kyc_selfie_url: data.kyc_selfie_url } : {}),
+    ...(data.kyc_status ? { kyc_status: data.kyc_status } : {}),
+    ...(data.is_verified !== undefined ? { is_verified: data.is_verified } : {}),
+  };
+
+  await supabase.from('users').insert(insertPayload).then(({ error }) => {
     // Surface failures instead of swallowing them. The DB trigger
     // `on_auth_user_created` (supabase/sync_auth_users_to_profiles.sql) is the
     // source of truth; this client insert is a best-effort fallback.
@@ -109,6 +139,15 @@ export const createUserProfile = async (uid: string, data: any) => {
     try {
       await supabase.from('creator_profiles').upsert({
         user_id: uid,
+        display_name: data.name,
+        handle: data.handle || (data.name ? `@${data.name.replace(/\s+/g, '').toLowerCase()}` : undefined),
+        legal_name: data.legal_name || null,
+        national_id_number: data.national_id_number || null,
+        dob: data.dob || null,
+        kyc_id_url: data.kyc_id_url || null,
+        kyc_selfie_url: data.kyc_selfie_url || null,
+        kyc_status: data.kyc_status || 'pending',
+        is_verified: data.is_verified || false,
         bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
         monthly_price: 1000,
         location: 'Nairobi, Kenya',
@@ -119,10 +158,11 @@ export const createUserProfile = async (uid: string, data: any) => {
       // non-fatal
     }
 
-    // Trigger notification to subscribers that a new creator signed up
-    notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
-      console.warn('Could not dispatch new creator notification:', err);
-    });
+    if (data.is_verified) {
+      notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
+        console.warn('Could not dispatch new creator notification:', err);
+      });
+    }
   }
 };
 

@@ -367,29 +367,58 @@ const AdminUsers = () => {
                       <div className="flex items-center gap-4 mb-4">
                         <img src={resolveUserAvatar(user.avatar, user.name)} alt="avatar" className="w-12 h-12 rounded-xl object-cover ring-2 ring-zinc-800" />
                         <div>
-                          <div className="font-bold text-white text-base">{user.name}</div>
+                          <div className="font-bold text-white text-base flex items-center gap-2">
+                            <span>{user.name}</span>
+                            <span className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
+                              @{String(user.username || user.handle || user.name || 'creator').replace(/^@+/, '')}
+                            </span>
+                          </div>
                           <div className="text-xs text-zinc-500">{user.email}</div>
+                          <div className="text-[10px] text-zinc-400 uppercase font-black mt-1">
+                            Role: <span className="text-red-400">{user.role || 'creator'}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-6">
-                        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-1">Phone Number</div>
-                        <div className="text-sm font-bold text-white">{user.phone || 'Not provided'}</div>
-                        <div className="mt-3 text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-1">Identity details</div>
-                        <div className="text-sm text-white">{user.legal_name || 'Legal name not provided'}</div>
-                        <div className="text-xs text-zinc-400">ID / passport: {user.national_id_number || 'Not provided'}</div>
-                        <div className="text-xs text-zinc-400">Date of birth: {user.dob || 'Not provided'}</div>
+
+                      <div className="bg-zinc-900 border border-zinc-800 p-3.5 rounded-xl mb-5 space-y-2">
+                        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-1.5">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Public Username</span>
+                          <span className="text-xs font-mono font-bold text-amber-400">@{String(user.username || user.handle || user.name || '').replace(/^@+/, '')}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-1.5">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">M-Pesa Phone</span>
+                          <span className="text-xs font-bold text-white">{user.phone || 'Not provided'}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-1.5">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Legal Full Name</span>
+                          <span className="text-xs font-bold text-white">{user.legal_name || 'Not provided'}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-1.5">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">National ID / Passport</span>
+                          <span className="text-xs font-mono font-bold text-zinc-300">{user.national_id_number || 'Not provided'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Date of Birth</span>
+                          <span className="text-xs font-bold text-zinc-300">{user.dob || 'Not provided'}</span>
+                        </div>
                       </div>
+
                       <div className="grid grid-cols-2 gap-3 mb-5">
                         {[
-                          ['ID document', kycDocumentUrls[user.uid]?.id],
+                          ['National ID / Passport', kycDocumentUrls[user.uid]?.id],
                           ['Selfie with ID', kycDocumentUrls[user.uid]?.selfie],
                         ].map(([label, url]) => (
-                          <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-2">
-                            <div className="text-[10px] text-zinc-500 uppercase font-black mb-2">{label}</div>
+                          <div key={label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 flex flex-col items-center">
+                            <div className="text-[10px] text-zinc-500 uppercase font-black mb-1.5 text-center">{label}</div>
                             {url ? (
-                              <a href={url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 underline">Review document</a>
+                              <div className="w-full flex flex-col items-center gap-1.5">
+                                <a href={url} target="_blank" rel="noreferrer" className="w-full h-24 rounded-lg overflow-hidden border border-zinc-800 hover:border-red-500 transition-colors block">
+                                  <img src={url} alt={label} className="w-full h-full object-cover" />
+                                </a>
+                                <a href={url} target="_blank" rel="noreferrer" className="text-[11px] text-blue-400 hover:underline font-bold">Review Full Photo ↗</a>
+                              </div>
                             ) : (
-                              <span className="text-xs text-zinc-500">Missing or unavailable</span>
+                              <span className="text-xs text-zinc-500 py-6">Missing or unavailable</span>
                             )}
                           </div>
                         ))}

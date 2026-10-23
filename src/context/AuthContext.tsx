@@ -9,7 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: (role?: string) => Promise<void>;
   signInWithFacebook: (role?: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string) => Promise<User | null>;
+  signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string, extraData?: Record<string, any>) => Promise<User | null>;
   signInWithEmail: (email: string, password: string) => Promise<User | null>;
   verifyOtp: (email: string, token: string) => Promise<User | null>;
   resetPassword: (email: string) => Promise<void>;
@@ -132,7 +132,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signUpWithEmail = async (email: string, password: string, name: string, phone: string, role: string) => {
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    name: string,
+    phone: string,
+    role: string,
+    extraData?: Record<string, any>
+  ) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -141,7 +148,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           data: {
             name,
             phone,
-            role
+            role,
+            ...(extraData || {})
           }
         }
       });
@@ -155,7 +163,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           name,
           email,
           phone,
-          role
+          role,
+          ...(extraData || {})
         });
       }
       return {

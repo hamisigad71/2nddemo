@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2, FileCheck, Check } from 'lucide-react';
+import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2 } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
 import { uploadFileToSupabase, getStoredCreatorProfile } from '../../lib/db';
@@ -88,8 +88,7 @@ const Signup = () => {
   const [otpStep, setOtpStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -162,8 +161,18 @@ const Signup = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName || !lastName || !email || !password || !phone) {
+    if (!username.trim() || !email || !password || !phone) {
       setError("Please fill out all fields.");
+      return;
+    }
+
+    const cleanUsername = username.replace(/^@+/, '').trim().toLowerCase();
+    if (cleanUsername.length < 3) {
+      setError("Username must be at least 3 characters long.");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      setError("Username can only contain letters, numbers, underscores, and dashes.");
       return;
     }
 
@@ -206,7 +215,24 @@ const Signup = () => {
       setLoading(true);
       const cleanEmail = email.trim();
       const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
-      const result: any = await signUpWithEmail(cleanEmail, password, `${firstName} ${lastName}`, fullPhone, accountType);
+      const result: any = await signUpWithEmail(
+        cleanEmail, 
+        password, 
+        cleanUsername, 
+        fullPhone, 
+        accountType,
+        {
+          username: cleanUsername,
+          handle: `@${cleanUsername}`,
+          legal_name: accountType === 'creator' ? legalName.trim() : null,
+          national_id_number: accountType === 'creator' ? nationalId.trim() : null,
+          dob: accountType === 'creator' ? dob : null,
+          kyc_id_url: idDocPreview || null,
+          kyc_selfie_url: selfiePreview || null,
+          kyc_status: accountType === 'creator' ? 'pending' : 'not_submitted',
+          is_verified: false
+        }
+      );
       
       // If user already exists in Supabase
       if (result?.isExistingUser) {
@@ -396,7 +422,7 @@ const Signup = () => {
     try {
       setError('');
       const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
-      await signUpWithEmail(email.trim(), password, `${firstName} ${lastName}`, fullPhone, accountType);
+      await signUpWithEmail(email.trim(), password, username.trim().toLowerCase(), fullPhone, accountType);
       toast.success('Code resent', {
         description: `A new verification code was sent to ${email.trim()}.`
       });
@@ -566,15 +592,25 @@ const Signup = () => {
             </div>
             
             <form className="flex flex-col gap-4" onSubmit={handleSignup}>
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
-                    <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">First Name</label>
-                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm" placeholder="Kamau" />
-                 </div>
-                 <div>
-                    <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">Last Name</label>
-                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm" placeholder="Mwangi" />
-                 </div>
+              <div>
+                <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">
+                  Username <span className="text-red-500">*</span>
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-zinc-500 font-bold text-sm select-none">@</span>
+                  <input 
+                    type="text" 
+                    value={username} 
+                    onChange={e => setUsername(e.target.value.replace(/^@+/, '').replace(/\s+/g, '_').toLowerCase())} 
+                    className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl pl-9 pr-4 py-3 text-white focus:border-red-500 focus:outline-none placeholder:text-zinc-600 text-sm font-medium" 
+                    placeholder="kamau" 
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                </div>
+                <span className="text-[10px] text-zinc-500 mt-1 block font-medium">
+                  Choose your unique platform username / handle
+                </span>
               </div>
               
               <div>
