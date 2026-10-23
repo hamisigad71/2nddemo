@@ -355,8 +355,8 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <BottomNav scrollRef={mainRef} />
+      {/* Mobile Bottom Navigation - hides whenever mobile sidebar menu is opened */}
+      <BottomNav scrollRef={mainRef} hidden={isMobileMenuOpen} />
     </div>
   );
 };

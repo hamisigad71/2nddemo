@@ -13,9 +13,10 @@ const navItems = [
 
 interface BottomNavProps {
   scrollRef?: React.RefObject<HTMLElement | null>;
+  hidden?: boolean;
 }
 
-const BottomNav: React.FC<BottomNavProps> = ({ scrollRef }) => {
+const BottomNav: React.FC<BottomNavProps> = ({ scrollRef, hidden = false }) => {
   const location = useLocation();
   const [visible, setVisible] = useState(true);
   const lastY = useRef(0);
@@ -36,9 +37,11 @@ const BottomNav: React.FC<BottomNavProps> = ({ scrollRef }) => {
     return () => target.removeEventListener('scroll', handleScroll);
   }, [scrollRef]);
 
+  const isShown = visible && !hidden;
+
   return (
     <nav
-      className={`md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 transition-all duration-300 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+      className={`md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2 transition-all duration-300 ${isShown ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'}`}
       style={{
         background: 'color-mix(in srgb, var(--color-background) 92%, transparent)',
         borderTop: '1px solid color-mix(in srgb, var(--color-border) 60%, transparent)',

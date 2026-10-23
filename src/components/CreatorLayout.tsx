@@ -288,7 +288,7 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
 
       {/* Mobile Bottom Navbar (quick access) */}
       <nav
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 transition-transform duration-300 ${isMobileMenuOpen ? 'translate-y-full' : 'translate-y-0'}`}
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2 transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}`}
         style={{
           background: 'color-mix(in srgb, var(--color-background) 92%, transparent)',
           borderTop: '1px solid color-mix(in srgb, var(--color-border) 60%, transparent)',
