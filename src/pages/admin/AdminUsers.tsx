@@ -413,7 +413,7 @@ const AdminUsers = () => {
                             {url ? (
                               <div className="w-full flex flex-col items-center gap-1.5">
                                 <a href={url} target="_blank" rel="noreferrer" className="w-full h-24 rounded-lg overflow-hidden border border-zinc-800 hover:border-red-500 transition-colors block">
-                                  <img src={url} alt={label} className="w-full h-full object-cover" />
+                                  <img src={url} alt={label || 'KYC Document'} className="w-full h-full object-cover" />
                                 </a>
                                 <a href={url} target="_blank" rel="noreferrer" className="text-[11px] text-blue-400 hover:underline font-bold">Review Full Photo ↗</a>
                               </div>
