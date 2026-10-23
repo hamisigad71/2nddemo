@@ -337,8 +337,7 @@ const Signup = () => {
           legal_name: accountType === 'creator' ? legalName.trim() : null,
           national_id_number: accountType === 'creator' ? nationalId.trim() : null,
           dob: accountType === 'creator' ? dob : null,
-          kyc_status: accountType === 'creator' ? 'pending' : 'not_submitted',
-          is_verified: false
+          kyc_status: accountType === 'creator' ? 'pending' : 'unverified'
         }
       );
       
@@ -414,20 +413,8 @@ const Signup = () => {
               dob: dob,
               kyc_id_url: uploadedIdUrl,
               kyc_selfie_url: uploadedSelfieUrl,
-              kyc_status: 'pending',
-              is_verified: false
+              kyc_status: 'pending'
             }).eq('uid', uid);
-
-            await supabase.from('creator_profiles').upsert({
-              user_id: uid,
-              legal_name: legalName.trim(),
-              national_id_number: nationalId.trim(),
-              dob: dob,
-              kyc_id_url: uploadedIdUrl,
-              kyc_selfie_url: uploadedSelfieUrl,
-              kyc_status: 'pending',
-              is_verified: false
-            }, { onConflict: 'user_id' });
 
             const local = getStoredCreatorProfile(uid) || {};
             localStorage.setItem(`tgd_creator_profile_${uid}`, JSON.stringify({
@@ -596,20 +583,8 @@ const Signup = () => {
               dob: kyc.dob,
               kyc_id_url: kyc.idUrl,
               kyc_selfie_url: kyc.selfieUrl,
-              kyc_status: 'pending',
-              is_verified: false
+              kyc_status: 'pending'
             }).eq('uid', vUid);
-
-            await supabase.from('creator_profiles').upsert({
-              user_id: vUid,
-              legal_name: kyc.legalName,
-              national_id_number: kyc.nationalId,
-              dob: kyc.dob,
-              kyc_id_url: kyc.idUrl,
-              kyc_selfie_url: kyc.selfieUrl,
-              kyc_status: 'pending',
-              is_verified: false
-            }, { onConflict: 'user_id' });
 
             const local = getStoredCreatorProfile(vUid) || {};
             localStorage.setItem(`tgd_creator_profile_${vUid}`, JSON.stringify({

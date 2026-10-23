@@ -40,18 +40,25 @@ export const createUserProfile = async (uid: string, data: any) => {
       ...(data.name ? { name: data.name } : {}),
       ...(data.avatar ? { avatar: data.avatar } : {}),
       ...(data.phone ? { phone: data.phone } : {}),
-      ...(data.username ? { username: data.username } : {}),
-      ...(data.handle ? { handle: data.handle } : {}),
       ...(data.legal_name ? { legal_name: data.legal_name } : {}),
       ...(data.national_id_number ? { national_id_number: data.national_id_number } : {}),
       ...(data.dob ? { dob: data.dob } : {}),
       ...(data.kyc_id_url ? { kyc_id_url: data.kyc_id_url } : {}),
       ...(data.kyc_selfie_url ? { kyc_selfie_url: data.kyc_selfie_url } : {}),
-      ...(data.kyc_status ? { kyc_status: data.kyc_status } : {}),
-      ...(data.is_verified !== undefined ? { is_verified: data.is_verified } : {}),
+      ...(data.kyc_status && ['unverified', 'pending', 'verified', 'rejected'].includes(data.kyc_status) ? { kyc_status: data.kyc_status } : {}),
     };
     if (Object.keys(userUpdates).length > 0) {
-      await supabase.from('users').update(userUpdates).eq('uid', uid);
+      const { error: updErr } = await supabase.from('users').update(userUpdates).eq('uid', uid);
+      if (updErr && (updErr.message?.includes('column') || updErr.code === '42703' || updErr.code === 'PGRST204')) {
+        const coreUpdates: Record<string, any> = {
+          ...(data.name ? { name: data.name } : {}),
+          ...(data.avatar ? { avatar: data.avatar } : {}),
+          ...(data.phone ? { phone: data.phone } : {}),
+        };
+        if (Object.keys(coreUpdates).length > 0) {
+          await supabase.from('users').update(coreUpdates).eq('uid', uid);
+        }
+      }
     }
 
     if (data.role === 'creator') {
@@ -59,20 +66,12 @@ export const createUserProfile = async (uid: string, data: any) => {
         await supabase.from('creator_profiles').upsert({
           user_id: uid,
           display_name: data.name,
-          handle: data.handle || (data.name ? `@${data.name.replace(/\s+/g, '').toLowerCase()}` : undefined),
           avatar: data.avatar || initialAvatar,
           avatar_url: data.avatar || initialAvatar,
-          legal_name: data.legal_name || null,
-          national_id_number: data.national_id_number || null,
-          dob: data.dob || null,
-          kyc_id_url: data.kyc_id_url || null,
-          kyc_selfie_url: data.kyc_selfie_url || null,
-          kyc_status: data.kyc_status || 'pending',
-          is_verified: data.is_verified || false,
           bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
           monthly_price: 1000,
           location: 'Nairobi, Kenya',
-          cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
+          cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
           tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
         }, { onConflict: 'user_id' });
       } catch {
@@ -84,7 +83,7 @@ export const createUserProfile = async (uid: string, data: any) => {
       const createdAt = byUid.created_at ? new Date(byUid.created_at).getTime() : 0;
       const isFresh = Date.now() - createdAt < 24 * 60 * 60 * 1000;
       const alreadyNotified = typeof window !== 'undefined' && localStorage.getItem(flagKey);
-      if (isFresh && !alreadyNotified && data.is_verified) {
+      if (isFresh && !alreadyNotified && (data.is_verified || data.kyc_status === 'verified')) {
         if (typeof window !== 'undefined') localStorage.setItem(flagKey, '1');
         notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
           console.warn('Could not dispatch new creator notification:', err);
@@ -117,22 +116,25 @@ export const createUserProfile = async (uid: string, data: any) => {
     avatar: initialAvatar,
     phone: data.phone,
     role: data.role || 'subscriber',
-    ...(data.username ? { username: data.username } : {}),
-    ...(data.handle ? { handle: data.handle } : {}),
     ...(data.legal_name ? { legal_name: data.legal_name } : {}),
     ...(data.national_id_number ? { national_id_number: data.national_id_number } : {}),
     ...(data.dob ? { dob: data.dob } : {}),
     ...(data.kyc_id_url ? { kyc_id_url: data.kyc_id_url } : {}),
     ...(data.kyc_selfie_url ? { kyc_selfie_url: data.kyc_selfie_url } : {}),
-    ...(data.kyc_status ? { kyc_status: data.kyc_status } : {}),
-    ...(data.is_verified !== undefined ? { is_verified: data.is_verified } : {}),
+    ...(data.kyc_status && ['unverified', 'pending', 'verified', 'rejected'].includes(data.kyc_status) ? { kyc_status: data.kyc_status } : {}),
   };
 
-  await supabase.from('users').insert(insertPayload).then(({ error }) => {
-    // Surface failures instead of swallowing them. The DB trigger
-    // `on_auth_user_created` (supabase/sync_auth_users_to_profiles.sql) is the
-    // source of truth; this client insert is a best-effort fallback.
-    if (error && error.code !== '23505') {
+  await supabase.from('users').insert(insertPayload).then(async ({ error }) => {
+    if (error && (error.message?.includes('column') || error.code === '42703' || error.code === 'PGRST204')) {
+      await supabase.from('users').insert({
+        uid,
+        name: data.name,
+        email: data.email,
+        avatar: initialAvatar,
+        phone: data.phone,
+        role: data.role || 'subscriber',
+      });
+    } else if (error && error.code !== '23505') {
       console.error('createUserProfile: users insert failed:', error.message);
     }
   });
@@ -142,27 +144,19 @@ export const createUserProfile = async (uid: string, data: any) => {
       await supabase.from('creator_profiles').upsert({
         user_id: uid,
         display_name: data.name,
-        handle: data.handle || (data.name ? `@${data.name.replace(/\s+/g, '').toLowerCase()}` : undefined),
         avatar: data.avatar || initialAvatar,
         avatar_url: data.avatar || initialAvatar,
-        legal_name: data.legal_name || null,
-        national_id_number: data.national_id_number || null,
-        dob: data.dob || null,
-        kyc_id_url: data.kyc_id_url || null,
-        kyc_selfie_url: data.kyc_selfie_url || null,
-        kyc_status: data.kyc_status || 'pending',
-        is_verified: data.is_verified || false,
         bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
         monthly_price: 1000,
         location: 'Nairobi, Kenya',
-        cover_image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
+        cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
         tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
       }, { onConflict: 'user_id' });
     } catch {
       // non-fatal
     }
 
-    if (data.is_verified) {
+    if (data.is_verified || data.kyc_status === 'verified') {
       notifySubscribersOfNewCreator(uid, data.name || 'New Creator', data.avatar).catch(err => {
         console.warn('Could not dispatch new creator notification:', err);
       });
@@ -2176,7 +2170,11 @@ export const getCreatorProfile = async (id: string) => {
         bio: resolvedBio,
         location: localCreator?.location || creatorMeta?.location || 'Nairobi, Kenya',
         rating: 4.9,
-        isVerified: isCreatorVerified(id, userRow?.is_verified, userRow?.kyc_status),
+        isVerified: isCreatorVerified(
+          id,
+          userRow?.is_verified ?? creatorMeta?.is_verified ?? localCreator?.is_verified,
+          userRow?.kyc_status || creatorMeta?.kyc_status || localCreator?.kyc_status
+        ),
         isOnline: isSuspended ? false : true,
         price_hr: localCreator?.monthly_price || creatorMeta?.monthly_price || 1000,
         age: localCreator?.age || creatorMeta?.age || 24,
@@ -2627,7 +2625,11 @@ export const getDiscoverCreators = async () => {
         avatar,
         cover,
         hasPosts,
-        isVerified: isCreatorVerified(u.uid, (u as any).is_verified, (u as any).kyc_status || p?.kyc_status),
+        isVerified: isCreatorVerified(
+          u.uid,
+          (u as any).is_verified ?? p?.is_verified ?? (local as any)?.is_verified,
+          (u as any).kyc_status || p?.kyc_status || (local as any)?.kyc_status
+        ),
         postsCount: postStats?.count || 0,
         createdAt: postStats?.latestDate || u.created_at || new Date().toISOString()
       };
@@ -2904,8 +2906,12 @@ export const getAdminCreators = async () => {
       const avatar = u.avatar || p?.avatar_url || p?.avatar || local?.avatar || local?.avatar_url || null;
       const hasId = Boolean((u as any).kyc_id_url || p?.kyc_id_url || (local as any)?.kyc_id_url || (local as any)?.idDocument);
       const hasSelfie = Boolean((u as any).kyc_selfie_url || p?.kyc_selfie_url || (local as any)?.kyc_selfie_url || (local as any)?.selfie);
-      const isVerified = isCreatorVerified(u.uid, (u as any).is_verified, (u as any).kyc_status || p?.kyc_status);
-      const kycStatus = (u as any).kyc_status || p?.kyc_status || (hasId ? 'pending' : 'not_submitted');
+      const kycStatus = (u as any).kyc_status || p?.kyc_status || (local as any)?.kyc_status || (hasId ? 'pending' : 'unverified');
+      const isVerified = isCreatorVerified(
+        u.uid,
+        (u as any).is_verified ?? p?.is_verified ?? (local as any)?.is_verified,
+        kycStatus
+      );
 
       return {
         id: u.uid,
@@ -2953,37 +2959,37 @@ export const setCreatorVerified = async (creatorId: string, verified: boolean): 
     (hasId && hasSelfie) ||
     creator?.kyc_status === 'pending' ||
     creatorProfile?.kyc_status === 'pending' ||
-    creator?.kyc_status === 'verified'
+    (local as any)?.kyc_status === 'pending' ||
+    creator?.kyc_status === 'verified' ||
+    (local as any)?.kyc_status === 'verified'
   );
 
   if (verified && !hasKycSubmitted) {
     throw new Error('The creator must submit their identity details, ID document, and selfie before verification.');
   }
 
-  const { data: updatedCreator, error: updateError } = await supabase
-    .from('users')
-    .update({ 
-      kyc_status: verified ? 'verified' : 'rejected',
-      is_verified: verified
-    })
-    .eq('uid', creatorId)
-    .select('uid')
-    .maybeSingle();
-  if (updateError) throw updateError;
-  if (!updatedCreator) throw new Error('Creator verification could not be updated.');
+  const targetKycStatus = verified ? 'verified' : 'rejected';
 
-  try {
-    await supabase
-      .from('creator_profiles')
-      .update({ 
-        is_verified: verified,
-        kyc_status: verified ? 'verified' : 'rejected'
-      })
-      .eq('user_id', creatorId);
-  } catch {}
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({
+      kyc_status: targetKycStatus
+    })
+    .eq('uid', creatorId);
+
+  if (updateError) {
+    console.warn('users kyc_status update notice:', updateError.message);
+  }
 
   if (typeof window !== 'undefined') {
     try {
+      const existingLocal = getStoredCreatorProfile(creatorId) || {};
+      localStorage.setItem(`tgd_creator_profile_${creatorId}`, JSON.stringify({
+        ...existingLocal,
+        kyc_status: targetKycStatus,
+        is_verified: verified
+      }));
+
       const verifiedIds = new Set(JSON.parse(localStorage.getItem('tgd_verified_creator_ids') || '[]'));
       if (verified) {
         verifiedIds.add(creatorId);
@@ -2996,6 +3002,19 @@ export const setCreatorVerified = async (creatorId: string, verified: boolean): 
     window.dispatchEvent(new CustomEvent('creators_updated'));
     window.dispatchEvent(new CustomEvent('posts_updated'));
   }
+
+  if (verified) {
+    createNotification(creatorId, {
+      title: 'Identity Verification Approved! 👑',
+      message: 'Congratulations! Your KYC identity documents have been approved by the admin. Your profile now displays the official Blue Verified Badge.',
+      type: 'system',
+      badge: 'Verified',
+      link: '/dashboard',
+      action_label: 'View Dashboard',
+      action_url: '/dashboard'
+    }).catch(() => {});
+  }
+
   return true;
 };
 
@@ -3016,14 +3035,14 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
     .update(userUpdates)
     .eq('uid', creatorId);
     
-  if (error) throw error;
-
-  try {
-    await supabase
-      .from('creator_profiles')
-      .update({ status: newStatus })
-      .eq('user_id', creatorId);
-  } catch {}
+  if (error) {
+    // Fallback if status column is not in users table
+    const { error: roleErr } = await supabase
+      .from('users')
+      .update({ role: roleMap[newStatus] as string })
+      .eq('uid', creatorId);
+    if (roleErr) console.warn('updateCreatorStatus role update notice:', roleErr.message);
+  }
 
   if (newStatus === 'suspended') {
     try {
@@ -3046,6 +3065,11 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
   }
 
   if (newStatus === 'active') {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(`tgd_user_status_${creatorId}`);
+      } catch {}
+    }
     try {
       const [{ data: user }, { data: profile }] = await Promise.all([
         supabase.from('users').select('*').eq('uid', creatorId).maybeSingle(),
@@ -3055,24 +3079,24 @@ export const updateCreatorStatus = async (creatorId: string, newStatus: 'active'
       const local = getStoredCreatorProfile(creatorId);
       const hasId = Boolean(user?.kyc_id_url || profile?.kyc_id_url || (local as any)?.kyc_id_url || (local as any)?.idDocument);
       const hasSelfie = Boolean(user?.kyc_selfie_url || profile?.kyc_selfie_url || (local as any)?.kyc_selfie_url || (local as any)?.selfie);
-      const hasFilledKyc = (hasId && hasSelfie) || user?.kyc_status === 'pending' || profile?.kyc_status === 'pending';
+      const hasFilledKyc = (hasId && hasSelfie) || user?.kyc_status === 'pending' || profile?.kyc_status === 'pending' || (local as any)?.kyc_status === 'pending';
 
       // When the admin approves any account that has filled KYC, grant them the blue verified badge!
       if (hasFilledKyc) {
         await supabase
           .from('users')
-          .update({ kyc_status: 'verified', is_verified: true })
+          .update({ kyc_status: 'verified' })
           .eq('uid', creatorId);
-
-        try {
-          await supabase
-            .from('creator_profiles')
-            .update({ is_verified: true, kyc_status: 'verified' })
-            .eq('user_id', creatorId);
-        } catch {}
 
         if (typeof window !== 'undefined') {
           try {
+            const existingLocal = getStoredCreatorProfile(creatorId) || {};
+            localStorage.setItem(`tgd_creator_profile_${creatorId}`, JSON.stringify({
+              ...existingLocal,
+              kyc_status: 'verified',
+              is_verified: true
+            }));
+
             const verifiedIds = new Set(JSON.parse(localStorage.getItem('tgd_verified_creator_ids') || '[]'));
             verifiedIds.add(creatorId);
             localStorage.setItem('tgd_verified_creator_ids', JSON.stringify(Array.from(verifiedIds)));

@@ -317,36 +317,31 @@ const Login = () => {
       // 5. Update users table with profile photo, cover photo, creator role and KYC details
       const { error: userUpdateError } = await supabase.from('users').update({
         avatar: finalAvatarUrl,
-        cover_image: finalCoverUrl,
         role: 'creator',
         legal_name: legalName.trim(),
         national_id_number: nationalId.trim(),
         dob: dob,
         kyc_id_url: finalIdDocUrl,
         kyc_selfie_url: finalSelfieUrl,
-        kyc_status: 'pending',
-        is_verified: false
+        kyc_status: 'pending'
       }).eq('uid', user.id);
 
       if (userUpdateError) {
         console.warn('Notice updating users table:', userUpdateError.message);
+        // Fallback if KYC columns are not yet on users table
+        await supabase.from('users').update({
+          avatar: finalAvatarUrl,
+          role: 'creator'
+        }).eq('uid', user.id);
       }
 
-      // 6. Update creator_profiles table
+      // 6. Update creator_profiles table with valid schema columns
       const { error: creatorUpdateError } = await supabase.from('creator_profiles').upsert({
         user_id: user.id,
         avatar: finalAvatarUrl,
         avatar_url: finalAvatarUrl,
         cover_image: finalCoverUrl,
-        name: creatorName,
-        display_name: creatorName,
-        legal_name: legalName.trim(),
-        national_id_number: nationalId.trim(),
-        dob: dob,
-        kyc_id_url: finalIdDocUrl,
-        kyc_selfie_url: finalSelfieUrl,
-        kyc_status: 'pending',
-        is_verified: false
+        display_name: creatorName
       }, { onConflict: 'user_id' });
 
       if (creatorUpdateError) {
