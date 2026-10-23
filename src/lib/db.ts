@@ -2301,7 +2301,7 @@ export const HARDCODED_DISCOVER_CREATORS = [
     subs: "342 subscribers", 
     subscribersCount: 342, 
     price: "KES 1,000/mo", 
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80", 
+    avatar: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg", 
     cover: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg", 
     hasPosts: true, 
     isVerified: true, 
@@ -4869,9 +4869,8 @@ export const getUserChatConversations = async (userId: string): Promise<ChatPart
   // 4. Default popular creators if the list is empty (so fan sees creators to subscribe & chat with)
   if (list.length === 0) {
     const defaults = [
-      { id: 'creator-amina', name: 'Amina K.', avatar: 'https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg', handle: '@aminak', price: 500 },
-      { id: 'creator-sarah', name: 'Sarah M.', avatar: 'https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg', handle: '@sarahm', price: 800 },
-      { id: 'creator-chef', name: 'Chef Kamau', avatar: 'https://i.pinimg.com/736x/46/a5/70/46a57001c54ff217af4d11d485d4959a.jpg', handle: '@chefkamau', price: 1000 },
+      { id: 'creator-wairimu', name: 'Wairimu K. ✨', avatar: 'https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg', handle: '@wairimuk', price: 1000 },
+      { id: 'creator-chebet', name: 'Chebet Fit & Spice 🔥', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80', handle: '@chebetfit', price: 1200 },
     ];
     for (const d of defaults) {
       const sub = await checkUserSubscription(userId, d.id);

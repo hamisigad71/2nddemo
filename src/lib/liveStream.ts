@@ -36,13 +36,13 @@ const MESSAGES_STORAGE_KEY = 'tgd_live_stream_messages';
 // Initial showcase streams to guarantee vibrant presentation immediately
 const DEFAULT_SHOWCASE_STREAMS: LiveStream[] = [
   {
-    id: 'live-showcase-amina',
-    creatorId: 'creator-amina',
-    creatorName: 'Amina K.',
-    creatorHandle: '@aminak',
-    creatorAvatar: 'https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg',
+    id: 'live-showcase-wairimu',
+    creatorId: 'creator-wairimu',
+    creatorName: 'Wairimu K. ✨',
+    creatorHandle: '@wairimuk',
+    creatorAvatar: 'https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg',
     title: 'Late Night VIP Lounge & Q&A 💋',
-    description: 'Chilling in Nairobi after a workout, answering your questions and taking live song requests!',
+    description: 'Chilling in Nairobi after a shoot, answering your questions and taking live song requests!',
     category: 'VIP Lounge',
     status: 'live',
     accessType: 'public',
@@ -51,14 +51,14 @@ const DEFAULT_SHOWCASE_STREAMS: LiveStream[] = [
     startedAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
   },
   {
-    id: 'live-showcase-sarah',
-    creatorId: 'creator-sarah',
-    creatorName: 'Sarah M.',
-    creatorHandle: '@sarahm',
-    creatorAvatar: 'https://i.pinimg.com/736x/76/34/d5/7634d55a25c897bd325bf125ebf824da.jpg',
-    title: 'Mombasa Beach Sunset & Exclusive Preview 🌅',
+    id: 'live-showcase-chebet',
+    creatorId: 'creator-chebet',
+    creatorName: 'Chebet Fit & Spice 🔥',
+    creatorHandle: '@chebetfit',
+    creatorAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
+    title: 'Mombasa Beach Sunset & Fitness Preview 🏋️‍♀️',
     description: 'VIP subscribers only live hangout before my weekend private show.',
-    category: 'Lifestyle',
+    category: 'Fitness & Spice',
     status: 'live',
     accessType: 'subscribers_only',
     ticketPrice: 0,
@@ -70,7 +70,7 @@ const DEFAULT_SHOWCASE_STREAMS: LiveStream[] = [
 function getStoredStreams(): LiveStream[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
+    if (!raw || raw.includes('creator-amina') || raw.includes('creator-sarah') || raw.includes('Amina K.')) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SHOWCASE_STREAMS));
       return DEFAULT_SHOWCASE_STREAMS;
     }
