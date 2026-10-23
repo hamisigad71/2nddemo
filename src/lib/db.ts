@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
-import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage } from './avatar';
+import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from './avatar';
 import { fetchAllPages } from './pagination';
 import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_NAMES } from './creatorDirectory';
 import { isKycVerified, isCreatorVerified } from './verification';
@@ -2631,18 +2631,25 @@ export const getDiscoverCreators = async () => {
       };
     }));
 
+    // Strictly filter out any creators who have not provided their profile photo OR cover photo
+    const completedRealCreators = realCreators.filter(c => {
+      const hasPhoto = hasUploadedProfilePhoto(c.avatar);
+      const hasCover = hasUploadedCoverPhoto(c.cover);
+      return hasPhoto && hasCover;
+    });
+
     // Sort: creators with active posts come first
-    realCreators.sort((a, b) => {
+    completedRealCreators.sort((a, b) => {
       if (a.hasPosts !== b.hasPosts) return a.hasPosts ? -1 : 1;
       return (b.postsCount || 0) - (a.postsCount || 0);
     });
 
     // Real registered creators first, followed by strictly 2 sample demo accounts clearly tagged
-    const existingIds = new Set(realCreators.map(c => c.id));
-    const combined: any[] = [...realCreators];
+    const existingIds = new Set(completedRealCreators.map(c => c.id));
+    const combined: any[] = [...completedRealCreators];
 
     HARDCODED_DISCOVER_CREATORS.slice(0, 2).forEach(demo => {
-      if (!existingIds.has(demo.id)) {
+      if (!existingIds.has(demo.id) && hasUploadedProfilePhoto(demo.avatar) && hasUploadedCoverPhoto(demo.cover)) {
         combined.push({
           ...demo,
           isVerified: Boolean(demo.isVerified),

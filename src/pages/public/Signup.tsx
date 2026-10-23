@@ -4,9 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2, User as UserIcon, ImagePlus } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
-import { uploadFileToSupabase, getStoredCreatorProfile, createNotification } from '../../lib/db';
+import { uploadFileToSupabase, getStoredCreatorProfile, createNotification, notifyAdmins } from '../../lib/db';
 import { compressAvatarImage } from '../../lib/avatar';
 import { validateSignupImages } from '../../lib/creatorSignupImages';
+import { buildAdminKycSubmissionNotification } from '../../lib/verification';
 
 const DISPOSABLE_OR_DUMMY_DOMAINS = new Set([
   'test.com', 'example.com', 'dummy.com', 'fake.com', 'invalid.com', 'none.com',
@@ -453,6 +454,12 @@ const Signup = () => {
           selfieUrl: uploadedSelfieUrl,
           email: cleanEmail
         }));
+
+        // Send submission directly to Platform Admins for approval
+        notifyAdmins(buildAdminKycSubmissionNotification({
+          username: cleanUsername,
+          nationalId: nationalId.trim()
+        })).catch((err) => console.warn('Admin KYC notification notice:', err));
       }
 
       // If session exists (email confirmation disabled in Supabase), user is already logged in!
@@ -621,6 +628,13 @@ const Signup = () => {
         }
       } catch (flushErr) {
         console.warn('Could not flush pending KYC after OTP:', flushErr);
+      }
+
+      if (accountType === 'creator') {
+        notifyAdmins(buildAdminKycSubmissionNotification({
+          username: cleanUsername,
+          nationalId: nationalId.trim()
+        })).catch(() => {});
       }
 
       if (accountType === 'subscriber') {

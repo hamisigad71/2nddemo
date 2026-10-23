@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect, useRef } from 'react';
-import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, createNotification } from '../../lib/db';
+import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, createNotification, notifyAdmins } from '../../lib/db';
+import { buildAdminKycSubmissionNotification } from '../../lib/verification';
 import { supabase } from '../../lib/supabase';
 import { 
   Eye, 
@@ -377,16 +378,11 @@ const Login = () => {
         detail: { avatar: finalAvatarUrl, name: creatorUser?.name }
       }));
 
-      // 8. Create Admin notification for KYC review
-      createNotification('admin', {
-        title: 'New Creator Verification Application',
-        message: `${creatorUser?.name || 'A creator'} has updated their required profile photos and submitted identity documents for approval.`,
-        type: 'system',
-        badge: 'KYC',
-        link: '/admin/users?view=kyc',
-        action_label: 'Review KYC',
-        action_url: '/admin/users?view=kyc'
-      }).catch(() => {});
+      // 8. Dispatch notification directly to Platform Admins for KYC review
+      notifyAdmins(buildAdminKycSubmissionNotification({
+        name: creatorUser?.name || 'A creator',
+        nationalId: nationalId.trim()
+      })).catch(() => {});
 
       // Success -> navigate to dashboard
       navigate('/dashboard');

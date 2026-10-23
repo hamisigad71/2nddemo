@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
 import { getDiscoverCreators, getFanSubscriptions, checkUserSubscription, getUserProfile } from '../../lib/db';
-import { getDefaultAvatar } from '../../lib/avatar';
+import { getDefaultAvatar, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../../lib/avatar';
 import LiveNowTray from '../../components/LiveNowTray';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useTheme } from '../../context/ThemeContext';
@@ -144,10 +144,12 @@ const Discover = () => {
   });
 
   const filtered = sorted.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
+    hasUploadedProfilePhoto(c.avatar) &&
+    hasUploadedCoverPhoto(c.cover) &&
+    (c.name.toLowerCase().includes(search.toLowerCase()) || 
     c.handle.toLowerCase().includes(search.toLowerCase()) ||
     c.category.toLowerCase().includes(search.toLowerCase()) ||
-    c.location.toLowerCase().includes(search.toLowerCase())
+    c.location.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (

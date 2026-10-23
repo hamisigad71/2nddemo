@@ -1,9 +1,16 @@
 // @ts-expect-error Node.js test types are not configured in this project.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasCompleteKycSubmission, isCreatorVerified, isKycVerified } from '../src/lib/verification';
+import { 
+  hasCompleteKycSubmission, 
+  isCreatorVerified, 
+  isKycVerified,
+  buildAdminKycSubmissionNotification,
+  canApproveKyc,
+  resolveKycApprovalPayload
+} from '../src/lib/verification';
 
-describe('creator verification eligibility', () => {
+describe('creator verification eligibility and admin approval flow', () => {
   it('grants the verified badge only after KYC approval', () => {
     assert.equal(isKycVerified('verified'), true);
     assert.equal(isKycVerified('pending'), false);
@@ -27,16 +34,68 @@ describe('creator verification eligibility', () => {
     assert.equal(hasCompleteKycSubmission({ ...complete, legalName: ' ' }), false);
   });
 
-  it('determines verification badge status upon admin approval based on KYC completion', () => {
-    // Helper replicating admin approval rule: creator only receives verified badge upon approval if KYC was filled
-    const resolveApprovalVerification = (hasFilledKyc: boolean) => {
-      return hasFilledKyc ? 'verified' : 'unverified';
+  it('dispatches an admin review notification when a creator submits verification details', () => {
+    const notif = buildAdminKycSubmissionNotification({
+      username: 'veronicah_ke',
+      nationalId: '38291044',
+    });
+
+    assert.equal(notif.title, 'New Creator KYC Verification Submitted 🛡️');
+    assert.match(notif.message, /veronicah_ke/);
+    assert.match(notif.message, /38291044/);
+    assert.equal(notif.link, '/admin/users?view=kyc');
+    assert.equal(notif.action_label, 'Review KYC');
+    assert.equal(notif.action_url, '/admin/users?view=kyc');
+    assert.equal(notif.badge, 'KYC Review');
+  });
+
+  it('prevents admin approval if required documents or identity details are missing', () => {
+    const incompleteApplicant = {
+      legal_name: 'Veronicah Njeri',
+      national_id_number: '38291044',
+      dob: '1998-07-21',
+      kyc_id_url: 'https://cdn.example.com/id.jpg',
+      kyc_selfie_url: null, // missing selfie
     };
 
-    assert.equal(resolveApprovalVerification(true), 'verified');
-    assert.equal(isCreatorVerified('creator-approved-with-kyc', true, resolveApprovalVerification(true)), true);
+    const check = canApproveKyc(incompleteApplicant);
+    assert.equal(check.canApprove, false);
+    assert.match(check.reason || '', /selfie/i);
 
-    assert.equal(resolveApprovalVerification(false), 'unverified');
-    assert.equal(isCreatorVerified('creator-approved-without-kyc', true, resolveApprovalVerification(false)), false);
+    const completeApplicant = {
+      legal_name: 'Veronicah Njeri',
+      national_id_number: '38291044',
+      dob: '1998-07-21',
+      kyc_id_url: 'https://cdn.example.com/id.jpg',
+      kyc_selfie_url: 'https://cdn.example.com/selfie.jpg',
+    };
+
+    const validCheck = canApproveKyc(completeApplicant);
+    assert.equal(validCheck.canApprove, true);
+  });
+
+  it('correctly transitions state upon admin approval or rejection', () => {
+    // 1. Initial submitted state
+    const submittedState = {
+      kyc_status: 'pending',
+      is_verified: false,
+    };
+    assert.equal(isCreatorVerified('creator-1', submittedState.is_verified, submittedState.kyc_status), false);
+
+    // 2. Admin approves application
+    const approvedPayload = resolveKycApprovalPayload('verified');
+    assert.deepEqual(approvedPayload, {
+      kyc_status: 'verified',
+      is_verified: true,
+    });
+    assert.equal(isCreatorVerified('creator-1', approvedPayload.is_verified, approvedPayload.kyc_status), true);
+
+    // 3. Admin rejects application
+    const rejectedPayload = resolveKycApprovalPayload('rejected');
+    assert.deepEqual(rejectedPayload, {
+      kyc_status: 'rejected',
+      is_verified: false,
+    });
+    assert.equal(isCreatorVerified('creator-1', rejectedPayload.is_verified, rejectedPayload.kyc_status), false);
   });
 });

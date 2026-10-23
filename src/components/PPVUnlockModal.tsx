@@ -56,8 +56,8 @@ export default function PPVUnlockModal({
       setStep('choose');
       setErrorMessage(null);
 
-      if (creatorId && !creatorId.startsWith('creator-')) {
-        getUserProfile(creatorId).then(cp => {
+      if (mediaItem?.creatorId && !mediaItem.creatorId.startsWith('creator-')) {
+        getUserProfile(mediaItem.creatorId).then(cp => {
           if (cp?.status === 'suspended' || cp?.status === 'banned' || cp?.role === 'suspended_creator') {
             setErrorMessage('Unlocks are disabled because this creator account is currently suspended.');
           }

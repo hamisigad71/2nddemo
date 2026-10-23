@@ -44,6 +44,36 @@ export const resolveUserAvatar = (avatarUrl?: string | null, name?: string | nul
 };
 
 /**
+ * Checks whether a creator has provided a real, custom uploaded profile photo
+ * (not an auto-generated initials badge, not a default SVG silhouette, and not empty).
+ */
+export const hasUploadedProfilePhoto = (avatarUrl?: string | null): boolean => {
+  if (!avatarUrl || typeof avatarUrl !== 'string') return false;
+  const clean = avatarUrl.trim();
+  if (!clean) return false;
+  if (clean.startsWith('data:image/svg+xml')) return false; // Default SVG silhouette
+  if (clean.includes('ui-avatars.com')) return false; // Auto-generated initials badge
+  if (clean.includes('pravatar.cc')) return false; // Placeholder
+  if (clean.includes('photo-1534528741775-53994a69daeb')) return false; // Old placeholder
+  if (clean.startsWith('blob:')) return false; // Expired browser blob URL
+  return true;
+};
+
+/**
+ * Checks whether a creator has provided a real, custom uploaded cover photo
+ * (not the default gradient placeholder, not an expired blob, and not empty).
+ */
+export const hasUploadedCoverPhoto = (coverUrl?: string | null): boolean => {
+  if (!coverUrl || typeof coverUrl !== 'string') return false;
+  const clean = coverUrl.trim();
+  if (!clean) return false;
+  if (clean.includes('photo-1618005182384-a83a8bd57fbe')) return false; // Default placeholder wave
+  if (clean.includes('photo-1549490349-8643362247b5')) return false; // Old placeholder
+  if (clean.startsWith('blob:')) return false; // Expired browser blob URL
+  return true;
+};
+
+/**
  * Client-side avatar image compressor.
  * Downscales phone camera/high-res photos (5MB - 12MB) to max 512x512 JPEG (~30-50KB).
  * This ensures:
