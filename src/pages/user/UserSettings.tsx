@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2, Check } from 'lucide-react';
+import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2, Check, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getUserProfile, updateUserProfile, deleteUserAccount, uploadFileToSupabase } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
@@ -11,6 +12,7 @@ import { hasCompleteKycSubmission } from '../../lib/verification';
 
 const UserSettings = () => {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
@@ -664,6 +666,59 @@ const UserSettings = () => {
                       <div className="absolute left-1 top-1 bg-muted-foreground w-4 h-4 rounded-full shadow"></div>
                    </div>
                 </div>
+             </div>
+          </section>
+
+          {/* Appearance & Theme */}
+          <section className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+             <h2 className="text-lg font-bold mb-2 pb-2 border-b border-border flex items-center gap-2">
+               {theme === 'dark' ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-400" />} Appearance & Theme
+             </h2>
+             <p className="text-xs text-muted-foreground mb-5">
+               Personalize your viewing experience. Dark mode is default, and you can switch to light mode at any time.
+             </p>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={`flex items-center gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                    theme === 'dark'
+                      ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30 shadow-md'
+                      : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                  }`}
+                >
+                  <div className={`p-2.5 rounded-xl transition-colors ${theme === 'dark' ? 'bg-primary text-white shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                    <Moon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold flex items-center gap-2 text-foreground">
+                      Dark Mode
+                      <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">Default</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Sleek dark appearance</div>
+                  </div>
+                  {theme === 'dark' && <Check className="w-4 h-4 text-primary shrink-0" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  className={`flex items-center gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                    theme === 'light'
+                      ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30 shadow-md'
+                      : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                  }`}
+                >
+                  <div className={`p-2.5 rounded-xl transition-colors ${theme === 'light' ? 'bg-primary text-white shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                    <Sun className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-foreground">Light Mode</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">High-contrast bright theme</div>
+                  </div>
+                  {theme === 'light' && <Check className="w-4 h-4 text-primary shrink-0" />}
+                </button>
              </div>
           </section>
 

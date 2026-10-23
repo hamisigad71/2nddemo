@@ -49,7 +49,7 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     try {
       setError('');
-      await signInWithGoogle('subscriber');
+      await signInWithGoogle();
     } catch (err: any) {
       console.error("Google sign in error:", err);
       setError(err?.message || 'Failed to sign in with Google. Please ensure Google provider is enabled in Supabase.');
@@ -59,7 +59,7 @@ const Login = () => {
   const handleFacebookSignIn = async () => {
     try {
       setError('');
-      await signInWithFacebook('subscriber');
+      await signInWithFacebook();
     } catch (err: any) {
       console.error("Facebook sign in error:", err);
       setError(err?.message || 'Failed to sign in with Facebook');

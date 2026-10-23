@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
-import { Save, Shield, CreditCard, Smartphone } from 'lucide-react';
+import { Save, Shield, CreditCard, Smartphone, Sun, Moon, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getUserProfile, updateUserProfile } from '../../lib/db';
 
 const CreatorSettings = () => {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
@@ -158,6 +160,60 @@ const CreatorSettings = () => {
                      + Add New Tier
                   </button>
                 </div>
+             </div>
+           </div>
+
+           {/* Appearance & Theme */}
+           <div className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+             <div className="flex items-center gap-3 mb-2 border-b border-border pb-4">
+                {theme === 'dark' ? <Moon className="w-6 h-6 text-indigo-400" /> : <Sun className="w-6 h-6 text-amber-500" />}
+                <h2 className="text-xl font-bold">Appearance & Theme</h2>
+             </div>
+             <p className="text-xs text-muted-foreground mb-5">
+               Customize your studio appearance. Dark mode is enabled by default, but you can switch to light mode at any time.
+             </p>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
+               <button
+                 type="button"
+                 onClick={() => setTheme('dark')}
+                 className={`flex items-center gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                   theme === 'dark'
+                     ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30 shadow-md'
+                     : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                 }`}
+               >
+                 <div className={`p-2.5 rounded-xl transition-colors ${theme === 'dark' ? 'bg-primary text-white shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                   <Moon className="w-5 h-5" />
+                 </div>
+                 <div className="flex-1 min-w-0">
+                   <div className="text-sm font-bold flex items-center gap-2 text-foreground">
+                     Dark Mode
+                     <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">Default</span>
+                   </div>
+                   <div className="text-xs text-muted-foreground mt-0.5">Sleek creator darkroom</div>
+                 </div>
+                 {theme === 'dark' && <Check className="w-4 h-4 text-primary shrink-0" />}
+               </button>
+
+               <button
+                 type="button"
+                 onClick={() => setTheme('light')}
+                 className={`flex items-center gap-3.5 p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                   theme === 'light'
+                     ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30 shadow-md'
+                     : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                 }`}
+               >
+                 <div className={`p-2.5 rounded-xl transition-colors ${theme === 'light' ? 'bg-primary text-white shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                   <Sun className="w-5 h-5 text-amber-500" />
+                 </div>
+                 <div className="flex-1 min-w-0">
+                   <div className="text-sm font-bold text-foreground">Light Mode</div>
+                   <div className="text-xs text-muted-foreground mt-0.5">Bright, clear daylight style</div>
+                 </div>
+                 {theme === 'light' && <Check className="w-4 h-4 text-primary shrink-0" />}
+               </button>
              </div>
            </div>
 

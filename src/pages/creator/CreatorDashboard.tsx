@@ -1,26 +1,42 @@
 import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
-import { getCreatorDashboardStats } from '../../lib/db';
+import { getCreatorDashboardStats, getUserProfile } from '../../lib/db';
 import { resolveUserAvatar } from '../../lib/avatar';
 
 const CreatorDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ totalEarnings: 0, activeSubs: 0, recentSubs: [] as any[] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      setLoading(true);
-      getCreatorDashboardStats(user.id).then(data => {
-        setStats(data);
+      // Role protection: Subscribers must not be on the creator dashboard
+      getUserProfile(user.id).then(profile => {
+        const role = profile?.role || user.user_metadata?.role || (typeof window !== 'undefined' ? localStorage.getItem('pendingAuthRole') : null);
+        if (role === 'subscriber' || role === 'fan') {
+          navigate('/user', { replace: true });
+          return;
+        }
+        if (role === 'admin') {
+          navigate('/admin', { replace: true });
+          return;
+        }
+
+        setLoading(true);
+        getCreatorDashboardStats(user.id).then(data => {
+          setStats(data);
+          setLoading(false);
+        });
+      }).catch(() => {
         setLoading(false);
       });
     }
-  }, [user]);
+  }, [user, navigate]);
   
   return (
     <CreatorLayout>

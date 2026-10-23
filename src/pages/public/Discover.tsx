@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Loader2 } from 'lucide-react';
+import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
 import { getDiscoverCreators, HARDCODED_DISCOVER_CREATORS } from '../../lib/db';
 import { getDefaultAvatar } from '../../lib/avatar';
 import LiveNowTray from '../../components/LiveNowTray';
+import { useTheme } from '../../context/ThemeContext';
 
 const Discover = () => {
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('trending');
   const [search, setSearch] = useState('');
   const [creators, setCreators] = useState<any[]>(HARDCODED_DISCOVER_CREATORS);
@@ -101,6 +103,14 @@ const Discover = () => {
             ))}
             <button className="px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap bg-input/30 hover:bg-input flex items-center gap-1 transition-colors border border-transparent hover:border-border ml-2">
               <Filter className="w-4 h-4" /> Filters
+            </button>
+            <button
+              onClick={toggleTheme}
+              className="p-2.5 rounded-full bg-input/30 hover:bg-input text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border shrink-0"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle theme appearance"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
             </button>
           </div>
         </div>

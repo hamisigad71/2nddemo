@@ -1,6 +1,7 @@
-import { ShieldCheck, TrendingUp, Users, CheckCircle, ArrowRight, Menu, Star, Zap, Lock, X, ChevronDown } from 'lucide-react';
+import { ShieldCheck, TrendingUp, Users, CheckCircle, ArrowRight, Menu, Star, Zap, Lock, X, ChevronDown, Sun, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 const heroImages = [
   "https://i.pinimg.com/736x/c6/ff/a6/c6ffa63b68d9f215fd063ffb97f33842.jpg",
@@ -39,6 +40,7 @@ const testimonials = [
 ];
 
 const Landing = () => {
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [followers, setFollowers] = useState(10000);
@@ -66,7 +68,15 @@ const Landing = () => {
           <a href="#creators" className="hover:text-primary transition-colors text-muted-foreground">Creators</a>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label="Toggle theme appearance"
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-400" />}
+          </button>
           <Link to="/login" className="hidden md:inline-flex text-sm font-medium hover:text-primary transition-colors text-muted-foreground">
             Login
           </Link>
@@ -84,9 +94,18 @@ const Landing = () => {
         <div className="fixed inset-0 z-[100] flex">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
           <div className="relative ml-auto w-72 h-full bg-muted border-l border-border flex flex-col p-6 gap-6 shadow-2xl animate-slide-in-right">
-            <button onClick={() => setMobileMenuOpen(false)} className="self-end text-muted-foreground hover:text-foreground">
-              <X className="w-6 h-6" />
-            </button>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-background/80 border border-border text-foreground transition-colors"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+                <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+              <button onClick={() => setMobileMenuOpen(false)} className="text-muted-foreground hover:text-foreground p-1">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <img src="/logo.svg" alt="Logo" className="w-10 h-10 object-contain" />
               <span className="text-2xl font-black tracking-tighter text-primary">The Gents Dollhouse<span className="text-secondary">.</span></span>

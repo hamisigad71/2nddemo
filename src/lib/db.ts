@@ -29,9 +29,10 @@ export const createUserProfile = async (uid: string, data: any) => {
   // Check by uid first (same auth session)
   const { data: byUid } = await supabase.from('users').select('uid, role, created_at').eq('uid', uid).maybeSingle();
   if (byUid) {
-    // If role was explicitly specified (e.g. 'creator') and differs from existing role, update it
+    // If role was explicitly specified (e.g. 'creator' or 'subscriber') and differs from existing role, update it
     if (data.role && data.role !== byUid.role) {
       await supabase.from('users').update({ role: data.role }).eq('uid', uid);
+      byUid.role = data.role;
     }
     if (data.name || data.avatar) {
       await supabase.from('users').update({
@@ -40,7 +41,7 @@ export const createUserProfile = async (uid: string, data: any) => {
       }).eq('uid', uid);
     }
 
-    if (data.role === 'creator' || byUid.role === 'creator') {
+    if (data.role === 'creator') {
       try {
         await supabase.from('creator_profiles').upsert({
           user_id: uid,

@@ -96,11 +96,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async (role?: string) => {
     try {
-      if (role) localStorage.setItem('pendingAuthRole', role);
+      if (role) {
+        localStorage.setItem('pendingAuthRole', role);
+      }
+      const targetPath = role === 'creator' ? '/dashboard' : '/user';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}${targetPath}`
         }
       });
       if (error) throw error;
@@ -112,11 +115,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithFacebook = async (role?: string) => {
     try {
-      if (role) localStorage.setItem('pendingAuthRole', role);
+      if (role) {
+        localStorage.setItem('pendingAuthRole', role);
+      }
+      const targetPath = role === 'creator' ? '/dashboard' : '/user';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}${targetPath}`
         }
       });
       if (error) throw error;
