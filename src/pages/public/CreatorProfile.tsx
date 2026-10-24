@@ -45,6 +45,7 @@ import PPVUnlockModal, {
   type PPVMediaItem,
 } from "../../components/PPVUnlockModal";
 import { toast } from "../../context/ToastContext";
+import "./CreatorProfile.css";
 
 export default function CreatorProfile() {
   const { id } = useParams();
@@ -475,7 +476,7 @@ export default function CreatorProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24">
+    <div className="creator-profile-page min-h-screen bg-background text-foreground pb-24">
       {/* Creator Owner Quick Toggle Bar (only visible to the actual creator) */}
       {isOwner && (
         <div className="bg-gradient-to-r from-red-950 via-zinc-900 to-black text-white px-4 py-2 text-xs font-bold flex items-center justify-between sticky top-0 z-50 border-b border-red-500/30 backdrop-blur-md shadow-lg">
@@ -517,7 +518,7 @@ export default function CreatorProfile() {
       )}
 
       {/* Cover Image & Top Navigation Bar */}
-      <div className="h-52 md:h-72 lg:h-80 w-full relative bg-zinc-900 overflow-hidden">
+      <div className="creator-profile-hero h-52 md:h-72 lg:h-80 w-full relative bg-zinc-900 overflow-hidden">
         <img
           src={
             (creator.cover_image && !/\.(mp4|webm|mov|m4v)/i.test(creator.cover_image) && !creator.cover_image.startsWith("blob:") && !creator.cover_image.includes("photo-1549490349-8643362247b5"))
@@ -530,9 +531,9 @@ export default function CreatorProfile() {
           }}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-black/40 to-black/60" />
+        <div className="creator-profile-hero-overlay absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-black/40 to-black/60" />
 
-        <nav className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-20">
+        <nav className="creator-profile-top-nav absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-20">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
@@ -543,7 +544,7 @@ export default function CreatorProfile() {
             </button>
             <Link
               to="/"
-              className="text-lg md:text-xl font-black tracking-tight text-white drop-shadow"
+              className="creator-profile-brand text-lg md:text-xl font-black tracking-tight text-white drop-shadow"
             >
               The Gents Dollhouse<span className="text-red-500">.</span>
             </Link>
@@ -572,10 +573,10 @@ export default function CreatorProfile() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative -mt-16 md:-mt-20">
+      <div className="creator-profile-content max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative -mt-16 md:-mt-20">
         {/* Creator Identity Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6">
-          <div className="flex items-end gap-4 md:gap-5 z-10">
+        <div className="creator-profile-heading flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6">
+          <div className="creator-profile-identity flex items-end gap-4 md:gap-5 z-10">
             <div className="relative">
               <img
                 src={creator.avatar}
@@ -583,12 +584,12 @@ export default function CreatorProfile() {
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = getDefaultAvatar(creator.name);
                 }}
-                className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-[#0A0A0C] object-cover bg-zinc-900 shadow-2xl ring-2 ring-red-500/40"
+                className="creator-profile-avatar w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-[#0A0A0C] object-cover bg-zinc-900 shadow-2xl ring-2 ring-red-500/40"
               />
               <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0A0A0C] shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
             </div>
 
-            <div className="pb-1">
+            <div className="creator-profile-details pb-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl md:text-3xl font-black text-white flex items-center gap-2">
                   {creator.name}
@@ -645,7 +646,7 @@ export default function CreatorProfile() {
 
           {/* Action Buttons: Creator Owner Controls vs Fan Visitor Actions */}
           {isOwnerActive ? (
-            <div className="flex items-center gap-2 w-full md:w-auto pb-1 z-10 flex-wrap">
+            <div className="creator-profile-actions flex items-center gap-2 w-full md:w-auto pb-1 z-10 flex-wrap">
               <Link
                 to="/create-post"
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.4)] text-xs uppercase tracking-wider active:scale-95 cursor-pointer"
@@ -667,7 +668,7 @@ export default function CreatorProfile() {
               </Link>
             </div>
           ) : (
-            <div className="flex items-center gap-2.5 w-full md:w-auto pb-1 z-10 flex-wrap">
+            <div className="creator-profile-actions flex items-center gap-2.5 w-full md:w-auto pb-1 z-10 flex-wrap">
               <button
                 onClick={() => setIsTipOpen(true)}
                 className="flex-1 md:flex-none flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
@@ -701,7 +702,7 @@ export default function CreatorProfile() {
 
         {/* ── Creator Owner Management Section (Boss Request: View Dashboard & Upload Content) ── */}
         {isOwnerActive ? (
-          <div className="bg-gradient-to-b from-zinc-900/90 via-[#111115]/95 to-black border border-red-500/30 rounded-3xl p-5 md:p-6 mb-8 shadow-2xl relative overflow-hidden">
+          <div className="creator-profile-surface bg-gradient-to-b from-zinc-900/90 via-[#111115]/95 to-black border border-red-500/30 rounded-3xl p-5 md:p-6 mb-8 shadow-2xl relative overflow-hidden">
             {/* Ambient accent glow */}
             <div className="absolute top-0 right-0 w-72 h-72 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -829,7 +830,7 @@ export default function CreatorProfile() {
             </div>
           </div>
         ) : !isSubscribed ? (
-          <div className="bg-black/95 border border-white/15 rounded-3xl p-5 md:p-6 mb-8 shadow-2xl">
+          <div className="creator-profile-surface bg-card border border-border rounded-3xl p-5 md:p-6 mb-8 shadow-2xl">
             {/* Limited Offer Promo Header */}
             <div className="flex items-center justify-between gap-2 mb-3">
               <span className="text-xs font-black uppercase tracking-wider text-zinc-400">
@@ -869,7 +870,7 @@ export default function CreatorProfile() {
                 setSubscribeTierName("VIP Monthly");
                 setIsSubscribeOpen(true);
               }}
-              className="w-full py-4 px-6 bg-red-600 hover:bg-red-500 text-white font-black text-sm md:text-base rounded-2xl transition-all shadow-[0_4px_25px_rgba(220,38,38,0.45)] hover:scale-[1.01] active:scale-[0.99] flex items-center justify-between cursor-pointer group"
+              className="creator-profile-primary-action creator-profile-subscribe-action w-full py-4 px-6 bg-red-600 hover:bg-red-500 text-white font-black text-sm md:text-base rounded-2xl transition-all shadow-[0_4px_25px_rgba(220,38,38,0.45)] hover:scale-[1.01] active:scale-[0.99] flex items-center justify-between cursor-pointer group"
             >
               <span className="tracking-wide uppercase">Subscribe</span>
               <span className="bg-black/30 px-3 py-1 rounded-xl text-white font-extrabold text-sm">
@@ -961,7 +962,7 @@ export default function CreatorProfile() {
         ) : null}
 
         {/* ── Main Tab Row Matching OnlyFans Screenshots (294 POSTS · 279 MEDIA) ── */}
-        <div className="flex border-b border-white/15 mb-6">
+        <div className="creator-profile-tabs flex border-b border-white/15 mb-6">
           <button
             onClick={() => setActiveTab("posts")}
             className={`flex-1 pb-3 text-center text-xs sm:text-sm font-black uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
@@ -1170,7 +1171,7 @@ export default function CreatorProfile() {
                 return (
                   <div
                     key={post.id}
-                    className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col"
+                    className="creator-profile-post-card bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col"
                   >
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -1216,7 +1217,7 @@ export default function CreatorProfile() {
                     </div>
 
                     {post.media_url && (
-                      <div className="relative w-full bg-zinc-950 flex justify-center items-center overflow-hidden min-h-[340px] max-h-[550px] border-y border-white/10">
+                      <div className="creator-profile-media relative w-full bg-zinc-950 flex justify-center items-center overflow-hidden min-h-[340px] max-h-[550px] border-y border-white/10">
                         {isPostLocked ? (
                           <>
                             {/* Blurred ambient backdrop for locked video/image */}
@@ -1330,7 +1331,7 @@ export default function CreatorProfile() {
             {isEscortDemo && (
               <>
                 {/* Free Public Post */}
-                <div className="bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                <div className="creator-profile-demo-card bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
                   <div className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <img
@@ -1381,7 +1382,7 @@ export default function CreatorProfile() {
                 </div>
 
                 {/* Locked VIP Post */}
-                <div className="bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
+                <div className="creator-profile-demo-card bg-black border border-white/10 rounded-2xl shadow-lg overflow-hidden flex flex-col">
                   <div className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <img
@@ -1472,7 +1473,7 @@ export default function CreatorProfile() {
 
         {/* ── ABOUT TAB ── */}
         {activeTab === "about" && (
-          <div className="bg-black border border-white/10 p-6 md:p-8 rounded-2xl space-y-6">
+          <div className="creator-profile-surface bg-card border border-border p-6 md:p-8 rounded-2xl space-y-6">
             <div>
               <h3 className="text-lg font-bold text-white mb-2">
                 About {creator.name.split(" ")[0]}
@@ -1500,7 +1501,7 @@ export default function CreatorProfile() {
               </div>
             )}
 
-            <div className="flex items-center gap-8 pt-4 border-t border-white/10 text-sm">
+            <div className="creator-profile-about-meta flex items-center gap-8 pt-4 border-t border-white/10 text-sm">
               <div className="flex items-center gap-2 text-zinc-300">
                 <MapPin className="w-4 h-4 text-red-500" /> {creator.location}
               </div>

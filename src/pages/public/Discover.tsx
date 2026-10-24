@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon } from 'lucide-react';
+import { Search, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
@@ -9,12 +9,14 @@ import LiveNowTray from '../../components/LiveNowTray';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { filterAndSortCreators, type CreatorDirectoryFilter } from '../../lib/creatorDirectory';
+import './Discover.css';
 
 const Discover = () => {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('trending');
+  const [activeTab, setActiveTab] = useState<CreatorDirectoryFilter>('trending');
   const [search, setSearch] = useState('');
   const [creators, setCreators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,22 +135,7 @@ const Discover = () => {
     setSubscribeModalCreator(creator);
   };
   
-  // Tab-based sorting
-  const sorted = [...creators].sort((a, b) => {
-    if (activeTab === 'new') {
-      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    }
-    if (activeTab === 'popular') {
-      const subsA = parseInt(String(a.subs).replace(/\D/g, ''), 10) || 0;
-      const subsB = parseInt(String(b.subs).replace(/\D/g, ''), 10) || 0;
-      return subsB - subsA;
-    }
-    // 'trending' (default): Creators with real feed posts first, then highest postsCount & subs
-    if (a.hasPosts !== b.hasPosts) {
-      return a.hasPosts ? -1 : 1;
-    }
-    return (b.postsCount || 0) - (a.postsCount || 0);
-  });
+  const sorted = filterAndSortCreators(creators, activeTab);
 
   const filtered = sorted.filter(c => 
     hasUploadedProfilePhoto(c.avatar) &&
@@ -161,8 +148,8 @@ const Discover = () => {
 
   return (
     <>
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="border-b border-border bg-background/95 sticky top-0 z-20 p-4">
+    <div className="discover-page min-h-screen bg-background text-foreground flex flex-col">
+      <div className="discover-header border-b border-border bg-background/95 sticky top-0 z-20 p-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex gap-4 items-center w-full md:w-auto">
             <Link to="/" className="text-xl font-bold text-primary mr-2 md:hidden">The Gents Dollhouse.</Link>
@@ -177,19 +164,24 @@ const Discover = () => {
               />
             </div>
           </div>
-          <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-            {['trending', 'popular', 'new'].map(tab => (
+          <div className="discover-filters flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar" role="group" aria-label="Filter creators">
+            {([
+              ['all', 'All Creators'],
+              ['verified', 'Verified'],
+              ['trending', 'Trending'],
+              ['popular', 'Popular'],
+              ['new', 'New'],
+            ] as const).map(([filter, label]) => (
               <button 
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2.5 rounded-full text-sm font-semibold capitalize whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-primary text-primary-foreground' : 'bg-input/30 hover:bg-input text-muted-foreground border border-transparent hover:border-border'}`}
+                key={filter}
+                type="button"
+                onClick={() => setActiveTab(filter)}
+                aria-pressed={activeTab === filter}
+                className={`discover-filter-button px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === filter ? 'bg-primary text-primary-foreground' : 'bg-input/30 hover:bg-input text-muted-foreground border border-transparent hover:border-border'}`}
               >
-                {tab}
+                {label}
               </button>
             ))}
-            <button className="px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap bg-input/30 hover:bg-input flex items-center gap-1 transition-colors border border-transparent hover:border-border ml-2">
-              <Filter className="w-4 h-4" /> Filters
-            </button>
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-full bg-input/30 hover:bg-input text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border shrink-0"
@@ -202,15 +194,17 @@ const Discover = () => {
         </div>
       </div>
       
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8 pb-24 md:pb-8 space-y-8">
+      <main className="discover-main flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8 pb-24 md:pb-8 space-y-8">
         {/* Live Broadcasts Carousel */}
         <LiveNowTray />
 
         <div>
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h1 className="text-xl sm:text-3xl font-bold capitalize">{activeTab} Creators</h1>
+            <h1 className="text-xl sm:text-3xl font-bold">
+              {activeTab === 'all' ? 'All Creators' : `${activeTab[0].toUpperCase()}${activeTab.slice(1)} Creators`}
+            </h1>
             <span className="text-xs text-muted-foreground font-semibold">
-              {filtered.length} verified creators
+              {filtered.length} {filtered.length === 1 ? 'creator' : 'creators'}
             </span>
           </div>
 
@@ -225,9 +219,12 @@ const Discover = () => {
               <p className="text-sm">Try searching with a different name or category.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+            <div className="discover-grid grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
              {filtered.map((creator, i) => {
                const isSubscribed = activeSubscribedIds.has(creator.id) || Boolean(user && (user.id === creator.id || user.email === creator.email)) || userRole === 'admin';
+               const category = creator.category?.trim().toLowerCase() === 'vip creator'
+                 ? 'Creator'
+                 : creator.category;
                return (
                 <div 
                   key={creator.id || i}
@@ -240,10 +237,10 @@ const Discover = () => {
                       handleCreatorCardClick(e as any, creator);
                     }
                   }}
-                  className="group relative flex flex-col bg-card border border-border/80 rounded-2xl overflow-hidden hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_6px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:shadow-[0_0_24px_rgba(225,29,72,0.12)] cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  className="discover-card group relative flex flex-col bg-card border border-border/80 rounded-2xl overflow-hidden hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_6px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:shadow-[0_0_24px_rgba(225,29,72,0.12)] cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/60"
                 >
                   {/* Media Cover Showcase */}
-                  <div className="relative aspect-[16/11] sm:aspect-[4/3] w-full overflow-hidden bg-muted">
+                  <div className="discover-card-cover relative aspect-[16/11] sm:aspect-[4/3] w-full overflow-hidden bg-muted">
                     <img 
                       src={creator.cover && !/\.(mp4|webm|mov|m4v)/i.test(creator.cover) ? creator.cover : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"} 
                       alt={creator.name} 
@@ -271,7 +268,7 @@ const Discover = () => {
                         <span />
                       )}
                       <span className="text-[9px] sm:text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md uppercase tracking-wider border border-white/10 shadow-sm truncate max-w-[120px]">
-                        {creator.isDemo ? 'SAMPLE PREVIEW' : creator.category}
+                        {creator.isDemo ? 'SAMPLE PREVIEW' : category}
                       </span>
                     </div>
 
@@ -292,7 +289,7 @@ const Discover = () => {
                   </div>
 
                   {/* Card Content Surface (Clean Solid Surface: No Fog, High Contrast) */}
-                  <div className="p-3 sm:p-4 pt-1 sm:pt-1.5 flex flex-col flex-1 relative bg-card">
+                  <div className="discover-card-content p-3 sm:p-4 pt-1 sm:pt-1.5 flex flex-col flex-1 relative bg-card">
                     {/* Avatar & Price Row */}
                     <div className="-mt-7 sm:-mt-8 mb-2 flex items-end justify-between relative z-10">
                       <div className="relative">
@@ -310,7 +307,7 @@ const Discover = () => {
                         )}
                       </div>
 
-                      <div className="text-right pl-2">
+                      <div className="discover-card-price text-right pl-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 block">Access</span>
                         <span className="text-xs sm:text-sm font-black text-primary leading-none block">{creator.price}</span>
                       </div>
@@ -318,7 +315,7 @@ const Discover = () => {
 
                     {/* Name & Verified Badge */}
                     <div className="min-w-0 mb-0.5">
-                      <h3 className="text-sm sm:text-base font-bold text-foreground truncate flex items-center gap-1 group-hover:text-primary transition-colors">
+                      <h3 className="discover-card-name text-sm sm:text-base font-bold text-foreground truncate flex items-center gap-1 group-hover:text-primary transition-colors">
                         <span className="truncate">{creator.name}</span>
                         {creator.isVerified && (
                           <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0 fill-blue-500/10" />
@@ -341,7 +338,7 @@ const Discover = () => {
                     </div>
 
                     {/* Stats & Link Footer */}
-                    <div className="mt-auto pt-2 sm:pt-2.5 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div className="discover-card-footer mt-auto pt-2 sm:pt-2.5 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
                       <div className="flex items-center gap-1.5 font-medium truncate">
                         <span className="font-semibold text-foreground/85">{creator.subs}</span>
                         {creator.postsCount > 0 && (

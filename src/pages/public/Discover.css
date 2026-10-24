@@ -1,0 +1,222 @@
+.discover-page {
+  min-width: 0;
+}
+
+.discover-header {
+  border-color: var(--border);
+  background-color: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.discover-filter-button {
+  flex: 0 0 auto;
+}
+
+.discover-card {
+  min-width: 0;
+  border-color: var(--border);
+  background-color: var(--card);
+  box-shadow: 0 8px 24px rgb(24 24 27 / 7%);
+}
+
+.discover-card-content {
+  min-width: 0;
+  background-color: var(--card);
+}
+
+.discover-card-name {
+  min-width: 0;
+}
+
+.discover-card-footer {
+  min-width: 0;
+  border-color: var(--border);
+  column-gap: 0.5rem;
+}
+
+.discover-card-footer > div {
+  min-width: 0;
+}
+
+.discover-card-footer > span {
+  min-width: 0;
+  text-align: right;
+}
+
+.light .discover-card {
+  border-color: hsl(240 6% 86%);
+  box-shadow: 0 8px 24px rgb(24 24 27 / 8%);
+}
+
+.light .discover-card-cover {
+  background-color: hsl(240 5% 92%);
+}
+
+.light .discover-card-content {
+  color: var(--fg);
+}
+
+.light .discover-card-footer {
+  border-color: hsl(240 6% 88%);
+}
+
+.light .discover-card-price > span:first-child {
+  color: hsl(240 4% 42%);
+}
+
+@media (max-width: 640px) {
+  .discover-header {
+    padding: 0.875rem 1rem 0.625rem;
+  }
+
+  .discover-header > div {
+    gap: 0.625rem;
+  }
+
+  .discover-header > div > div:first-child {
+    gap: 0.625rem;
+  }
+
+  .discover-header > div > div:first-child > a {
+    max-width: 38%;
+    margin-right: 0;
+    font-size: clamp(0.9rem, 3.8vw, 1.125rem);
+    line-height: 1.25;
+  }
+
+  .discover-header input {
+    min-width: 0;
+    min-height: 2.875rem;
+    border-radius: 0.875rem;
+    font-size: 0.9rem;
+  }
+
+  .discover-header > div > div:last-child {
+    gap: 0.5rem;
+    padding-bottom: 0.125rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .discover-header > div > div:last-child::-webkit-scrollbar {
+    display: none;
+  }
+
+  .discover-header > div > div:last-child > button {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+  }
+
+  .discover-filter-button {
+    min-width: 0;
+  }
+
+  .discover-main {
+    padding: 1rem 0.875rem 6rem;
+    gap: 1.5rem;
+  }
+
+  .discover-main h1 {
+    font-size: clamp(1.15rem, 5vw, 1.5rem);
+  }
+
+  .discover-grid {
+    gap: 0.75rem;
+  }
+
+  .discover-card {
+    border-radius: 1.125rem;
+    box-shadow: 0 5px 16px rgb(24 24 27 / 7%);
+  }
+
+  .discover-card-cover {
+    aspect-ratio: 1.35;
+  }
+
+  .discover-card-content {
+    padding: 0.75rem;
+    padding-top: 0.25rem;
+  }
+
+  .discover-card-content > div:first-child {
+    margin-top: -1.8rem;
+    margin-bottom: 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .discover-card-content > div:first-child img {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .discover-card-price {
+    padding-left: 0.25rem;
+    max-width: 62%;
+  }
+
+  .discover-card-price > span:last-child {
+    overflow-wrap: anywhere;
+    font-size: clamp(0.68rem, 3.1vw, 0.85rem);
+  }
+
+  .discover-card-name {
+    font-size: clamp(0.8rem, 3.7vw, 0.95rem);
+    line-height: 1.35;
+  }
+
+  .discover-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding-top: 0.625rem;
+  }
+
+  .discover-card-footer > div {
+    font-size: 0.68rem;
+  }
+
+  .discover-card-footer > span {
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+}
+
+@media (max-width: 360px) {
+  .discover-header {
+    padding-inline: 0.75rem;
+  }
+
+  .discover-header > div > div:first-child > a {
+    max-width: 34%;
+    font-size: 0.82rem;
+  }
+
+  .discover-header > div > div:last-child > button {
+    padding-inline: 0.75rem;
+  }
+
+  .discover-main {
+    padding-inline: 0.625rem;
+  }
+
+  .discover-grid {
+    gap: 0.5rem;
+  }
+
+  .discover-card-content {
+    padding-inline: 0.625rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover-page *,
+  .discover-page *::before,
+  .discover-page *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

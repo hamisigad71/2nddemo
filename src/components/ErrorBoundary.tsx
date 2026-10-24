@@ -32,42 +32,60 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center shadow-2xl">
-            <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8" />
+        <main
+          className="min-h-screen flex items-center justify-center p-5 text-white"
+          style={{
+            background:
+              "radial-gradient(ellipse at 50% 38%, rgba(48, 36, 88, 0.36), transparent 48%), #080611",
+          }}
+        >
+          <section
+            aria-labelledby="error-title"
+            className="w-full max-w-[26rem] rounded-[1.35rem] border border-[#29253f] bg-[#111020] p-6 text-center shadow-[0_24px_80px_rgba(0,0,0,0.48)] sm:p-8"
+          >
+            <div
+              aria-hidden="true"
+              className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/[0.08] text-red-400"
+            >
+              <AlertTriangle className="h-7 w-7" strokeWidth={1.8} />
             </div>
-            <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
-            <p className="text-sm text-slate-400 mb-6">
-              An unexpected error occurred while rendering this page. You can try refreshing or returning to the home page.
+            <h1 id="error-title" className="mb-2 text-[1.4rem] font-semibold tracking-[-0.025em]">
+              We couldn&apos;t load this page
+            </h1>
+            <p className="mx-auto mb-6 max-w-sm text-sm leading-6 text-slate-400">
+              Refresh to try again, or go home and continue browsing.
             </p>
             {this.state.error?.message && (
-              <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-3 text-xs text-red-400 font-mono text-left mb-6 overflow-x-auto max-h-28">
-                {this.state.error.message}
+              <div className="mb-6 overflow-hidden rounded-xl border border-[#29263d] bg-[#0b0a15] text-left">
+                <div className="border-b border-[#29263d] px-3.5 py-2 text-xs font-medium text-slate-400">
+                  Technical details
+                </div>
+                <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all px-3.5 py-3 font-mono text-[11px] leading-[1.55] text-red-300">
+                  {this.state.error.message}
+                </pre>
               </div>
             )}
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               <button
                 onClick={this.handleReset}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm transition-all"
+                className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-500 px-3.5 text-sm font-semibold text-slate-950 shadow-[0_4px_18px_rgba(245,158,11,0.16)] transition-colors hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111020] motion-reduce:transition-none"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw aria-hidden="true" className="h-4 w-4 shrink-0" />
                 Reload Page
               </button>
               <a
                 href="/"
-                className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition-all"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.06] px-3.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111020] motion-reduce:transition-none"
               >
-                <Home className="w-4 h-4" />
+                <Home aria-hidden="true" className="h-4 w-4 shrink-0" />
                 Home
               </a>
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       );
     }
 
     return this.props.children;
   }
 }
-
