@@ -7,6 +7,7 @@ import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_N
 import { isKycVerified, isCreatorVerified } from './verification';
 import {
   buildCreatorSubscriptionMessage,
+  buildTransactionPaymentNotification,
   getPaymentMethodLabel,
 } from './paymentNotifications';
 
@@ -4361,6 +4362,19 @@ export interface NotificationItem {
   action_url?: string;
   is_read: boolean;
   created_at: string;
+  payment_details?: {
+    gross_amount: number;
+    platform_fee: number;
+    net_amount: number;
+    payer_name: string;
+    payer_avatar?: string;
+    recipient_name: string;
+    recipient_avatar?: string;
+    status: string;
+    payment_method: string;
+    reference?: string;
+    transaction_id?: string;
+  };
 }
 
 export const createNotification = async (
@@ -4593,6 +4607,57 @@ export const getAdminNotifications = async (): Promise<NotificationItem[]> => {
     console.warn('Error fetching remote admin notifications:', err);
   }
 
+  // 2. Fetch live transactions to guarantee all payments done or received appear in admin notifications
+  let txItems: NotificationItem[] = [];
+  try {
+    const { data: txs } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(60);
+
+    if (txs && txs.length > 0) {
+      const userIds = Array.from(new Set(
+        txs.flatMap((t: any) => [t.from_user_id, t.to_creator_id]).filter(Boolean)
+      ));
+
+      const userMap = new Map<string, any>();
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('uid, name, avatar')
+          .in('uid', userIds);
+        (users || []).forEach(u => userMap.set(u.uid, u));
+      }
+
+      // Check which transaction notification IDs have been marked read locally
+      const readTxIds = new Set<string>();
+      try {
+        const storedRead = localStorage.getItem('tgd_admin_read_tx_notifs');
+        if (storedRead) {
+          JSON.parse(storedRead).forEach((id: string) => readTxIds.add(id));
+        }
+      } catch {}
+
+      txItems = txs.map((t: any) => {
+        const fromUser = userMap.get(t.from_user_id);
+        const toCreator = userMap.get(t.to_creator_id);
+        const payerName = fromUser?.name || 'Subscriber';
+        const creatorName = toCreator?.name || 'Creator';
+
+        return buildTransactionPaymentNotification(t, {
+          payerName,
+          creatorName,
+          payerAvatar: fromUser?.avatar,
+          creatorAvatar: toCreator?.avatar,
+          isRead: readTxIds.has(`tx-${t.id}`),
+        });
+      });
+    }
+  } catch (txErr) {
+    console.warn('Error building transaction notifications for admin:', txErr);
+  }
+
   let localItems: NotificationItem[] = [];
   try {
     const raw = localStorage.getItem('tgd_admin_notifications');
@@ -4601,7 +4666,7 @@ export const getAdminNotifications = async (): Promise<NotificationItem[]> => {
 
   const seen = new Set<string>();
   const merged: NotificationItem[] = [];
-  for (const item of [...localItems, ...remoteItems]) {
+  for (const item of [...txItems, ...localItems, ...remoteItems]) {
     const key = item.id || `${item.title}-${item.message}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -4613,9 +4678,21 @@ export const getAdminNotifications = async (): Promise<NotificationItem[]> => {
 };
 
 export const markAdminNotificationAsRead = async (id: string) => {
-  try {
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-  } catch {}
+  if (id.startsWith('tx-')) {
+    try {
+      const stored = localStorage.getItem('tgd_admin_read_tx_notifs');
+      const list: string[] = stored ? JSON.parse(stored) : [];
+      if (!list.includes(id)) {
+        list.push(id);
+        localStorage.setItem('tgd_admin_read_tx_notifs', JSON.stringify(list));
+      }
+    } catch {}
+  } else {
+    try {
+      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    } catch {}
+  }
+
   try {
     const raw = localStorage.getItem('tgd_admin_notifications');
     if (raw) {
@@ -4630,6 +4707,23 @@ export const markAdminNotificationAsRead = async (id: string) => {
 };
 
 export const markAllAdminNotificationsAsRead = async () => {
+  try {
+    // 1. Mark remote admin notifications as read
+    const { data: adminUsers } = await supabase.from('users').select('uid').eq('role', 'admin');
+    const adminUids = (adminUsers || []).map((a: any) => a.uid).filter(Boolean);
+    const targetUids = Array.from(new Set([...adminUids, 'admin']));
+    await supabase.from('notifications').update({ is_read: true }).in('user_id', targetUids);
+  } catch {}
+
+  try {
+    // 2. Mark all transaction payment notifications as read locally
+    const { data: txs } = await supabase.from('transactions').select('id');
+    if (txs) {
+      const allTxIds = txs.map((t: any) => `tx-${t.id}`);
+      localStorage.setItem('tgd_admin_read_tx_notifs', JSON.stringify(allTxIds));
+    }
+  } catch {}
+
   try {
     const raw = localStorage.getItem('tgd_admin_notifications');
     if (raw) {

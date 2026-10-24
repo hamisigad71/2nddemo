@@ -35,6 +35,20 @@ export const isCreatorVerified = (
   kycStatus?: unknown
 ): boolean => isKycVerified(kycStatus);
 
+export const hasPrivateKycEvidence = (
+  userId: string,
+  idDocumentPath?: string | null,
+  selfiePath?: string | null,
+): boolean => {
+  if (!userId) return false;
+  const requiredPrefix = `${userId}/`;
+  return [idDocumentPath, selfiePath].every((path) =>
+    typeof path === 'string' &&
+    path.startsWith(requiredPrefix) &&
+    !/^(blob:|data:|https?:\/\/)/i.test(path)
+  );
+};
+
 export const hasCompleteKycSubmission = (submission: KycSubmission): boolean =>
   Boolean(
     submission.legalName.trim() &&
@@ -116,4 +130,3 @@ export const isCreatorProfileComplete = (
 
   return Boolean(hasValidAvatar && hasValidCover && hasValidKyc);
 };
-

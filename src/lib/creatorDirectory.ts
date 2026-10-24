@@ -8,6 +8,12 @@ export type CreatorDirectoryCandidate = {
 
 export type CreatorDirectoryFilter = 'all' | 'verified' | 'trending' | 'popular' | 'new';
 
+export const shouldIncludeCreatorInDiscover = (
+  isExplicitlyFeatured: boolean,
+  hasUploadedAvatar: boolean,
+  hasUploadedCover: boolean,
+): boolean => isExplicitlyFeatured || (hasUploadedAvatar && hasUploadedCover);
+
 type FilterableCreator = {
   isVerified?: boolean;
   hasPosts?: boolean;

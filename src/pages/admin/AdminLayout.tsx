@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserCheck, DollarSign,
   BarChart3, Settings, Menu, LogOut, Bell, ChevronRight,
   Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart, Megaphone, Lock,
-  CheckCheck, Radio, Video, UserPlus, X
+  CheckCheck, Radio, Video, UserPlus, X, Receipt, ArrowRight, ArrowUpRight, CheckCircle2, CreditCard
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -50,6 +50,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0);
   const [pendingAppsCount, setPendingAppsCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifTab, setNotifTab] = useState<'all' | 'payments'>('all');
   const [adminNotifications, setAdminNotifications] = useState<NotificationItem[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -91,6 +92,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
     window.addEventListener('payouts_updated', handlePayoutUpdate);
     window.addEventListener('wallet_updated', handlePayoutUpdate);
+    window.addEventListener('transactions_updated', handleNotifUpdate);
     window.addEventListener('applications_updated', handleAppsUpdate);
     window.addEventListener('creators_updated', handleAppsUpdate);
     window.addEventListener('admin_notifications_updated', handleNotifUpdate);
@@ -102,16 +104,25 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'transactions' },
         (payload: any) => {
-          if (payload.new?.type === 'payout') {
-            toast.info(`New Creator Withdrawal Request: KES ${Number(payload.new.amount || 0).toLocaleString()}!`);
+          const isPayout = payload.new?.type === 'payout';
+          const gross = Number(payload.new?.gross_amount || payload.new?.amount || 0);
+          const fee = Number(payload.new?.platform_fee || Math.round(gross * 0.3));
+          if (isPayout) {
+            toast.info(`New Creator Withdrawal Request: KES ${gross.toLocaleString()}!`);
             checkPendingPayouts();
+          } else {
+            toast.success(`💳 Payment Received: KES ${gross.toLocaleString()} (${payload.new?.type || 'payment'}). Platform fee: KES ${fee.toLocaleString()}`);
           }
+          loadNotifications();
         }
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'transactions' },
-        () => checkPendingPayouts()
+        () => {
+          checkPendingPayouts();
+          loadNotifications();
+        }
       )
       .on(
         'postgres_changes',
@@ -128,6 +139,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     return () => {
       window.removeEventListener('payouts_updated', handlePayoutUpdate);
       window.removeEventListener('wallet_updated', handlePayoutUpdate);
+      window.removeEventListener('transactions_updated', handleNotifUpdate);
       window.removeEventListener('applications_updated', handleAppsUpdate);
       window.removeEventListener('creators_updated', handleAppsUpdate);
       window.removeEventListener('admin_notifications_updated', handleNotifUpdate);
@@ -136,8 +148,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
+  const isPaymentNotif = (n: NotificationItem) =>
+    Boolean(n.payment_details) ||
+    n.id.startsWith('tx-') ||
+    n.badge?.toLowerCase().includes('payment') ||
+    n.type === 'subscription' ||
+    n.type === 'tip' ||
+    n.type === 'ppv';
+
+  const paymentNotifs = adminNotifications.filter(isPaymentNotif);
+  const paymentNotifsCount = paymentNotifs.length;
+  const unreadPaymentsCount = paymentNotifs.filter(n => !n.is_read).length;
   const unreadNotifsCount = adminNotifications.filter(n => !n.is_read).length;
   const totalUnreadBadge = unreadNotifsCount + pendingPayoutsCount;
+  const displayedNotifs = notifTab === 'payments' ? paymentNotifs : adminNotifications;
 
   const handleLogout = async () => {
     await logout();
@@ -264,7 +288,29 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Live Payments Quick Trigger */}
+            <button
+              onClick={() => {
+                setNotifTab('payments');
+                setShowNotifications(true);
+              }}
+              title="View platform payments feed"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-400 border border-emerald-500/30 text-xs font-black transition-all active:scale-95 shadow-sm group cursor-pointer"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Live Payments</span>
+              {unreadPaymentsCount > 0 ? (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500 text-black text-[10px] font-black">
+                  {unreadPaymentsCount}
+                </span>
+              ) : paymentNotifsCount > 0 ? (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                  {paymentNotifsCount}
+                </span>
+              ) : null}
+            </button>
+
             {/* Notification Center */}
             <div className="relative">
               <button
@@ -286,7 +332,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className={`${adminNotificationPopoverClassName} bg-[#0c0d12] border border-zinc-800 rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[500px] animate-in fade-in zoom-in-95 duration-150`}>
+                  <div className={`${adminNotificationPopoverClassName} bg-[#0c0d12] border border-zinc-800 rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-150`}>
                     {/* Header */}
                     <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60">
                       <div className="flex items-center gap-2">
@@ -319,8 +365,49 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                       </div>
                     </div>
 
-                    {/* Pending Payouts Quick Alert */}
-                    {pendingPayoutsCount > 0 && (
+                    {/* Filter Tabs: All Alerts vs Payments Only */}
+                    <div className="p-2 border-b border-zinc-800/80 bg-zinc-950/40 flex items-center gap-2">
+                      <button
+                        onClick={() => setNotifTab('all')}
+                        className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          notifTab === 'all'
+                            ? 'bg-zinc-800 text-white shadow-sm'
+                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                        }`}
+                      >
+                        <Bell className="w-3.5 h-3.5" />
+                        <span>All Alerts</span>
+                        {adminNotifications.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-700 text-zinc-300">
+                            {adminNotifications.length}
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => setNotifTab('payments')}
+                        className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          notifTab === 'payments'
+                            ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-950/40'
+                            : 'text-zinc-400 hover:text-emerald-400 hover:bg-emerald-950/30'
+                        }`}
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>Payments Only</span>
+                        {paymentNotifsCount > 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                            notifTab === 'payments'
+                              ? 'bg-emerald-800 text-emerald-100'
+                              : 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
+                          }`}>
+                            {paymentNotifsCount}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Pending Payouts Quick Alert (when on All Alerts tab) */}
+                    {notifTab === 'all' && pendingPayoutsCount > 0 && (
                       <Link
                         to="/admin/payouts"
                         onClick={() => setShowNotifications(false)}
@@ -342,17 +429,131 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     )}
 
                     {/* Notification Stream */}
-                    <div className="overflow-y-auto divide-y divide-zinc-800/60 custom-scrollbar max-h-80">
-                      {adminNotifications.length === 0 ? (
+                    <div className="overflow-y-auto divide-y divide-zinc-800/60 custom-scrollbar max-h-84">
+                      {displayedNotifs.length === 0 ? (
                         <div className="py-12 px-6 text-center text-zinc-500">
-                          <Bell className="w-8 h-8 mx-auto mb-2.5 opacity-30 text-zinc-400" />
-                          <div className="text-xs font-bold text-zinc-300">All caught up!</div>
-                          <div className="text-[11px] mt-1 text-zinc-500">
-                            You'll receive live alerts when new creators join, post videos, or start broadcasting.
-                          </div>
+                          {notifTab === 'payments' ? (
+                            <>
+                              <Receipt className="w-9 h-9 mx-auto mb-2.5 opacity-30 text-emerald-400" />
+                              <div className="text-xs font-bold text-zinc-300">No Payment Records Yet</div>
+                              <div className="text-[11px] mt-1 text-zinc-500 max-w-xs mx-auto">
+                                All subscriptions, tips, and unlock payments made on the platform will appear here in real-time.
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="w-8 h-8 mx-auto mb-2.5 opacity-30 text-zinc-400" />
+                              <div className="text-xs font-bold text-zinc-300">All caught up!</div>
+                              <div className="text-[11px] mt-1 text-zinc-500">
+                                You'll receive live alerts when new creators join, post videos, or start broadcasting.
+                              </div>
+                            </>
+                          )}
                         </div>
                       ) : (
-                        adminNotifications.map((notif) => {
+                        displayedNotifs.map((notif) => {
+                          const isPayment = isPaymentNotif(notif);
+
+                          if (isPayment) {
+                            const details = notif.payment_details;
+                            const gross = Number(details?.gross_amount ?? 0);
+                            const fee = Number(details?.platform_fee ?? Math.round(gross * 0.3));
+                            const creatorShare = Number(details?.net_amount ?? Math.max(0, gross - fee));
+                            const currency = details?.currency || 'KES';
+                            const method = details?.payment_method || 'M-PESA';
+                            const payerName = details?.payer_name || 'Fan Member';
+                            const creatorName = details?.creator_name || 'Creator';
+                            const status = details?.status || 'completed';
+
+                            return (
+                              <div
+                                key={notif.id}
+                                onClick={async () => {
+                                  await markAdminNotificationAsRead(notif.id);
+                                  setAdminNotifications(prev =>
+                                    prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n)
+                                  );
+                                  setShowNotifications(false);
+                                  navigate(notif.action_url || '/admin/transactions');
+                                }}
+                                className={`p-3.5 hover:bg-emerald-950/30 transition-all cursor-pointer relative border-l-2 ${
+                                  !notif.is_read
+                                    ? 'bg-emerald-950/20 border-emerald-500'
+                                    : 'border-transparent opacity-90'
+                                }`}
+                              >
+                                {!notif.is_read && (
+                                  <span className="absolute top-3.5 right-3 w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80 animate-pulse" />
+                                )}
+
+                                {/* Top Row: Amount & Badges */}
+                                <div className="flex items-center justify-between gap-2 mb-2 pr-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                                      <Receipt className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <div className="text-xs font-black text-emerald-400 tracking-tight flex items-center gap-1.5">
+                                        <span>+{currency} {gross.toLocaleString()}</span>
+                                        <span className="text-[10px] font-bold text-zinc-400 capitalize">
+                                          ({details?.type || notif.type || 'payment'})
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60">
+                                      {method}
+                                    </span>
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                      status === 'completed'
+                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                    }`}>
+                                      {status}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Flow Row: Payer -> Creator */}
+                                <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2 mb-2 flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-1.5 min-w-0 max-w-[42%]">
+                                    {details?.payer_avatar ? (
+                                      <img src={details.payer_avatar} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                    ) : (
+                                      <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                                    )}
+                                    <span className="text-[11px] font-bold text-zinc-200 truncate">{payerName}</span>
+                                  </div>
+
+                                  <ArrowRight className="w-3 h-3 text-zinc-600 shrink-0 mx-1" />
+
+                                  <div className="flex items-center gap-1.5 min-w-0 max-w-[42%] justify-end text-right">
+                                    <span className="text-[11px] font-bold text-red-400 truncate">{creatorName}</span>
+                                    {details?.creator_avatar ? (
+                                      <img src={details.creator_avatar} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                    ) : (
+                                      <UserPlus className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Financial Split Row */}
+                                <div className="flex items-center justify-between text-[10px] text-zinc-400 px-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-emerald-400/90 font-bold">Platform: +{currency} {fee.toLocaleString()}</span>
+                                    <span className="text-zinc-600">•</span>
+                                    <span className="text-zinc-300">Creator: {currency} {creatorShare.toLocaleString()}</span>
+                                  </div>
+                                  <span className="text-[9px] text-zinc-500">
+                                    {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+
                           const isLive = notif.badge?.toLowerCase().includes('live');
                           const isNewCreator = notif.badge?.toLowerCase().includes('creator');
                           const isVideo = notif.badge?.toLowerCase().includes('video');
@@ -420,18 +621,18 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     {/* Footer */}
                     <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/80 flex items-center justify-between text-[11px]">
                       <Link
+                        to="/admin/transactions"
+                        onClick={() => setShowNotifications(false)}
+                        className="text-emerald-400 hover:text-emerald-300 transition-colors font-bold flex items-center gap-1"
+                      >
+                        <Receipt className="w-3.5 h-3.5" /> All Payments &rarr;
+                      </Link>
+                      <Link
                         to="/admin/creators"
                         onClick={() => setShowNotifications(false)}
                         className="text-zinc-400 hover:text-white transition-colors font-bold"
                       >
                         Manage Creators &rarr;
-                      </Link>
-                      <Link
-                        to="/admin/content"
-                        onClick={() => setShowNotifications(false)}
-                        className="text-red-500 hover:text-red-400 transition-colors font-bold"
-                      >
-                        Content Feed &rarr;
                       </Link>
                     </div>
                   </div>

@@ -8,8 +8,10 @@ import {
   buildAdminKycSubmissionNotification,
   canApproveKyc,
   resolveKycApprovalPayload,
-  isCreatorProfileComplete
+  isCreatorProfileComplete,
+  hasPrivateKycEvidence
 } from '../src/lib/verification';
+import { shouldIncludeCreatorInDiscover } from '../src/lib/creatorDirectory';
 
 describe('creator verification eligibility and admin approval flow', () => {
   it('grants the verified badge only after KYC approval', () => {
@@ -33,6 +35,22 @@ describe('creator verification eligibility and admin approval flow', () => {
     assert.equal(hasCompleteKycSubmission(complete), true);
     assert.equal(hasCompleteKycSubmission({ ...complete, idDocument: null }), false);
     assert.equal(hasCompleteKycSubmission({ ...complete, legalName: ' ' }), false);
+  });
+
+  it('accepts only both KYC documents stored under the creator private folder', () => {
+    assert.equal(
+      hasPrivateKycEvidence('creator-1', 'creator-1/123-id.jpg', 'creator-1/123-selfie.jpg'),
+      true
+    );
+    assert.equal(hasPrivateKycEvidence('creator-1', 'creator-1/id.jpg', null), false);
+    assert.equal(hasPrivateKycEvidence('creator-1', 'other-user/id.jpg', 'creator-1/selfie.jpg'), false);
+    assert.equal(hasPrivateKycEvidence('creator-1', 'blob:preview', 'creator-1/selfie.jpg'), false);
+  });
+
+  it('allows only explicitly selected creators to appear without both profile images', () => {
+    assert.equal(shouldIncludeCreatorInDiscover(true, false, false), true);
+    assert.equal(shouldIncludeCreatorInDiscover(false, true, true), true);
+    assert.equal(shouldIncludeCreatorInDiscover(false, true, false), false);
   });
 
   it('dispatches an admin review notification when a creator submits verification details', () => {
