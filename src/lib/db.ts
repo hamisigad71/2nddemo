@@ -3,8 +3,9 @@ import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
 import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from './avatar';
 import { fetchAllPages } from './pagination';
-import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_NAMES } from './creatorDirectory';
-import { isKycVerified, isCreatorVerified } from './verification';
+import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_NAMES, shouldIncludeCreatorInDiscover } from './creatorDirectory';
+import { hasPrivateKycEvidence, isKycVerified, isCreatorVerified } from './verification';
+import { calculateAge, getPublicGenderLabel } from './profileDemographics';
 import {
   buildCreatorSubscriptionMessage,
   buildTransactionPaymentNotification,
@@ -41,6 +42,8 @@ export const createUserProfile = async (uid: string, data: any) => {
       ...(data.name ? { name: data.name } : {}),
       ...(data.avatar ? { avatar: data.avatar } : {}),
       ...(data.phone ? { phone: data.phone } : {}),
+      ...(data.gender !== undefined ? { gender: data.gender } : {}),
+      ...(data.gender_description !== undefined ? { gender_description: data.gender_description } : {}),
       ...(data.legal_name ? { legal_name: data.legal_name } : {}),
       ...(data.national_id_number ? { national_id_number: data.national_id_number } : {}),
       ...(data.dob ? { dob: data.dob } : {}),
@@ -50,6 +53,7 @@ export const createUserProfile = async (uid: string, data: any) => {
     };
     if (Object.keys(userUpdates).length > 0) {
       const { error: updErr } = await supabase.from('users').update(userUpdates).eq('uid', uid);
+      if (updErr && (data.gender !== undefined || data.gender_description !== undefined)) throw updErr;
       if (updErr && (updErr.message?.includes('column') || updErr.code === '42703' || updErr.code === 'PGRST204')) {
         const coreUpdates: Record<string, any> = {
           ...(data.name ? { name: data.name } : {}),
@@ -64,9 +68,12 @@ export const createUserProfile = async (uid: string, data: any) => {
 
     if (data.role === 'creator') {
       try {
-        await supabase.from('creator_profiles').upsert({
+        const { error } = await supabase.from('creator_profiles').upsert({
           user_id: uid,
           display_name: data.name,
+          ...(data.gender !== undefined ? { gender: data.gender } : {}),
+          ...(data.gender_description !== undefined ? { gender_description: data.gender_description } : {}),
+          ...(data.dob !== undefined && data.dob !== null ? { dob: data.dob } : {}),
           avatar: data.avatar || initialAvatar,
           avatar_url: data.avatar || initialAvatar,
           bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
@@ -75,7 +82,9 @@ export const createUserProfile = async (uid: string, data: any) => {
           cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
           tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
         }, { onConflict: 'user_id' });
-      } catch {
+        if (error && (data.gender !== undefined || data.gender_description !== undefined)) throw error;
+      } catch (error) {
+        if (data.gender !== undefined || data.gender_description !== undefined) throw error;
         // non-fatal if table not configured
       }
 
@@ -117,6 +126,8 @@ export const createUserProfile = async (uid: string, data: any) => {
     avatar: initialAvatar,
     phone: data.phone,
     role: data.role || 'subscriber',
+    ...(data.gender !== undefined ? { gender: data.gender } : {}),
+    ...(data.gender_description !== undefined ? { gender_description: data.gender_description } : {}),
     ...(data.legal_name ? { legal_name: data.legal_name } : {}),
     ...(data.national_id_number ? { national_id_number: data.national_id_number } : {}),
     ...(data.dob ? { dob: data.dob } : {}),
@@ -127,6 +138,9 @@ export const createUserProfile = async (uid: string, data: any) => {
 
   await supabase.from('users').insert(insertPayload).then(async ({ error }) => {
     if (error && (error.message?.includes('column') || error.code === '42703' || error.code === 'PGRST204')) {
+      if (data.gender !== undefined || data.gender_description !== undefined) {
+        throw new Error('Profile demographics could not be saved. Apply the profile demographics database migration and try again.');
+      }
       await supabase.from('users').insert({
         uid,
         name: data.name,
@@ -136,15 +150,19 @@ export const createUserProfile = async (uid: string, data: any) => {
         role: data.role || 'subscriber',
       });
     } else if (error && error.code !== '23505') {
+      if (data.gender !== undefined || data.gender_description !== undefined) throw error;
       console.error('createUserProfile: users insert failed:', error.message);
     }
   });
 
   if (data.role === 'creator') {
     try {
-      await supabase.from('creator_profiles').upsert({
+      const { error } = await supabase.from('creator_profiles').upsert({
         user_id: uid,
         display_name: data.name,
+        ...(data.gender !== undefined ? { gender: data.gender } : {}),
+        ...(data.gender_description !== undefined ? { gender_description: data.gender_description } : {}),
+        ...(data.dob !== undefined && data.dob !== null ? { dob: data.dob } : {}),
         avatar: data.avatar || initialAvatar,
         avatar_url: data.avatar || initialAvatar,
         bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
@@ -153,7 +171,9 @@ export const createUserProfile = async (uid: string, data: any) => {
         cover_image: data.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80',
         tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
       }, { onConflict: 'user_id' });
-    } catch {
+      if (error && (data.gender !== undefined || data.gender_description !== undefined)) throw error;
+    } catch (error) {
+      if (data.gender !== undefined || data.gender_description !== undefined) throw error;
       // non-fatal
     }
 
@@ -362,6 +382,46 @@ export const updateUserProfile = async (uid: string, data: any) => {
     }
   } catch (err: any) {
     console.warn('updateUserProfile exception:', err?.message || err);
+  }
+};
+
+export const updateProfileDemographics = async (
+  uid: string,
+  data: { dob?: string; gender?: string | null; gender_description?: string | null },
+  creatorName?: string,
+) => {
+  if (!uid) throw new Error('A signed-in account is required to save profile details.');
+  if (!Object.keys(data).length) throw new Error('At least one profile detail is required.');
+
+  const { data: updatedUser, error: userError } = await supabase
+    .from('users')
+    .update(data)
+    .eq('uid', uid)
+    .select('uid')
+    .maybeSingle();
+
+  if (userError) {
+    if (userError.message?.includes('column') || userError.code === '42703' || userError.code === 'PGRST204') {
+      throw new Error('Profile details could not be saved. Apply the profile demographics database migration and try again.');
+    }
+    throw userError;
+  }
+  if (!updatedUser) throw new Error('Your account profile was not found. Please sign in again and retry.');
+
+  if (creatorName !== undefined) {
+    const { error: creatorError } = await supabase
+      .from('creator_profiles')
+      .upsert({
+        user_id: uid,
+        display_name: creatorName,
+        ...data,
+      }, { onConflict: 'user_id' });
+    if (creatorError) {
+      if (creatorError.message?.includes('column') || creatorError.code === '42703' || creatorError.code === 'PGRST204') {
+        throw new Error('Creator details could not be saved. Apply the profile demographics database migration and try again.');
+      }
+      throw creatorError;
+    }
   }
 };
 
@@ -2178,6 +2238,12 @@ export const getCreatorProfile = async (id: string) => {
       || creatorMeta?.bio
       || userRow?.bio
       || 'Welcome to my official creator page! Exclusive posts, videos, and private chats.';
+    const profileDob = userRow?.dob || creatorMeta?.dob || localCreator?.dob;
+    const profileAge = profileDob ? calculateAge(String(profileDob)) : null;
+    const publicGender = getPublicGenderLabel(
+      userRow?.gender || creatorMeta?.gender || localCreator?.gender,
+      userRow?.gender_description || creatorMeta?.gender_description || localCreator?.gender_description,
+    );
 
     if (userRow || localCreator || creatorMeta || authMeta || appMeta || storageAssets.avatar || storageAssets.cover || hasPosts) {
       const isSuspended = userRow?.status === 'suspended' || 
@@ -2201,7 +2267,8 @@ export const getCreatorProfile = async (id: string) => {
         ),
         isOnline: isSuspended ? false : true,
         price_hr: localCreator?.monthly_price || creatorMeta?.monthly_price || 1000,
-        age: localCreator?.age || creatorMeta?.age || 24,
+        age: profileAge ?? localCreator?.age ?? creatorMeta?.age ?? null,
+        gender: publicGender,
         services: localCreator?.tags || creatorMeta?.tags || ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
         gallery: localCreator?.gallery || creatorMeta?.gallery || [],
         promo_discount: localCreator?.promo_discount ?? creatorMeta?.promo_discount ?? 50,
@@ -2229,7 +2296,8 @@ export const getCreatorProfile = async (id: string) => {
       isVerified: isCreatorVerified(id, localCreator?.isVerified),
       isOnline: true,
       price_hr: localCreator.monthly_price || 1000,
-      age: localCreator.age || 24,
+      age: localCreator.dob ? calculateAge(String(localCreator.dob)) : localCreator.age || null,
+      gender: getPublicGenderLabel(localCreator.gender, localCreator.gender_description),
       services: localCreator.tags || ['VIP Content', 'Exclusive Photos'],
       gallery: [],
       promo_discount: 50,
@@ -2427,7 +2495,7 @@ export const getDiscoverCreators = async () => {
     try {
       const { data: usersData } = await supabase
         .from('users')
-        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status')
+        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required')
         .in('role', ['creator', 'pending_creator', 'escort']);
       if (usersData) creatorUsers = [...usersData];
     } catch {}
@@ -2439,7 +2507,7 @@ export const getDiscoverCreators = async () => {
       try {
         const { data: postingUsers } = await supabase
           .from('users')
-          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status')
+          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required')
           .in('uid', postingUidsToFetch);
         if (postingUsers) {
           postingUsers.forEach(u => {
@@ -2484,7 +2552,7 @@ export const getDiscoverCreators = async () => {
           try {
             const { data: userRows } = await supabase
               .from('users')
-              .select('uid, name, email, avatar, role, phone, created_at, cover_image, status')
+              .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required, gender, gender_description, dob')
               .in('uid', missingUserIds);
             (userRows || []).forEach(ur => fetchedUsersMap.set(ur.uid, ur));
           } catch {}
@@ -2507,6 +2575,9 @@ export const getDiscoverCreators = async () => {
               avatar: matchedUser?.avatar || p.avatar_url || p.avatar || null,
               cover_image: matchedUser?.cover_image || p.cover_image || null,
               role: matchedUser?.role || 'creator',
+              kyc_status: matchedUser?.kyc_status || p.kyc_status,
+              is_verified: matchedUser?.is_verified || p.is_verified,
+              payout_kyc_required: matchedUser?.payout_kyc_required || false,
               created_at: p.created_at || matchedUser?.created_at || new Date().toISOString()
             });
             creatorUserIds.add(p.user_id);
@@ -2653,6 +2724,7 @@ export const getDiscoverCreators = async () => {
 
       const rawCover = pCover || uCover || localCover || storageCover || postCover;
       const cover = rawCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
+      const isDiscoverFeatured = Boolean(u.payout_kyc_required);
 
       // Self-heal: persist resolved cover back to DB in background if not yet set
       if (rawCover && hasUploadedCoverPhoto(rawCover)) {
@@ -2667,6 +2739,12 @@ export const getDiscoverCreators = async () => {
       const realSubs = creatorSubCounts.has(u.uid)
         ? (creatorSubCounts.get(u.uid) || 0)
         : (activeSubsQueriedSuccessfully ? 0 : (p?.total_subscribers || 0));
+      const profileDob = u.dob || p?.dob || local?.dob;
+      const profileAge = profileDob ? calculateAge(String(profileDob)) : null;
+      const publicGender = getPublicGenderLabel(
+        u.gender || p?.gender || local?.gender,
+        u.gender_description || p?.gender_description || local?.gender_description,
+      );
 
       return {
         id: u.uid,
@@ -2674,6 +2752,8 @@ export const getDiscoverCreators = async () => {
         handle: `@${creatorName.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
         category: p?.niche || (p?.tags && p.tags[0]) || (hasPosts ? 'Active Feed Creator' : 'VIP Creator'),
         location: p?.location || 'Nairobi, Kenya',
+        age: profileAge ?? local?.age ?? p?.age ?? null,
+        gender: publicGender,
         subs: `${realSubs} ${realSubs === 1 ? 'subscriber' : 'subscribers'}`,
         subscribersCount: realSubs,
         price: `KES ${(p?.monthly_price || 1000).toLocaleString()}/mo`,
@@ -2685,6 +2765,7 @@ export const getDiscoverCreators = async () => {
           (u as any).is_verified ?? p?.is_verified ?? (local as any)?.is_verified,
           (u as any).kyc_status || p?.kyc_status || (local as any)?.kyc_status
         ),
+        isDiscoverFeatured,
         postsCount: postStats?.count || 0,
         createdAt: postStats?.latestDate || u.created_at || new Date().toISOString()
       };
@@ -2694,7 +2775,7 @@ export const getDiscoverCreators = async () => {
     const completedRealCreators = realCreators.filter(c => {
       const hasPhoto = hasUploadedProfilePhoto(c.avatar);
       const hasCover = hasUploadedCoverPhoto(c.cover);
-      return hasPhoto && hasCover;
+      return shouldIncludeCreatorInDiscover(c.isDiscoverFeatured, hasPhoto, hasCover);
     });
 
     // Sort: creators with active posts come first
@@ -3732,21 +3813,33 @@ export const requestCreatorPayout = async (
 
   let creatorName = 'Creator';
   let creatorEmail = '';
-  try {
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('name, email, phone, status, role')
-      .eq('uid', creatorId)
-      .maybeSingle();
+  let requiresPayoutKyc = false;
+  const { data: userRow, error: userProfileError } = await supabase
+    .from('users')
+    .select('name, email, phone, status, role, payout_kyc_required, kyc_id_url, kyc_selfie_url')
+    .eq('uid', creatorId)
+    .maybeSingle();
 
-    if (userRow?.status === 'suspended' || userRow?.status === 'banned' || userRow?.role === 'suspended_creator') {
-      throw new Error('Withdrawals and payouts are disabled because this creator account is suspended. Please contact platform administration.');
-    }
-    if (userRow?.name) creatorName = userRow.name;
-    if (userRow?.email) creatorEmail = userRow.email;
-  } catch (checkErr: any) {
-    if (checkErr?.message?.includes('suspended')) throw checkErr;
+  if (userProfileError) {
+    throw new Error(`Could not verify payout eligibility: ${userProfileError.message}`);
   }
+  if (!userRow) {
+    throw new Error('Creator account not found. Cannot request payout.');
+  }
+
+  requiresPayoutKyc = Boolean(userRow.payout_kyc_required);
+  if (
+    requiresPayoutKyc &&
+    !hasPrivateKycEvidence(creatorId, userRow.kyc_id_url, userRow.kyc_selfie_url)
+  ) {
+    throw new Error('Upload your National ID and selfie with ID before requesting a withdrawal.');
+  }
+
+  if (userRow.status === 'suspended' || userRow.status === 'banned' || userRow.role === 'suspended_creator') {
+    throw new Error('Withdrawals and payouts are disabled because this creator account is suspended. Please contact platform administration.');
+  }
+  if (userRow.name) creatorName = userRow.name;
+  if (userRow.email) creatorEmail = userRow.email;
 
   let payoutTx: any = {
     id: `payout_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -3781,9 +3874,13 @@ export const requestCreatorPayout = async (
       payoutTx = data;
     }
     if (error) {
+      if (requiresPayoutKyc) {
+        throw new Error(error.message || 'Your ID and selfie must be uploaded before withdrawal.');
+      }
       console.warn('Supabase payout insert notice:', error.message);
     }
   } catch (err) {
+    if (requiresPayoutKyc) throw err;
     console.warn('Supabase payout insert exception:', err);
   }
 

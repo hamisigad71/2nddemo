@@ -7,8 +7,8 @@ import { createUserProfile } from '../lib/db';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: (role?: string) => Promise<void>;
-  signInWithFacebook: (role?: string) => Promise<void>;
+  signInWithGoogle: (role?: string, completeSignup?: boolean) => Promise<void>;
+  signInWithFacebook: (role?: string, completeSignup?: boolean) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string, phone: string, role: string, extraData?: Record<string, any>) => Promise<User | null>;
   signInWithEmail: (email: string, password: string) => Promise<User | null>;
   verifyOtp: (email: string, token: string) => Promise<User | null>;
@@ -171,7 +171,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               email: session.user.email,
               avatar,
               phone,
-              role
+              role,
+              gender: metadata.gender,
+              gender_description: metadata.gender_description,
+              dob: metadata.dob,
             });
 
             if (avatar && typeof window !== 'undefined') {
@@ -203,12 +206,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signInWithGoogle = async (role?: string) => {
+  const signInWithGoogle = async (role?: string, completeSignup = false) => {
     try {
       if (role) {
         localStorage.setItem('pendingAuthRole', role);
       }
-      const targetPath = role === 'creator' ? '/dashboard' : '/user';
+      const targetPath = completeSignup
+        ? `/signup?complete_profile=1&role=${encodeURIComponent(role || 'subscriber')}`
+        : role === 'creator' ? '/dashboard' : '/user';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -222,12 +227,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithFacebook = async (role?: string) => {
+  const signInWithFacebook = async (role?: string, completeSignup = false) => {
     try {
       if (role) {
         localStorage.setItem('pendingAuthRole', role);
       }
-      const targetPath = role === 'creator' ? '/dashboard' : '/user';
+      const targetPath = completeSignup
+        ? `/signup?complete_profile=1&role=${encodeURIComponent(role || 'subscriber')}`
+        : role === 'creator' ? '/dashboard' : '/user';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {

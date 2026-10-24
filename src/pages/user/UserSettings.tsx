@@ -4,11 +4,12 @@ import UserLayout from '../../components/UserLayout';
 import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2, Check, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { getUserProfile, updateUserProfile, deleteUserAccount, uploadFileToSupabase } from '../../lib/db';
+import { getUserProfile, updateUserProfile, updateProfileDemographics, deleteUserAccount, uploadFileToSupabase } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import { resolveUserAvatar, DEFAULT_AVATAR, compressAvatarImage } from '../../lib/avatar';
 import { hasCompleteKycSubmission } from '../../lib/verification';
+import { GENDER_OPTIONS, validateProfileDemographics } from '../../lib/profileDemographics';
 
 const UserSettings = () => {
   const { user, logout } = useAuth();
@@ -41,6 +42,8 @@ const UserSettings = () => {
     idDocumentPreview: null as string | null,
     selfiePreview: null as string | null,
   });
+  const [gender, setGender] = useState('');
+  const [genderDescription, setGenderDescription] = useState('');
   const [kycStatus, setKycStatus] = useState('unverified');
   const [kycSaving, setKycSaving] = useState(false);
   const [idDocumentFile, setIdDocumentFile] = useState<File | null>(null);
@@ -80,6 +83,8 @@ const UserSettings = () => {
         if (profile.legal_name) setKycData(prev => ({ ...prev, legalName: profile.legal_name }));
         if (profile.national_id_number) setKycData(prev => ({ ...prev, nationalId: profile.national_id_number }));
         if (profile.dob) setKycData(prev => ({ ...prev, dob: profile.dob }));
+        if (profile.gender) setGender(profile.gender);
+        if (profile.gender_description) setGenderDescription(profile.gender_description);
       }
     });
   }, [user]);
@@ -161,6 +166,16 @@ const UserSettings = () => {
     setSaving(true);
     setSaveMsg('');
     try {
+      if (gender) {
+        const demographicsError = validateProfileDemographics({
+          dob: kycData.dob,
+          gender,
+          genderDescription,
+          accountType: 'subscriber',
+        });
+        if (demographicsError) throw new Error(demographicsError);
+      }
+
       let finalAvatarUrl = avatarPreview;
 
       // 1. Upload avatar file to storage if user picked one
@@ -199,6 +214,16 @@ const UserSettings = () => {
         phone: fullPhone || null,
         ...(finalAvatarUrl ? { avatar: finalAvatarUrl } : {}),
       });
+      const demographicUpdates = {
+        ...(kycData.dob ? { dob: kycData.dob } : {}),
+        ...(gender ? {
+          gender,
+          gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
+        } : {}),
+      };
+      if (Object.keys(demographicUpdates).length > 0) {
+        await updateProfileDemographics(user.id, demographicUpdates);
+      }
 
       // 3. Update Supabase Auth user metadata
       try {
@@ -467,6 +492,44 @@ const UserSettings = () => {
                    </select>
                 </div>
              </div>
+             <div className="mt-5 max-w-xl">
+               <label htmlFor="user-gender" className="mb-1 block text-sm font-bold">Gender</label>
+               <select
+                 id="user-gender"
+                 value={gender}
+                 onChange={e => setGender(e.target.value)}
+                 className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
+               >
+                 <option value="">Choose an option</option>
+                 {GENDER_OPTIONS.map(option => (
+                   <option key={option.value} value={option.value}>{option.label}</option>
+                 ))}
+               </select>
+               {gender === 'self_describe' && (
+                 <input
+                   type="text"
+                   value={genderDescription}
+                   onChange={e => setGenderDescription(e.target.value.slice(0, 80))}
+                   maxLength={80}
+                   aria-label="Describe your gender"
+                   placeholder="Describe your gender"
+                   className="mt-3 w-full rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
+                 />
+               )}
+               <div className="mt-4">
+                 <label htmlFor="user-dob" className="mb-1 block text-sm font-bold">Date of birth</label>
+                 <input
+                   id="user-dob"
+                   type="date"
+                   value={kycData.dob}
+                   onChange={e => setKycData(prev => ({ ...prev, dob: e.target.value }))}
+                   className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
+                 />
+               </div>
+               <p className="mt-2 text-xs text-muted-foreground">
+                 Public profiles show calculated age and gender, not your full date of birth.
+               </p>
+             </div>
           </section>
 
           {/* Identity Verification (KYC) Section */}
@@ -513,10 +576,7 @@ const UserSettings = () => {
                      <input type="text" name="nationalId" value={kycData.nationalId} onChange={handleKycChange} className="w-full bg-muted/20 border border-border px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="e.g. 12345678" />
                    </div>
                  </div>
-                 <div className="mb-6">
-                   <label className="block text-sm font-bold mb-1">Date of Birth <span className="text-red-500">*</span></label>
-                   <input type="date" name="dob" value={kycData.dob} onChange={handleKycChange} className="w-full sm:w-1/2 bg-muted/20 border border-border px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:border-primary" />
-                 </div>
+                 <p className="mb-6 text-xs text-muted-foreground">Date of birth is managed under your public profile details and is not shown publicly.</p>
                  
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center hover:bg-muted/30 transition-colors cursor-pointer flex flex-col items-center justify-center h-40">

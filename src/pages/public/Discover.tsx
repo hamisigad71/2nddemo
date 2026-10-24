@@ -9,7 +9,7 @@ import LiveNowTray from '../../components/LiveNowTray';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { filterAndSortCreators, type CreatorDirectoryFilter } from '../../lib/creatorDirectory';
+import { filterAndSortCreators, shouldIncludeCreatorInDiscover, type CreatorDirectoryFilter } from '../../lib/creatorDirectory';
 import './Discover.css';
 
 const Discover = () => {
@@ -138,8 +138,11 @@ const Discover = () => {
   const sorted = filterAndSortCreators(creators, activeTab);
 
   const filtered = sorted.filter(c => 
-    hasUploadedProfilePhoto(c.avatar) &&
-    hasUploadedCoverPhoto(c.cover) &&
+    shouldIncludeCreatorInDiscover(
+      Boolean(c.isDiscoverFeatured),
+      hasUploadedProfilePhoto(c.avatar),
+      hasUploadedCoverPhoto(c.cover),
+    ) &&
     (c.name.toLowerCase().includes(search.toLowerCase()) || 
     c.handle.toLowerCase().includes(search.toLowerCase()) ||
     c.category.toLowerCase().includes(search.toLowerCase()) ||
@@ -336,6 +339,13 @@ const Discover = () => {
                       <MapPin className="w-3 h-3 shrink-0 text-muted-foreground/60" />
                       <span className="truncate">{creator.location}</span>
                     </div>
+                    {(creator.gender || creator.age) && (
+                      <div className="mb-2.5 flex items-center gap-1.5 text-[10px] sm:text-[11px] text-muted-foreground">
+                        {creator.gender && <span>{creator.gender}</span>}
+                        {creator.gender && creator.age && <span aria-hidden="true">·</span>}
+                        {creator.age && <span>{creator.age} yrs</span>}
+                      </div>
+                    )}
 
                     {/* Stats & Link Footer */}
                     <div className="discover-card-footer mt-auto pt-2 sm:pt-2.5 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">

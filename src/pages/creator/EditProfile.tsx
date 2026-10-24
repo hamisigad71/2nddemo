@@ -1,17 +1,19 @@
 import CreatorLayout from '../../components/CreatorLayout';
 import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check, Trash2, AlertTriangle, X, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase, deleteUserAccount, notifyAdmins, invalidateCreatorStorageAssets } from '../../lib/db';
+import { getUserProfile, updateUserProfile, updateProfileDemographics, updateCreatorProfile, uploadFileToSupabase, deleteUserAccount, notifyAdmins, invalidateCreatorStorageAssets } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import CreatePostForm from '../../components/CreatePostForm';
 import { resolveUserAvatar, compressAvatarImage } from '../../lib/avatar';
 import { buildAdminKycSubmissionNotification } from '../../lib/verification';
+import { GENDER_OPTIONS, validateProfileDemographics } from '../../lib/profileDemographics';
 
 const EditProfile = () => {
-  const [activeTab, setActiveTab] = useState<string>('profile');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string>(() => searchParams.get('tab') === 'kyc' ? 'kyc' : 'profile');
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   
@@ -30,9 +32,10 @@ const EditProfile = () => {
     displayName: '',
     username: '',
     bio: 'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
+    gender: '',
+    genderDescription: '',
     location: 'Nairobi, Kenya',
     monthlyPrice: 1000,
-    age: 24,
     tags: ['VIP Content', 'Direct Chat', 'Exclusive Photos'],
     promoDiscount: 50,
     promoActive: true,
@@ -53,6 +56,7 @@ const EditProfile = () => {
     selfieFile: null,
   });
   const [kycStatus, setKycStatus] = useState<string>('unverified');
+  const [payoutKycRequired, setPayoutKycRequired] = useState(false);
   const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
 
   const [payoutData, setPayoutData] = useState({
@@ -66,6 +70,10 @@ const EditProfile = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [otpMessage, setOtpMessage] = useState({ text: "", type: "" });
   const [isLoadingOtp, setIsLoadingOtp] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'kyc') setActiveTab('kyc');
+  }, [searchParams]);
 
   // Load existing profile from LocalStorage & DB
   useEffect(() => {
@@ -90,7 +98,8 @@ const EditProfile = () => {
           coverImage: local.cover_image || prev.coverImage,
           location: local.location || prev.location,
           monthlyPrice: local.monthly_price || prev.monthlyPrice,
-          age: local.age || prev.age,
+          gender: local.gender || prev.gender,
+          genderDescription: local.gender_description || prev.genderDescription,
         }));
       }
 
@@ -104,6 +113,7 @@ const EditProfile = () => {
     // 2. Fetch latest from Supabase
     getUserProfile(user.id).then(async (profile) => {
       if (profile) {
+        setPayoutKycRequired(Boolean(profile.payout_kyc_required));
         if (profile.kyc_status) {
           setKycStatus(profile.kyc_status);
         }
@@ -129,6 +139,8 @@ const EditProfile = () => {
           displayName: profile.name || user.user_metadata?.full_name || user.user_metadata?.name || prev.displayName,
           bio: profile.bio || prev.bio,
           avatarUrl: profile.avatar || prev.avatarUrl,
+          gender: profile.gender || prev.gender,
+          genderDescription: profile.gender_description || prev.genderDescription,
         }));
       }
       try {
@@ -150,7 +162,8 @@ const EditProfile = () => {
             monthlyPrice: creatorMeta.monthly_price || prev.monthlyPrice,
             location: creatorMeta.location || prev.location,
             coverImage: creatorMeta.cover_image || prev.coverImage,
-            age: creatorMeta.age || prev.age,
+            gender: creatorMeta.gender || prev.gender,
+            genderDescription: creatorMeta.gender_description || prev.genderDescription,
             tags: creatorMeta.tags || prev.tags,
             promoDiscount: creatorMeta.promo_discount || prev.promoDiscount,
             promoActive: creatorMeta.promo_active !== false,
@@ -307,6 +320,14 @@ const EditProfile = () => {
       toast.error('Please enter your full legal name, ID number, and date of birth.');
       return;
     }
+    if (payoutKycRequired && !kycFiles.idFile) {
+      toast.error('Please upload a fresh National ID or Passport document for withdrawal verification.');
+      return;
+    }
+    if (payoutKycRequired && !kycFiles.selfieFile) {
+      toast.error('Please upload a fresh selfie holding your ID for withdrawal verification.');
+      return;
+    }
     if (!kycFiles.idFile && !kycData.idDocumentPreview) {
       toast.error('Please upload your National ID or Passport document.');
       return;
@@ -318,13 +339,14 @@ const EditProfile = () => {
 
     setIsSubmittingKyc(true);
     try {
-      let idPath = kycData.idDocumentPreview || '';
-      let selfiePath = kycData.selfiePreview || '';
+      let idPath = payoutKycRequired ? '' : (kycData.idDocumentPreview || '');
+      let selfiePath = payoutKycRequired ? '' : (kycData.selfiePreview || '');
 
       if (kycFiles.idFile) {
         const ext = kycFiles.idFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
         const targetPath = `${user.id}/${Date.now()}-id.${ext}`;
         const { error: idError } = await supabase.storage.from('kyc-documents').upload(targetPath, kycFiles.idFile, { upsert: true });
+        if (idError && payoutKycRequired) throw idError;
         idPath = idError ? (await uploadFileToSupabase(kycFiles.idFile, 'Daysman Gad', `kyc/${targetPath}`)) || targetPath : targetPath;
       }
 
@@ -332,6 +354,7 @@ const EditProfile = () => {
         const ext = kycFiles.selfieFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
         const targetPath = `${user.id}/${Date.now()}-selfie.${ext}`;
         const { error: selfieError } = await supabase.storage.from('kyc-documents').upload(targetPath, kycFiles.selfieFile, { upsert: true });
+        if (selfieError && payoutKycRequired) throw selfieError;
         selfiePath = selfieError ? (await uploadFileToSupabase(kycFiles.selfieFile, 'Daysman Gad', `kyc/${targetPath}`)) || targetPath : targetPath;
       }
 
@@ -339,21 +362,31 @@ const EditProfile = () => {
         legal_name: kycData.legalName.trim(),
         national_id_number: kycData.nationalId.trim(),
         dob: kycData.dob,
+        ...(profileData.gender ? {
+          gender: profileData.gender,
+          gender_description: profileData.gender === 'self_describe' ? profileData.genderDescription.trim() : null,
+        } : {}),
         kyc_id_url: idPath,
         kyc_selfie_url: selfiePath,
-        kyc_status: 'pending'
+        kyc_status: payoutKycRequired ? 'verified' : 'pending',
+        ...(payoutKycRequired ? { is_verified: true } : {})
       }).eq('uid', user.id);
 
       if (userError) throw userError;
 
       try {
         await supabase.from('creator_profiles').update({
-          kyc_status: 'pending',
+          kyc_status: payoutKycRequired ? 'verified' : 'pending',
+          ...(payoutKycRequired ? { is_verified: true } : {}),
           kyc_id_url: idPath,
           kyc_selfie_url: selfiePath,
           legal_name: kycData.legalName.trim(),
           national_id_number: kycData.nationalId.trim(),
           dob: kycData.dob,
+          ...(profileData.gender ? {
+            gender: profileData.gender,
+            gender_description: profileData.gender === 'self_describe' ? profileData.genderDescription.trim() : null,
+          } : {}),
         }).eq('user_id', user.id);
       } catch {}
 
@@ -363,25 +396,39 @@ const EditProfile = () => {
         local.legalName = kycData.legalName.trim();
         local.nationalId = kycData.nationalId.trim();
         local.dob = kycData.dob;
+        if (profileData.gender) {
+          local.gender = profileData.gender;
+          local.gender_description = profileData.gender === 'self_describe' ? profileData.genderDescription.trim() : null;
+        }
         local.kyc_id_url = idPath;
         local.kyc_selfie_url = selfiePath;
-        local.kyc_status = 'pending';
+        local.kyc_status = payoutKycRequired ? 'verified' : 'pending';
         localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(local));
       } catch {}
 
       // Dispatch notification directly to Platform Admins for KYC review with photos & ID
-      notifyAdmins(buildAdminKycSubmissionNotification({
-        name: profileData.displayName || user.user_metadata?.name || 'A creator',
-        nationalId: kycData.nationalId.trim(),
-        avatar: avatarPreview || profileData.avatarUrl
-      })).catch(() => {});
+      if (!payoutKycRequired) {
+        notifyAdmins(buildAdminKycSubmissionNotification({
+          name: profileData.displayName || user.user_metadata?.name || 'A creator',
+          nationalId: kycData.nationalId.trim(),
+          avatar: avatarPreview || profileData.avatarUrl
+        })).catch(() => {});
+      }
 
-      setKycStatus('pending');
+      setKycStatus(payoutKycRequired ? 'verified' : 'pending');
       window.dispatchEvent(new CustomEvent('creators_updated'));
       window.dispatchEvent(new CustomEvent('profile_updated'));
-      toast.success('KYC Submitted Successfully!', {
-        description: 'Your documents have been submitted to admin for verification.'
-      });
+      if (payoutKycRequired) {
+        window.dispatchEvent(new CustomEvent('kyc_documents_updated'));
+      }
+      toast.success(
+        payoutKycRequired ? 'Withdrawal documents saved securely.' : 'KYC Submitted Successfully!',
+        {
+          description: payoutKycRequired
+            ? 'Your verified status is unchanged. You can now request a withdrawal.'
+            : 'Your documents have been submitted to admin for verification.'
+        }
+      );
     } catch (err: any) {
       toast.error(err?.message || 'Failed to submit KYC documents.');
     } finally {
@@ -430,6 +477,18 @@ const EditProfile = () => {
 
   const handleSaveAll = async () => {
     if (!user?.id) return;
+    if (profileData.gender) {
+      const demographicsError = validateProfileDemographics({
+        dob: kycData.dob,
+        gender: profileData.gender,
+        genderDescription: profileData.genderDescription,
+        accountType: 'creator',
+      });
+      if (demographicsError) {
+        toast.error(demographicsError);
+        return;
+      }
+    }
     setSaving(true);
     try {
       let finalAvatarUrl = avatarPreview || profileData.avatarUrl;
@@ -491,7 +550,9 @@ const EditProfile = () => {
           monthly_price: Number(profileData.monthlyPrice) || 1000,
           location: profileData.location,
           cover_image: finalCoverUrl,
-          age: Number(profileData.age) || 24,
+          gender: profileData.gender,
+          gender_description: profileData.gender === 'self_describe' ? profileData.genderDescription.trim() : null,
+          dob: kycData.dob,
           tags: profileData.tags,
           promo_discount: Number(profileData.promoDiscount) || 50,
           promo_active: profileData.promoActive,
@@ -503,6 +564,16 @@ const EditProfile = () => {
         console.warn('creator_profiles update notice:', e);
       }
 
+      if (profileData.gender || kycData.dob) {
+        await updateProfileDemographics(user.id, {
+          ...(kycData.dob ? { dob: kycData.dob } : {}),
+          ...(profileData.gender ? {
+            gender: profileData.gender,
+            gender_description: profileData.gender === 'self_describe' ? profileData.genderDescription.trim() : null,
+          } : {}),
+        }, profileData.displayName || user.user_metadata?.name || 'Creator');
+      }
+
       // 5. Update Supabase Auth user metadata
       try {
         await supabase.auth.updateUser({
@@ -512,6 +583,9 @@ const EditProfile = () => {
             avatar: finalAvatarUrl,
             name: profileData.displayName,
             full_name: profileData.displayName,
+            gender: profileData.gender,
+            gender_description: profileData.gender === 'self_describe' ? profileData.genderDescription.trim() : null,
+            dob: kycData.dob,
           }
         });
       } catch (e) {
@@ -530,7 +604,9 @@ const EditProfile = () => {
         bio: profileData.bio,
         location: profileData.location,
         monthly_price: Number(profileData.monthlyPrice) || 1000,
-        age: Number(profileData.age) || 24,
+        dob: kycData.dob,
+        gender: profileData.gender,
+        gender_description: profileData.gender === 'self_describe' ? profileData.genderDescription.trim() : null,
         tags: profileData.tags,
         promo_discount: Number(profileData.promoDiscount) || 50,
         promo_active: profileData.promoActive,
@@ -756,15 +832,30 @@ const EditProfile = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Age</label>
-                        <input 
-                          type="number"
-                          min="18"
-                          max="99"
-                          value={profileData.age}
-                          onChange={e => setProfileData(p => ({ ...p, age: Number(e.target.value) || 24 }))}
-                          className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors" 
-                        />
+                        <label htmlFor="creator-gender" className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-400">Gender</label>
+                        <select
+                          id="creator-gender"
+                          value={profileData.gender}
+                          onChange={e => setProfileData(p => ({ ...p, gender: e.target.value }))}
+                          className="w-full rounded-2xl border border-zinc-800 bg-[#0d0e12] px-4 py-3.5 text-sm text-white focus:border-red-500 focus:outline-none"
+                        >
+                          <option value="">Choose an option</option>
+                          {GENDER_OPTIONS.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        {profileData.gender === 'self_describe' && (
+                          <input
+                            type="text"
+                            value={profileData.genderDescription}
+                            onChange={e => setProfileData(p => ({ ...p, genderDescription: e.target.value.slice(0, 80) }))}
+                            maxLength={80}
+                            aria-label="Describe your gender"
+                            placeholder="Describe your gender"
+                            className="mt-2 w-full rounded-xl border border-zinc-800 bg-[#0d0e12] px-3 py-2 text-sm text-white focus:border-red-500 focus:outline-none"
+                          />
+                        )}
+                        <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">Public profiles show your calculated age, not your full date of birth.</p>
                       </div>
                     </div>
 
@@ -1108,13 +1199,15 @@ const EditProfile = () => {
                 
                 <button 
                   onClick={handleKycSubmit} 
-                  disabled={isSubmittingKyc || kycStatus === 'verified'}
+                  disabled={isSubmittingKyc || (kycStatus === 'verified' && !payoutKycRequired)}
                   className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-lg shadow-red-600/20 border border-red-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSubmittingKyc ? (
                     <><Loader2 className="w-5 h-5 animate-spin" /> Submitting Documents...</>
-                  ) : kycStatus === 'verified' ? (
+                  ) : kycStatus === 'verified' && !payoutKycRequired ? (
                     <><CheckCircle2 className="w-5 h-5 text-white fill-blue-500" /> Identity Verified</>
+                  ) : payoutKycRequired ? (
+                    'Save Documents for Withdrawal'
                   ) : kycStatus === 'pending' ? (
                     'Update Submitted KYC Documents'
                   ) : (

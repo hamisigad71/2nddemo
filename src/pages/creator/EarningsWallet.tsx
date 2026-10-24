@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import {
   ArrowUpRight,
@@ -24,9 +25,11 @@ import {
 } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
+import { hasPrivateKycEvidence } from '../../lib/verification';
 
 const EarningsWallet = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [withdrawStatus, setWithdrawStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle');
@@ -37,6 +40,30 @@ const EarningsWallet = () => {
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
   const [savingPhone, setSavingPhone] = useState(false);
+  const [payoutKycRequired, setPayoutKycRequired] = useState(false);
+  const [payoutKycEvidenceProvided, setPayoutKycEvidenceProvided] = useState(false);
+  const [payoutProfileStatus, setPayoutProfileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [isKycPromptOpen, setIsKycPromptOpen] = useState(false);
+
+  const refreshPayoutKycStatus = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const profile = await getUserProfile(user.id);
+      if (!profile) {
+        setPayoutProfileStatus('error');
+        return;
+      }
+      const required = Boolean(profile.payout_kyc_required);
+      setPayoutKycRequired(required);
+      setPayoutKycEvidenceProvided(
+        required && hasPrivateKycEvidence(user.id, profile.kyc_id_url, profile.kyc_selfie_url)
+      );
+      setPayoutProfileStatus('ready');
+    } catch (err) {
+      console.error('Could not check withdrawal identity requirements:', err);
+      setPayoutProfileStatus('error');
+    }
+  }, [user?.id]);
 
   const fetchTransactions = useCallback(async () => {
     if (!user?.id) return;
@@ -61,14 +88,19 @@ const EarningsWallet = () => {
       } else if (user.user_metadata?.phone) {
         setPayoutPhone(user.user_metadata.phone);
       }
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('Could not load payout phone number:', err);
+    });
+    refreshPayoutKycStatus();
 
     const handleRefresh = () => {
       fetchTransactions();
     };
+    const handleKycRefresh = () => refreshPayoutKycStatus();
 
     window.addEventListener('wallet_updated', handleRefresh);
     window.addEventListener('payouts_updated', handleRefresh);
+    window.addEventListener('kyc_documents_updated', handleKycRefresh);
 
     // Real-time Supabase listener for instant balance updates
     const channel = supabase
@@ -90,9 +122,10 @@ const EarningsWallet = () => {
     return () => {
       window.removeEventListener('wallet_updated', handleRefresh);
       window.removeEventListener('payouts_updated', handleRefresh);
+      window.removeEventListener('kyc_documents_updated', handleKycRefresh);
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchTransactions]);
+  }, [user?.id, user?.user_metadata?.phone, fetchTransactions, refreshPayoutKycStatus]);
 
   // ── 30% Platform Fee / 70% Creator Net Ledger Calculations ────────────
   const incomingTransactions = transactions.filter(
@@ -143,8 +176,17 @@ const EarningsWallet = () => {
   };
 
   const openWithdrawModal = () => {
+    if (payoutProfileStatus !== 'ready') {
+      toast.error('Could not verify your withdrawal requirements. Please try again.');
+      void refreshPayoutKycStatus();
+      return;
+    }
     if (availableBalance <= 0) {
       toast.error('No available balance to withdraw.');
+      return;
+    }
+    if (payoutKycRequired && !payoutKycEvidenceProvided) {
+      setIsKycPromptOpen(true);
       return;
     }
     setWithdrawAmount(String(availableBalance));
@@ -154,6 +196,11 @@ const EarningsWallet = () => {
   const handleConfirmWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
+    if (payoutKycRequired && !payoutKycEvidenceProvided) {
+      setIsWithdrawModalOpen(false);
+      setIsKycPromptOpen(true);
+      return;
+    }
 
     const numericAmount = Number(withdrawAmount);
     if (!numericAmount || numericAmount <= 0) {
@@ -661,6 +708,50 @@ const EarningsWallet = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isKycPromptOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="withdraw-identity-title"
+            className="w-full max-w-md rounded-3xl border border-zinc-700 bg-[#0d0e12] p-6 shadow-2xl sm:p-8"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-500/30 bg-sky-500/10 text-sky-400">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <h3 id="withdraw-identity-title" className="mb-2 text-xl font-black text-white">
+              Identity documents required
+            </h3>
+            <p className="mb-5 text-sm leading-relaxed text-zinc-300">
+              Before you can withdraw funds, upload a clear photo of your National ID or passport and a selfie holding that ID. Your verified creator badge will remain active.
+            </p>
+            <ul className="mb-6 space-y-2 text-sm text-zinc-300">
+              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 shrink-0 text-sky-400" /> National ID or passport</li>
+              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 shrink-0 text-sky-400" /> Selfie holding the same ID</li>
+            </ul>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsKycPromptOpen(false)}
+                className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-300 hover:bg-zinc-800"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsKycPromptOpen(false);
+                  navigate('/edit-profile?tab=kyc');
+                }}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white hover:bg-red-500"
+              >
+                Upload documents
+              </button>
+            </div>
           </div>
         </div>
       )}

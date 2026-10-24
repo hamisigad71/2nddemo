@@ -1502,6 +1502,11 @@ export default function CreatorProfile() {
             )}
 
             <div className="creator-profile-about-meta flex items-center gap-8 pt-4 border-t border-white/10 text-sm">
+              {creator.gender && (
+                <div className="flex items-center gap-2 text-zinc-300">
+                  <span className="font-semibold text-white">{creator.gender}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-zinc-300">
                 <MapPin className="w-4 h-4 text-red-500" /> {creator.location}
               </div>

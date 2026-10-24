@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2, User as UserIcon, ImagePlus } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
-import { uploadFileToSupabase, getStoredCreatorProfile, createNotification, notifyAdmins } from '../../lib/db';
+import { uploadFileToSupabase, getStoredCreatorProfile, createNotification, notifyAdmins, updateProfileDemographics } from '../../lib/db';
 import { compressAvatarImage } from '../../lib/avatar';
 import { validateSignupImages } from '../../lib/creatorSignupImages';
 import { buildAdminKycSubmissionNotification } from '../../lib/verification';
+import { GENDER_OPTIONS, getMinimumBirthDateForAge, validateProfileDemographics } from '../../lib/profileDemographics';
 
 const DISPOSABLE_OR_DUMMY_DOMAINS = new Set([
   'test.com', 'example.com', 'dummy.com', 'fake.com', 'invalid.com', 'none.com',
@@ -87,9 +88,12 @@ function formatSignupErrorMessage(err: any, email: string, accountType: string):
 }
 
 const Signup = () => {
-  const [accountType, setAccountType] = useState('creator'); // 'subscriber' or 'creator'
-  const { user, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, verifyOtp } = useAuth();
+  const [searchParams] = useSearchParams();
+  const initialRole = searchParams.get('role');
+  const [accountType, setAccountType] = useState(initialRole === 'subscriber' || initialRole === 'creator' ? initialRole : 'creator');
+  const { user, loading: authLoading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, verifyOtp } = useAuth();
   const navigate = useNavigate();
+  const isCompletingSocialProfile = searchParams.get('complete_profile') === '1';
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpStep, setOtpStep] = useState(false);
@@ -100,6 +104,8 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [gender, setGender] = useState('');
+  const [genderDescription, setGenderDescription] = useState('');
 
   // Profile photo state (for both creators and subscribers)
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -118,15 +124,6 @@ const Signup = () => {
   const [idDocPreview, setIdDocPreview] = useState<string>('');
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string>('');
-
-  const calculateAge = (birthDateString: string): number => {
-    if (!birthDateString) return 0;
-    const birth = new Date(birthDateString);
-    if (isNaN(birth.getTime())) return 0;
-    const diffMs = Date.now() - birth.getTime();
-    const ageDate = new Date(diffMs);
-    return Math.abs(ageDate.getUTCFullYear() - 1970);
-  };
 
   const handleIdDocSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -199,18 +196,18 @@ const Signup = () => {
 
   // Only auto-redirect if OTP step is not active or user is confirmed
   useEffect(() => {
-    if (user && !otpStep) {
+    if (user && !otpStep && !isCompletingSocialProfile) {
       if (accountType === 'creator') {
         navigate('/dashboard');
       } else {
         navigate('/user');
       }
     }
-  }, [user, navigate, accountType, otpStep]);
+  }, [user, navigate, accountType, otpStep, isCompletingSocialProfile]);
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle(accountType);
+      await signInWithGoogle(accountType, true);
     } catch (err: any) {
       setError('Failed: ' + (err?.message || err));
     }
@@ -218,7 +215,7 @@ const Signup = () => {
 
   const handleFacebookSignIn = async () => {
     try {
-      await signInWithFacebook(accountType);
+      await signInWithFacebook(accountType, true);
     } catch (err: any) {
       setError('Failed: ' + (err?.message || err));
     }
@@ -228,6 +225,17 @@ const Signup = () => {
     e.preventDefault();
     if (!username.trim() || !email || !password || !phone) {
       setError("Please fill out all fields.");
+      return;
+    }
+
+    const demographicsError = validateProfileDemographics({
+      dob,
+      gender,
+      genderDescription,
+      accountType,
+    });
+    if (demographicsError) {
+      setError(demographicsError);
       return;
     }
 
@@ -260,15 +268,6 @@ const Signup = () => {
       }
       if (!nationalId.trim()) {
         setError("National ID or Passport number is strictly required.");
-        return;
-      }
-      if (!dob) {
-        setError("Please enter your Date of Birth. Creators must be 18+.");
-        return;
-      }
-      const age = calculateAge(dob);
-      if (age < 18) {
-        setError("You must be at least 18 years of age to register as a creator.");
         return;
       }
       if (!idDocFile) {
@@ -336,7 +335,9 @@ const Signup = () => {
           cover_image: accountType === 'creator' && uploadedCoverUrl?.startsWith('http') ? uploadedCoverUrl : null,
           legal_name: accountType === 'creator' ? legalName.trim() : null,
           national_id_number: accountType === 'creator' ? nationalId.trim() : null,
-          dob: accountType === 'creator' ? dob : null,
+          dob,
+          gender,
+          gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
           kyc_status: accountType === 'creator' ? 'pending' : 'unverified'
         }
       );
@@ -375,7 +376,10 @@ const Signup = () => {
               avatar: uploadedAvatarUrl,
               avatar_url: uploadedAvatarUrl,
               cover_image: uploadedCoverUrl,
-              name: cleanUsername
+              name: cleanUsername,
+              dob,
+              gender,
+              gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
             }));
           }
 
@@ -413,6 +417,8 @@ const Signup = () => {
               legal_name: legalName.trim(),
               national_id_number: nationalId.trim(),
               dob: dob,
+              gender,
+              gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
               kyc_id_url: uploadedIdUrl,
               kyc_selfie_url: uploadedSelfieUrl,
               kyc_status: 'pending'
@@ -424,6 +430,8 @@ const Signup = () => {
               legalName: legalName.trim(),
               nationalId: nationalId.trim(),
               dob: dob,
+              gender,
+              gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
               kyc_id_url: uploadedIdUrl,
               kyc_selfie_url: uploadedSelfieUrl,
               kyc_status: 'pending',
@@ -439,6 +447,8 @@ const Signup = () => {
           legalName: legalName.trim(),
           nationalId: nationalId.trim(),
           dob,
+          gender,
+          gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
           idUrl: uploadedIdUrl,
           selfieUrl: uploadedSelfieUrl,
           email: cleanEmail
@@ -487,6 +497,114 @@ const Signup = () => {
       setLoading(false);
     }
   };
+
+  const handleCompleteSocialProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      setError(authLoading ? 'Finishing sign-in. Please wait a moment.' : 'Your sign-in session could not be found. Please sign in again.');
+      return;
+    }
+
+    const demographicsError = validateProfileDemographics({
+      dob,
+      gender,
+      genderDescription,
+      accountType,
+    });
+    if (demographicsError) {
+      setError(demographicsError);
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    try {
+      const displayName = user.user_metadata?.full_name
+        || user.user_metadata?.name
+        || user.email?.split('@')[0]
+        || 'Creator';
+      await updateProfileDemographics(user.id, {
+        dob,
+        gender,
+        gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
+      }, accountType === 'creator' ? displayName : undefined);
+
+      if (accountType === 'creator') {
+        const localProfile = getStoredCreatorProfile(user.id) || {};
+        localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify({
+          ...localProfile,
+          dob,
+          gender,
+          gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
+        }));
+      }
+      window.dispatchEvent(new CustomEvent('profile_updated', {
+        detail: { uid: user.id, dob, gender },
+      }));
+      navigate(accountType === 'creator' ? '/dashboard' : '/user', { replace: true });
+    } catch (err: any) {
+      setError(err?.message || 'Your profile details could not be saved. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderDemographicFields = () => (
+    <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
+      <div>
+        <h3 className="text-sm font-bold text-white">About you</h3>
+        <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+          Your public profile shows calculated age and gender, not your full date of birth.
+        </p>
+      </div>
+      <div>
+        <label htmlFor="signup-gender" className="mb-1.5 block text-xs font-bold text-zinc-300">
+          Gender <span className="text-red-500">*</span>
+        </label>
+        <select
+          id="signup-gender"
+          value={gender}
+          onChange={e => setGender(e.target.value)}
+          required
+          className="w-full rounded-xl border border-zinc-800 bg-[#0d0e12] px-4 py-3 text-sm text-white focus:border-red-500 focus:outline-none"
+        >
+          <option value="">Choose an option</option>
+          {GENDER_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        {gender === 'self_describe' && (
+          <input
+            type="text"
+            value={genderDescription}
+            onChange={e => setGenderDescription(e.target.value.slice(0, 80))}
+            maxLength={80}
+            required
+            aria-label="Describe your gender"
+            placeholder="Describe your gender"
+            className="mt-3 w-full rounded-xl border border-zinc-800 bg-[#0d0e12] px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:border-red-500 focus:outline-none"
+          />
+        )}
+      </div>
+      <div>
+        <label htmlFor="signup-dob" className="mb-1.5 block text-xs font-bold text-zinc-300">
+          Date of birth <span className="text-red-500">*</span>
+        </label>
+        <input
+          id="signup-dob"
+          type="date"
+          value={dob}
+          onChange={e => setDob(e.target.value)}
+          max={accountType === 'creator' ? getMinimumBirthDateForAge(18) : undefined}
+          required
+          className="w-full rounded-xl border border-zinc-800 bg-[#0d0e12] px-4 py-3 text-sm text-white focus:border-red-500 focus:outline-none"
+        />
+        {accountType === 'creator' && (
+          <span className="mt-1 block text-[10px] text-zinc-500">Creators must be at least 18 years old.</span>
+        )}
+      </div>
+    </section>
+  );
 
   const handleDirectPasswordLogin = async () => {
     if (!email || !password) {
@@ -594,6 +712,8 @@ const Signup = () => {
               legalName: kyc.legalName,
               nationalId: kyc.nationalId,
               dob: kyc.dob,
+              gender: kyc.gender,
+              gender_description: kyc.gender_description,
               kyc_id_url: kyc.idUrl,
               kyc_selfie_url: kyc.selfieUrl,
               kyc_status: 'pending',
@@ -665,7 +785,40 @@ const Signup = () => {
         <div className="w-full max-w-lg bg-[#0d0e12] border border-zinc-800 p-8 pb-10 rounded-3xl shadow-2xl relative z-10">
         
         {/* Step 2: OTP Code Verification Screen */}
-        {otpStep ? (
+        {isCompletingSocialProfile ? (
+          <div>
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-black text-white">Finish your profile</h2>
+              <p className="mt-2 text-sm text-zinc-400">Add your gender and date of birth to complete signup.</p>
+            </div>
+            {error && (
+              <div role="alert" className="mb-5 rounded-xl border border-red-500/40 bg-red-950/30 p-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+            {authLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-zinc-400">
+                <RefreshCw className="h-4 w-4 animate-spin" /> Finishing sign-in…
+              </div>
+            ) : !user ? (
+              <div className="text-center text-sm text-zinc-300">
+                <p>Your sign-in session could not be found.</p>
+                <Link to="/login" className="mt-3 inline-block font-bold text-red-400 hover:underline">Sign in again</Link>
+              </div>
+            ) : (
+              <form onSubmit={handleCompleteSocialProfile} className="flex flex-col gap-5">
+                {renderDemographicFields()}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-500 bg-red-600 py-3.5 font-black text-white shadow-lg shadow-red-600/20 transition-colors hover:bg-red-700 disabled:opacity-60"
+                >
+                  {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <>Save and continue <ArrowRight className="h-5 w-5" /></>}
+                </button>
+              </form>
+            )}
+          </div>
+        ) : otpStep ? (
           <div>
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-red-950/60 border border-red-500/40 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/10">
@@ -990,6 +1143,8 @@ const Signup = () => {
                 </div>
               </div>
 
+              {renderDemographicFields()}
+
               {/* Creator-only Mandatory Identity Verification Fields */}
               {accountType === 'creator' && (
                 <div className="pt-4 mt-2 border-t border-zinc-800 space-y-4">
@@ -1029,20 +1184,6 @@ const Signup = () => {
                         placeholder="e.g. 12345678" 
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black uppercase text-zinc-400 mb-1.5">
-                      Date of Birth <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="date" 
-                      value={dob} 
-                      onChange={e => setDob(e.target.value)} 
-                      max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                      className="w-full bg-[#0d0e12] border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none text-sm" 
-                    />
-                    <span className="text-[10px] text-zinc-500 mt-1 block">You must be 18+ to register as a creator</span>
                   </div>
 
                   {/* Required Uploads: ID Document & Selfie holding ID */}
