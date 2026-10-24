@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Download, Receipt, ArrowUpRight, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Download, Receipt, ArrowUpRight, Loader2 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAdminTransactions } from '../../lib/db';
 

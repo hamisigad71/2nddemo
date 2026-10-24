@@ -3096,10 +3096,14 @@ export const resolveStorageDocUrl = async (rawUrl: string | null | undefined): P
 
 export const getAdminApplications = async (): Promise<CreatorApplicationItem[]> => {
   try {
-    const [{ data: users, error: usersErr }, { data: profiles }] = await Promise.all([
+    const [usersRes, profilesRes] = await Promise.all([
       supabase.from('users').select('*').order('created_at', { ascending: false }),
-      supabase.from('creator_profiles').select('*').catch(() => ({ data: [] })) as any,
+      supabase.from('creator_profiles').select('*'),
     ]);
+
+    const users = usersRes.data;
+    const usersErr = usersRes.error;
+    const profiles = profilesRes.data;
 
     if (usersErr) throw usersErr;
 
@@ -3995,16 +3999,24 @@ export const getAdminContentPosts = async () => {
 
     return posts.map(p => {
       const u = userMap.get(p.creator_id);
+      const mediaUrl = p.media_url || '';
+      const isVideo = p.media_type === 'video' || Boolean(mediaUrl && /\.(mp4|webm|mov|m4v|ogg|ogv|mkv|avi)($|\?)/i.test(mediaUrl));
+      const hasMedia = Boolean(mediaUrl);
+
       return {
+        ...p,
         id: p.id,
         creator: u?.name || 'Creator',
         creatorId: p.creator_id,
-        type: p.media_type === 'video' || (p.media_url && p.media_url.includes('.mp4')) ? 'Video' : p.media_url ? 'Photo' : 'Text Post',
-        title: p.content ? (p.content.substring(0, 60) + (p.content.length > 60 ? '...' : '')) : 'Media Upload',
-        reports: 0,
-        reason: 'General Review',
+        creatorAvatar: resolveUserAvatar(u?.avatar, u?.name),
+        media_url: mediaUrl,
+        media_type: p.media_type || (isVideo ? 'video' : hasMedia ? 'image' : 'text'),
+        type: isVideo ? 'Video' : hasMedia ? 'Photo' : 'Post',
+        title: p.content || (isVideo ? 'Video Upload' : hasMedia ? 'Photo Upload' : 'Text Post'),
+        reports: p.reports ?? 0,
+        reason: p.reason || 'General Review',
         status: p.status || 'published',
-        img: p.media_url || resolveUserAvatar(u?.avatar, u?.name),
+        img: mediaUrl,
         time: p.created_at ? new Date(p.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' }) : 'Recent'
       };
     });

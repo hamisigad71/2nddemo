@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Search, ShieldCheck, CheckCircle2, Crown, XCircle, AlertTriangle, 
-  ExternalLink, ZoomIn, Eye, RefreshCw, Loader2, Sparkles, User, 
+  ExternalLink, ZoomIn, Eye, RefreshCw, Loader2, 
   FileText, Camera, Phone, Mail, Calendar, Check, X, ShieldAlert
 } from 'lucide-react';
 import AdminLayout from './AdminLayout';
@@ -262,7 +262,7 @@ const AdminApplications = () => {
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredApps.map((app) => {
-              const avatarUrl = resolveUserAvatar({ avatarUrl: app.avatar, name: app.name });
+              const avatarUrl = resolveUserAvatar(app.avatar, app.name);
               const isWorking = actionLoading?.startsWith(app.uid);
 
               return (
@@ -469,7 +469,7 @@ const AdminApplications = () => {
               <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={resolveUserAvatar({ avatarUrl: inspectItem.avatar, name: inspectItem.name })}
+                    src={resolveUserAvatar(inspectItem.avatar, inspectItem.name)}
                     alt={inspectItem.name}
                     className="w-12 h-12 rounded-xl object-cover border border-white/10"
                   />

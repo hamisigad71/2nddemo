@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, CheckCircle2, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle, Eye, X, ExternalLink, Crown, Check } from 'lucide-react';
+import { CheckCircle, CheckCircle2, XCircle, Clock, Search, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle, Eye, X, ExternalLink, Crown, Check } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAdminCreators, updateCreatorStatus, deleteUserAccount, setCreatorVerified, approveCreatorApplication } from '../../lib/db';
 import { supabase } from '../../lib/supabase';

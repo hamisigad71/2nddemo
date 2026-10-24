@@ -3,6 +3,7 @@ import { Flag, Eye, Check, X, ShieldAlert, Search, Trash2, Loader2, MessageSquar
 import AdminLayout from './AdminLayout';
 import { getAdminContentPosts, deletePost, sendAdminMessage } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
+import { resolveUserAvatar } from '../../lib/avatar';
 
 
 
@@ -35,7 +36,28 @@ const AdminContent = () => {
   }, []);
 
   const isVideoUrl = (url: string) =>
-    Boolean(url && (url.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) || url.includes('video')));
+    Boolean(url && (/\.(mp4|webm|mov|m4v|ogg|ogv|mkv|avi)($|\?)/i.test(url) || url.includes('/video/') || url.includes('video/')));
+
+  const isVideoPost = (item: any) => {
+    if (!item) return false;
+    const type = String(item.type || '').toLowerCase();
+    const mediaType = String(item.media_type || '').toLowerCase();
+    if (type === 'video' || mediaType === 'video') return true;
+    return isVideoUrl(item.media_url || item.img || '');
+  };
+
+  const isPhotoPost = (item: any) => {
+    if (!item || isVideoPost(item)) return false;
+    const type = String(item.type || '').toLowerCase();
+    const mediaType = String(item.media_type || '').toLowerCase();
+    if (type === 'photo' || mediaType === 'image' || mediaType === 'photo') return true;
+    const url = item.media_url || item.img || '';
+    return Boolean(url && (/\.(jpe?g|png|gif|webp|svg|avif|bmp)($|\?)/i.test(url) || url.startsWith('http')));
+  };
+
+  const getMediaUrl = (item: any) => {
+    return item?.media_url || item?.img || '';
+  };
 
   const loadContent = async () => {
     setLoading(true);
@@ -43,22 +65,28 @@ const AdminContent = () => {
       const posts = await getAdminContentPosts();
 
       // Normalise real Supabase posts to match the card shape
-      const normalised = posts.map((p: any) => ({
-        ...p,
-        img: p.media_url || p.img || '',
-        title: p.content || p.title || '(no caption)',
-        creator: p.users?.name || p.creator || 'Unknown Creator',
-        creatorId: p.creator_id || p.creatorId,
-        type: p.media_type === 'video' || isVideoUrl(p.media_url || '')
-          ? 'Video'
-          : (p.media_url ? 'Photo' : 'Post'),
-        reports: p.reports ?? 0,
-        reason: p.reason || 'General Review',
-        status: p.status || 'pending',
-        time: p.created_at
-          ? new Date(p.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
-          : p.time || '',
-      }));
+      const normalised = posts.map((p: any) => {
+        const mediaUrl = p.media_url || p.img || '';
+        const isVideo = p.media_type === 'video' || p.type === 'Video' || isVideoUrl(mediaUrl);
+        const isPhoto = !isVideo && (p.media_type === 'image' || p.media_type === 'photo' || p.type === 'Photo' || Boolean(mediaUrl));
+
+        return {
+          ...p,
+          img: mediaUrl,
+          media_url: mediaUrl,
+          creator: p.creator || p.users?.name || 'Unknown Creator',
+          creatorAvatar: p.creatorAvatar || resolveUserAvatar(p.users?.avatar, p.creator || p.users?.name),
+          creatorId: p.creator_id || p.creatorId,
+          type: isVideo ? 'Video' : (isPhoto ? 'Photo' : 'Post'),
+          title: p.content || p.title || (isVideo ? 'Video Upload' : isPhoto ? 'Photo Upload' : '(no caption)'),
+          reports: p.reports ?? 0,
+          reason: p.reason || 'General Review',
+          status: p.status || 'pending',
+          time: p.time || (p.created_at
+            ? new Date(p.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
+            : ''),
+        };
+      });
 
       setItems(normalised);
     } catch (err) {
@@ -179,27 +207,32 @@ const AdminContent = () => {
               <div className="flex items-start gap-5">
                 {/* Thumbnail — video or image */}
                 <div className="relative w-14 h-14 shrink-0">
-                  {item.img && item.type === 'Video' ? (
+                  {isVideoPost(item) && getMediaUrl(item) ? (
                     <div className="w-14 h-14 rounded-2xl bg-zinc-900 border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors flex items-center justify-center overflow-hidden">
                       <video
-                        src={item.img}
-                        className="w-full h-full object-cover rounded-2xl"
+                        src={getMediaUrl(item)}
+                        className="w-full h-full object-cover rounded-2xl pointer-events-none"
                         muted
+                        playsInline
                         preload="metadata"
                       />
                       <span className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
                         <Eye className="w-5 h-5 text-white/80" />
                       </span>
                     </div>
-                  ) : item.img ? (
-                    <img src={item.img} className="w-14 h-14 rounded-2xl object-cover border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors" />
+                  ) : isPhotoPost(item) && getMediaUrl(item) ? (
+                    <img
+                      src={getMediaUrl(item)}
+                      alt="Thumbnail"
+                      className="w-14 h-14 rounded-2xl object-cover border-2 border-zinc-800 group-hover:border-red-500/30 transition-colors"
+                    />
                   ) : (
                     <div className="w-14 h-14 rounded-2xl bg-zinc-900 border-2 border-zinc-800 flex items-center justify-center text-zinc-600">
                       <ShieldAlert className="w-6 h-6" />
                     </div>
                   )}
                   {/* Video badge */}
-                  {item.type === 'Video' && (
+                  {isVideoPost(item) && (
                     <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide shadow">▶</span>
                   )}
                 </div>
@@ -207,7 +240,7 @@ const AdminContent = () => {
                   <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                     <div>
                       <div className="font-black text-white text-base mb-0.5 group-hover:text-red-400 transition-colors">{item.title}</div>
-                      <div className="text-xs text-zinc-500 font-medium">{item.creator} · <span className="text-zinc-600">{item.type}</span> · {item.time}</div>
+                      <div className="text-xs text-zinc-500 font-medium">{item.creator} · <span className="text-zinc-600">{isVideoPost(item) ? 'Video' : isPhotoPost(item) ? 'Photo' : 'Post'}</span> · {item.time}</div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${reasonColors[item.reason] ?? 'text-zinc-400 bg-zinc-800'}`}>{item.reason}</span>
@@ -251,7 +284,14 @@ const AdminContent = () => {
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-zinc-800 shrink-0">
               <div className="flex items-center gap-4">
-                <img src={selectedPost.img} className="w-10 h-10 rounded-xl object-cover border border-zinc-800" />
+                <img
+                  src={selectedPost.creatorAvatar || resolveUserAvatar('', selectedPost.creator)}
+                  alt={selectedPost.creator}
+                  className="w-10 h-10 rounded-xl object-cover border border-zinc-800"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedPost.creator || 'Creator')}&background=18181b&color=ffffff&bold=true`;
+                  }}
+                />
                 <div>
                   <div className="text-white font-black">{selectedPost.creator}</div>
                   <div className="text-xs text-zinc-500 font-bold">{selectedPost.time}</div>
@@ -266,10 +306,20 @@ const AdminContent = () => {
             <div className="p-6 overflow-y-auto space-y-4">
               <div className="text-white text-base leading-relaxed break-words">{selectedPost.title}</div>
               <div className="w-full rounded-2xl overflow-hidden border border-zinc-800 bg-black flex items-center justify-center bg-zinc-900 min-h-[300px]">
-                {selectedPost.type === 'Video' ? (
-                  <video src={selectedPost.img} controls className="w-full max-h-[500px] object-contain" />
-                ) : selectedPost.type === 'Photo' ? (
-                  <img src={selectedPost.img} className="w-full max-h-[500px] object-contain" />
+                {isVideoPost(selectedPost) && getMediaUrl(selectedPost) ? (
+                  <video
+                    src={getMediaUrl(selectedPost)}
+                    controls
+                    playsInline
+                    preload="auto"
+                    className="w-full max-h-[500px] object-contain"
+                  />
+                ) : isPhotoPost(selectedPost) && getMediaUrl(selectedPost) ? (
+                  <img
+                    src={getMediaUrl(selectedPost)}
+                    alt="Post media"
+                    className="w-full max-h-[500px] object-contain"
+                  />
                 ) : (
                    <div className="text-zinc-600 font-black uppercase tracking-widest text-sm py-20">Text Only Post</div>
                 )}
