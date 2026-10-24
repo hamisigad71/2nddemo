@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect, useRef } from 'react';
-import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, notifyAdmins } from '../../lib/db';
+import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, notifyAdmins, invalidateCreatorStorageAssets } from '../../lib/db';
 import { buildAdminKycSubmissionNotification, isCreatorProfileComplete } from '../../lib/verification';
 import { hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../../lib/avatar';
 import { supabase } from '../../lib/supabase';
@@ -317,6 +317,8 @@ const Login = () => {
       // 5. Update users table with profile photo, cover photo, creator role and KYC details
       const { error: userUpdateError } = await supabase.from('users').update({
         avatar: finalAvatarUrl,
+        avatar_url: finalAvatarUrl,
+        cover_image: finalCoverUrl,
         role: 'creator',
         legal_name: legalName.trim(),
         national_id_number: nationalId.trim(),
@@ -331,6 +333,8 @@ const Login = () => {
         // Fallback if KYC columns are not yet on users table
         await supabase.from('users').update({
           avatar: finalAvatarUrl,
+          avatar_url: finalAvatarUrl,
+          cover_image: finalCoverUrl,
           role: 'creator'
         }).eq('uid', user.id);
       }
@@ -346,7 +350,15 @@ const Login = () => {
 
       if (creatorUpdateError) {
         console.warn('Notice updating creator_profiles table:', creatorUpdateError.message);
+        await supabase.from('creator_profiles').update({
+          avatar: finalAvatarUrl,
+          avatar_url: finalAvatarUrl,
+          cover_image: finalCoverUrl,
+          display_name: creatorName
+        }).eq('user_id', user.id);
       }
+
+      invalidateCreatorStorageAssets(user.id);
 
       // 7. Update local cache & dispatch profile update
       localStorage.setItem(`tgd_user_avatar_${user.id}`, finalAvatarUrl);

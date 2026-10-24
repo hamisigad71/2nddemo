@@ -3,7 +3,7 @@ import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCl
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase, deleteUserAccount, notifyAdmins } from '../../lib/db';
+import { getUserProfile, updateUserProfile, updateCreatorProfile, uploadFileToSupabase, deleteUserAccount, notifyAdmins, invalidateCreatorStorageAssets } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import CreatePostForm from '../../components/CreatePostForm';
@@ -542,6 +542,8 @@ const EditProfile = () => {
           localStorage.setItem(`tgd_user_avatar_${user.id}`, finalAvatarUrl);
         } catch {}
       }
+
+      invalidateCreatorStorageAssets(user.id);
 
       // 7. Update all existing posts by this creator in tgd_all_posts
       try {

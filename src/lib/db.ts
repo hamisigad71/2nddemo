@@ -222,6 +222,10 @@ export const isVideoMediaUrl = (url?: string | null): boolean => {
 
 const creatorStorageAssetsCache = new Map<string, { avatar: string | null; cover: string | null }>();
 
+export const invalidateCreatorStorageAssets = (creatorId: string) => {
+  if (creatorId) creatorStorageAssetsCache.delete(creatorId);
+};
+
 export const getCreatorStorageAssets = async (creatorId: string): Promise<{ avatar: string | null; cover: string | null }> => {
   if (!creatorId || creatorId.startsWith('escort-') || creatorId.startsWith('creator-')) {
     return { avatar: null, cover: null };
@@ -259,6 +263,7 @@ export const getCreatorStorageAssets = async (creatorId: string): Promise<{ avat
   for (const bucket of storageBuckets) {
     if (cover) break;
     try {
+      // 1. Check folder covers/${creatorId}
       const { data: covFiles } = await supabase.storage
         .from(bucket)
         .list(`covers/${creatorId}`, { limit: 10, sortBy: { column: 'name', order: 'desc' } });
@@ -271,6 +276,23 @@ export const getCreatorStorageAssets = async (creatorId: string): Promise<{ avat
         }
       }
     } catch {}
+
+    // 2. Also check flat covers/ directory for files named with creatorId prefix (e.g. login/signup uploads)
+    if (!cover) {
+      try {
+        const { data: flatCovers } = await supabase.storage
+          .from(bucket)
+          .list('covers', { search: creatorId, limit: 10, sortBy: { column: 'created_at', order: 'desc' } });
+
+        if (flatCovers && flatCovers.length > 0) {
+          const validFlat = flatCovers.find(f => f.name && f.name.startsWith(creatorId) && !f.name.startsWith('.') && !f.name.includes('emptyFolderPlaceholder'));
+          if (validFlat) {
+            const { data } = supabase.storage.from(bucket).getPublicUrl(`covers/${validFlat.name}`);
+            if (data?.publicUrl) cover = data.publicUrl;
+          }
+        }
+      } catch {}
+    }
   }
 
   const result = { avatar, cover };
@@ -317,6 +339,7 @@ export const updateUserProfile = async (uid: string, data: any) => {
         safeData.avatar = data.avatar || data.avatar_url;
         safeData.avatar_url = data.avatar_url || data.avatar;
       }
+      if (data.cover_image !== undefined) safeData.cover_image = data.cover_image;
       if (data.phone !== undefined) safeData.phone = data.phone;
       if (data.role !== undefined) safeData.role = data.role;
       if (data.email !== undefined) safeData.email = data.email;
@@ -2403,7 +2426,7 @@ export const getDiscoverCreators = async () => {
     try {
       const { data: usersData } = await supabase
         .from('users')
-        .select('uid, name, email, avatar, role, phone, created_at')
+        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status')
         .in('role', ['creator', 'pending_creator', 'escort']);
       if (usersData) creatorUsers = [...usersData];
     } catch {}
@@ -2415,7 +2438,7 @@ export const getDiscoverCreators = async () => {
       try {
         const { data: postingUsers } = await supabase
           .from('users')
-          .select('uid, name, email, avatar, role, phone, created_at')
+          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status')
           .in('uid', postingUidsToFetch);
         if (postingUsers) {
           postingUsers.forEach(u => {
@@ -2460,7 +2483,7 @@ export const getDiscoverCreators = async () => {
           try {
             const { data: userRows } = await supabase
               .from('users')
-              .select('uid, name, email, avatar, role, phone, created_at')
+              .select('uid, name, email, avatar, role, phone, created_at, cover_image, status')
               .in('uid', missingUserIds);
             (userRows || []).forEach(ur => fetchedUsersMap.set(ur.uid, ur));
           } catch {}
@@ -2481,6 +2504,7 @@ export const getDiscoverCreators = async () => {
               uid: p.user_id,
               name: resolvedName,
               avatar: matchedUser?.avatar || p.avatar_url || p.avatar || null,
+              cover_image: matchedUser?.cover_image || p.cover_image || null,
               role: matchedUser?.role || 'creator',
               created_at: p.created_at || matchedUser?.created_at || new Date().toISOString()
             });
@@ -2510,8 +2534,20 @@ export const getDiscoverCreators = async () => {
           const uid = key.replace('tgd_creator_profile_', '');
           const localProf = JSON.parse(localStorage.getItem(key) || '{}');
           localCreatorProfiles.push({ uid, profile: localProf });
-          if (!profileMap.has(uid)) {
+          const existing = profileMap.get(uid);
+          if (!existing) {
             profileMap.set(uid, localProf);
+          } else {
+            // Merge uploaded cover/avatar if DB record still holds placeholder
+            const merged = { ...existing };
+            if (hasUploadedCoverPhoto(localProf.cover_image) && !hasUploadedCoverPhoto(existing.cover_image)) {
+              merged.cover_image = localProf.cover_image;
+            }
+            if (hasUploadedProfilePhoto(localProf.avatar) && !hasUploadedProfilePhoto(existing.avatar)) {
+              merged.avatar = localProf.avatar;
+              merged.avatar_url = localProf.avatar;
+            }
+            profileMap.set(uid, merged);
           }
         }
       }
@@ -2527,7 +2563,7 @@ export const getDiscoverCreators = async () => {
       try {
         const { data: realUsers } = await supabase
           .from('users')
-          .select('uid, name, avatar')
+          .select('uid, name, avatar, cover_image')
           .in('uid', genericUids);
 
         if (realUsers && realUsers.length > 0) {
@@ -2539,6 +2575,9 @@ export const getDiscoverCreators = async () => {
             }
             if (ru?.avatar && !u.avatar) {
               u.avatar = ru.avatar;
+            }
+            if (ru?.cover_image && !u.cover_image) {
+              u.cover_image = ru.cover_image;
             }
           });
         }
@@ -2583,14 +2622,17 @@ export const getDiscoverCreators = async () => {
       const p = profileMap.get(u.uid);
       const postStats = postsByCreator.get(u.uid);
       const hasPosts = (postStats?.count || 0) > 0;
+      const local = getStoredCreatorProfile(u.uid);
 
       // Storage assets check for missing avatar or cover
+      const hasKnownCover = hasUploadedCoverPhoto(p?.cover_image) || hasUploadedCoverPhoto(u.cover_image) || hasUploadedCoverPhoto(local?.cover_image);
+      const hasKnownAvatar = hasUploadedProfilePhoto(u.avatar) || hasUploadedProfilePhoto(p?.avatar) || hasUploadedProfilePhoto(p?.avatar_url) || hasUploadedProfilePhoto(local?.avatar);
+
       let storageAssets = { avatar: null as string | null, cover: null as string | null };
-      if (!u.avatar || !p?.cover_image) {
+      if (!hasKnownAvatar || !hasKnownCover) {
         storageAssets = await getCreatorStorageAssets(u.uid);
       }
 
-      const local = getStoredCreatorProfile(u.uid);
       const creatorName = resolveCreatorDisplayName(
         u.name,
         p?.display_name,
@@ -2602,13 +2644,25 @@ export const getDiscoverCreators = async () => {
       const rawAvatar = u.avatar || p?.avatar_url || p?.avatar || local?.avatar || local?.avatar_url || storageAssets.avatar;
       const avatar = resolveUserAvatar(rawAvatar && !rawAvatar.startsWith('blob:') ? rawAvatar : null, creatorName);
       
-      const rawCover = (p?.cover_image && !isVideoMediaUrl(p.cover_image) && !p.cover_image.startsWith('blob:') && !p.cover_image.includes('photo-1549490349-8643362247b5') ? p.cover_image : null)
-        || (u.cover_image && !isVideoMediaUrl(u.cover_image) && !u.cover_image.startsWith('blob:') && !u.cover_image.includes('photo-1549490349-8643362247b5') ? u.cover_image : null)
-        || (local?.cover_image && !isVideoMediaUrl(local.cover_image) && !local.cover_image.startsWith('blob:') && !local.cover_image.includes('photo-1549490349-8643362247b5') ? local.cover_image : null)
-        || (storageAssets.cover && !isVideoMediaUrl(storageAssets.cover) ? storageAssets.cover : null)
-        || (postStats?.latestCover && !isVideoMediaUrl(postStats.latestCover) && !postStats.latestCover.startsWith('blob:') && !postStats.latestCover.includes('photo-1549490349-8643362247b5') ? postStats.latestCover : null);
+      const pCover = (p?.cover_image && hasUploadedCoverPhoto(p.cover_image) && !isVideoMediaUrl(p.cover_image)) ? p.cover_image : null;
+      const uCover = (u.cover_image && hasUploadedCoverPhoto(u.cover_image) && !isVideoMediaUrl(u.cover_image)) ? u.cover_image : null;
+      const localCover = (local?.cover_image && hasUploadedCoverPhoto(local.cover_image) && !isVideoMediaUrl(local.cover_image)) ? local.cover_image : null;
+      const storageCover = (storageAssets.cover && hasUploadedCoverPhoto(storageAssets.cover) && !isVideoMediaUrl(storageAssets.cover)) ? storageAssets.cover : null;
+      const postCover = (postStats?.latestCover && hasUploadedCoverPhoto(postStats.latestCover) && !isVideoMediaUrl(postStats.latestCover)) ? postStats.latestCover : null;
 
+      const rawCover = pCover || uCover || localCover || storageCover || postCover;
       const cover = rawCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
+
+      // Self-heal: persist resolved cover back to DB in background if not yet set
+      if (rawCover && hasUploadedCoverPhoto(rawCover)) {
+        if (!hasUploadedCoverPhoto(u.cover_image)) {
+          supabase.from('users').update({ cover_image: rawCover }).eq('uid', u.uid).then(() => {}, () => {});
+        }
+        if (!hasUploadedCoverPhoto(p?.cover_image)) {
+          supabase.from('creator_profiles').update({ cover_image: rawCover }).eq('user_id', u.uid).then(() => {}, () => {});
+        }
+      }
+
       const realSubs = creatorSubCounts.has(u.uid)
         ? (creatorSubCounts.get(u.uid) || 0)
         : (activeSubsQueriedSuccessfully ? 0 : (p?.total_subscribers || 0));

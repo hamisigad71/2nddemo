@@ -355,7 +355,9 @@ const Signup = () => {
       if (uid && uploadedAvatarUrl) {
         try {
           await supabase.from('users').update({
-            avatar: uploadedAvatarUrl
+            avatar: uploadedAvatarUrl,
+            avatar_url: uploadedAvatarUrl,
+            ...(accountType === 'creator' && uploadedCoverUrl ? { cover_image: uploadedCoverUrl } : {})
           }).eq('uid', uid);
 
           if (accountType === 'creator') {
