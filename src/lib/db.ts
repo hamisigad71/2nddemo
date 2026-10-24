@@ -5003,10 +5003,12 @@ export const getAdminTransactions = async () => {
     if (userIds.length > 0) {
       const { data: usersData } = await supabase
         .from('users')
-        .select('uid, name, email')
-        .in('uid', userIds);
+        .select('*');
 
-      (usersData || []).forEach(u => userMap.set(u.uid, { name: u.name, email: u.email }));
+      (usersData || []).forEach((u: any) => {
+        if (u.uid) userMap.set(u.uid, { name: u.name, email: u.email });
+        if (u.id) userMap.set(u.id, { name: u.name, email: u.email });
+      });
     }
     
     return txs.map(t => {
@@ -5020,6 +5022,9 @@ export const getAdminTransactions = async () => {
         amount: `KES ${(t.gross_amount || 0).toLocaleString()}`,
         fee: `KES ${(t.platform_fee || 0).toLocaleString()}`,
         net: `KES ${(t.net_amount || 0).toLocaleString()}`,
+        rawGross: Number(t.gross_amount || 0),
+        rawFee: Number(t.platform_fee || 0),
+        rawNet: Number(t.net_amount || 0),
         status: t.status === 'completed' ? 'success' : (t.status || 'success'),
         date: new Date(t.created_at).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
       };

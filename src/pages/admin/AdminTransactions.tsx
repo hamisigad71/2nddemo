@@ -37,6 +37,12 @@ const AdminTransactions = () => {
 
   const filtered = transactionsList.filter(t => filter === 'all' || t.status === filter);
 
+  const totalVolume = transactionsList.reduce((acc, t) => acc + (t.rawGross || 0), 0);
+  const totalFees = transactionsList.reduce((acc, t) => acc + (t.rawFee || 0), 0);
+  const successfulTxCount = transactionsList.filter(t => t.status === 'success').length;
+  const failedTxCount = transactionsList.filter(t => t.status === 'failed').length;
+  const successRate = transactionsList.length > 0 ? Math.round((successfulTxCount / transactionsList.length) * 100) : 100;
+
   return (
     <AdminLayout>
       <div className="p-4 md:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto custom-scrollbar overflow-y-auto">
@@ -50,15 +56,15 @@ const AdminTransactions = () => {
               <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500">
                 <Receipt className="w-5 h-5" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Transactions & Payouts</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Transactions & Ledger</h1>
             </div>
             <p className="text-zinc-400 text-sm font-medium max-w-xl leading-relaxed">
-              Full transaction log across M-Pesa, Card payments, and platform fee deductions.
+              Live transaction log across M-Pesa, Card payments, and platform fee deductions.
             </p>
           </div>
           
           <div className="relative z-10 shrink-0">
-            <button className="flex items-center gap-2 px-6 py-3.5 bg-[#0d0e12] border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-500 rounded-2xl text-xs font-black uppercase tracking-wider text-white transition-all shadow-lg active:scale-95 group">
+            <button className="flex items-center gap-2 px-6 py-3.5 bg-[#0d0e12] border border-zinc-700 hover:bg-zinc-800 hover:border-zinc-500 rounded-2xl text-xs font-black uppercase tracking-wider text-white transition-all shadow-lg active:scale-95 group cursor-pointer">
               <Download className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" /> Export CSV
             </button>
           </div>
@@ -67,10 +73,10 @@ const AdminTransactions = () => {
         {/* Summary Tiles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Volume', value: 'KES 48.2M', sub: '+12.5% this month', icon: <ArrowUpRight className="w-4 h-4 text-emerald-500" />, highlight: 'text-white' },
-            { label: 'Platform Fees', value: 'KES 4.82M', sub: '10% average take rate', icon: <ArrowUpRight className="w-4 h-4 text-emerald-500" />, highlight: 'text-red-500' },
-            { label: 'Failed Today', value: '2', sub: 'Action required on 1 user', icon: <AlertTriangle className="w-4 h-4 text-red-500" />, highlight: 'text-red-500' },
-            { label: 'Pending Payouts', value: '5', sub: 'Processing next batch', icon: <RefreshCw className="w-4 h-4 text-yellow-500" />, highlight: 'text-yellow-500' },
+            { label: 'Total Volume', value: `KES ${totalVolume.toLocaleString()}`, sub: `${successfulTxCount} completed payments`, icon: <ArrowUpRight className="w-4 h-4 text-emerald-500" />, highlight: 'text-white' },
+            { label: 'Platform Fees (30%)', value: `KES ${totalFees.toLocaleString()}`, sub: 'Retained platform commission', icon: <ArrowUpRight className="w-4 h-4 text-emerald-500" />, highlight: 'text-red-500' },
+            { label: 'Transactions Count', value: `${transactionsList.length}`, sub: `${successfulTxCount} completed · ${failedTxCount} failed`, icon: <Receipt className="w-4 h-4 text-blue-500" />, highlight: 'text-white' },
+            { label: 'Success Rate', value: `${successRate}%`, sub: 'Payment completion rate', icon: <CheckCircle className="w-4 h-4 text-emerald-500" />, highlight: 'text-emerald-400' },
           ].map(({ label, value, sub, icon, highlight }, i) => (
             <div key={i} className="bg-[#0d0e12] border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition-colors group relative overflow-hidden">
                <div className="absolute top-0 right-0 p-4 opacity-30 group-hover:opacity-100 transition-opacity">
@@ -113,7 +119,7 @@ const AdminTransactions = () => {
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Creator</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Method</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Amount</th>
-                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Fee (10%)</th>
+                  <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Platform Fee (30%)</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Creator Net</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Status</th>
                   <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 pr-8">Date</th>
