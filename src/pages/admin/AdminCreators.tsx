@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, CheckCircle2, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle, Eye, X, ExternalLink } from 'lucide-react';
+import { CheckCircle, CheckCircle2, XCircle, Clock, Search, MoreVertical, TrendingUp, Users, ShieldAlert, Loader2, Trash2, AlertTriangle, Eye, X, ExternalLink, Crown, Check } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-import { getAdminCreators, updateCreatorStatus, deleteUserAccount, setCreatorVerified } from '../../lib/db';
+import { getAdminCreators, updateCreatorStatus, deleteUserAccount, setCreatorVerified, approveCreatorApplication } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 
@@ -124,6 +124,22 @@ const AdminCreators = () => {
     }
   };
 
+  const handleApproveCreator = async (id: string, type: 'creator' | 'vip') => {
+    try {
+      await approveCreatorApplication(id, type);
+      const creator = creatorsList.find(c => c.id === id);
+      toast.success(
+        type === 'vip'
+          ? `👑 ${creator?.name || 'Creator'} approved as VIP Creator!`
+          : `✅ ${creator?.name || 'Creator'} approved as Verified Creator!`
+      );
+      if (kycModalCreator?.id === id) setKycModalCreator(null);
+      await loadCreators();
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not approve creator.');
+    }
+  };
+
   const filtered = creatorsList.filter(c => {
     const matchFilter = filter === 'all' || c.status === filter;
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -131,8 +147,9 @@ const AdminCreators = () => {
     return matchFilter && matchSearch;
   });
 
+  // Only show creators who have submitted verification documents (ID or Selfie) in the Compliance Queue
   const pendingCreators = creatorsList.filter(
-    c => c.status === 'pending' || (!c.isVerified && (c.hasId || c.hasSelfie || c.kycStatus === 'pending'))
+    c => !c.isVerified && (Boolean(c.idDocUrl || c.hasId) || Boolean(c.selfieUrl || c.hasSelfie))
   );
 
   return (
@@ -349,10 +366,10 @@ const AdminCreators = () => {
               <p className="text-zinc-500 text-sm mt-1">Review applicant KYC and verification documents (National ID &amp; Selfie).</p>
             </div>
             <button
-              onClick={() => navigate('/admin/users?view=kyc')}
+              onClick={() => navigate('/admin/applications')}
               className="text-red-500 text-sm font-bold hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
             >
-              View All KYC Verifications &rarr;
+              View All Applications &rarr;
             </button>
           </div>
 
@@ -445,20 +462,30 @@ const AdminCreators = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-3 relative z-10">
+                  <div className="flex items-center gap-2 relative z-10">
                     <button
-                      onClick={() => handleStatusChange(p.id, 'active')}
+                      type="button"
+                      onClick={() => handleApproveCreator(p.id, 'vip')}
                       disabled={!p.hasId || !p.hasSelfie}
-                      className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 transition-all border border-red-500 active:scale-95 cursor-pointer"
+                      className="flex-1 py-3 px-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 disabled:opacity-40 text-black font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-md shadow-amber-500/20 cursor-pointer disabled:cursor-not-allowed"
                     >
-                      Approve &amp; Verify
+                      <Crown className="w-3.5 h-3.5" /> Approve VIP
                     </button>
                     <button
-                      onClick={() => setKycModalCreator(p)}
-                      className="px-4 flex items-center justify-center gap-1.5 bg-[#0d0e12] hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl border border-zinc-700 text-[11px] font-bold transition-all active:scale-95 cursor-pointer"
-                      title="Inspect Full KYC Details"
+                      type="button"
+                      onClick={() => handleApproveCreator(p.id, 'creator')}
+                      disabled={!p.hasId || !p.hasSelfie}
+                      className="flex-1 py-3 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20 cursor-pointer disabled:cursor-not-allowed"
                     >
-                      <Eye className="w-4 h-4" /> Inspect
+                      <Check className="w-3.5 h-3.5" /> Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKycModalCreator(p)}
+                      className="px-3 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 text-[10px] font-bold transition-all flex items-center justify-center cursor-pointer"
+                      title="Inspect KYC Dossier"
+                    >
+                      <Eye className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -562,14 +589,24 @@ const AdminCreators = () => {
                     Revoke Verification Badge
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={!kycModalCreator.hasId || !kycModalCreator.hasSelfie}
-                    onClick={() => handleToggleVerified(kycModalCreator.id, true)}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Approve KYC &amp; Grant Blue Badge
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!kycModalCreator.hasId || !kycModalCreator.hasSelfie}
+                      onClick={() => handleApproveCreator(kycModalCreator.id, 'creator')}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <Check className="w-4 h-4" /> Approve as Creator
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!kycModalCreator.hasId || !kycModalCreator.hasSelfie}
+                      onClick={() => handleApproveCreator(kycModalCreator.id, 'vip')}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 disabled:opacity-40 text-black text-xs font-black uppercase tracking-wider shadow-lg shadow-amber-500/25 transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <Crown className="w-4 h-4" /> Approve as VIP
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
