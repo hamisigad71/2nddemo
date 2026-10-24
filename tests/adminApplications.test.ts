@@ -95,3 +95,4 @@ describe('Admin Creator Applications & VIP Approval', () => {
     assert.match(rejectPayload.reason, /cut off/);
   });
 });
+
