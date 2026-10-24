@@ -3,7 +3,7 @@ import { FALLBACK_POSTS } from '../data/mockPosts';
 import { getEscorts } from './mockData';
 import { resolveUserAvatar, getDefaultAvatar, compressAvatarImage, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from './avatar';
 import { fetchAllPages } from './pagination';
-import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_NAMES, shouldIncludeCreatorInDiscover } from './creatorDirectory';
+import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_NAMES, shouldIncludeCreatorInDiscover, isSelectedVerifiedCreator } from './creatorDirectory';
 import { hasPrivateKycEvidence, isKycVerified, isCreatorVerified } from './verification';
 import { calculateAge, getPublicGenderLabel } from './profileDemographics';
 import {
@@ -2260,7 +2260,7 @@ export const getCreatorProfile = async (id: string) => {
         bio: resolvedBio,
         location: localCreator?.location || creatorMeta?.location || 'Nairobi, Kenya',
         rating: 4.9,
-        isVerified: isCreatorVerified(
+        isVerified: isSelectedVerifiedCreator(resolvedName, userRow?.email, id) || isCreatorVerified(
           id,
           userRow?.is_verified ?? creatorMeta?.is_verified ?? localCreator?.is_verified,
           userRow?.kyc_status || creatorMeta?.kyc_status || localCreator?.kyc_status
@@ -2493,15 +2493,38 @@ export const getDiscoverCreators = async () => {
     // 2. Fetch all real creator accounts from 'users' table
     let creatorUsers: any[] = [];
     try {
-      const { data: usersData } = await supabase
+      const { data: usersData, error: uErr } = await supabase
         .from('users')
         .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required')
         .in('role', ['creator', 'pending_creator', 'escort']);
-      if (usersData) creatorUsers = [...usersData];
+      if (usersData) {
+        creatorUsers = [...usersData];
+      } else if (uErr) {
+        const { data: baseData } = await supabase
+          .from('users')
+          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified')
+          .in('role', ['creator', 'pending_creator', 'escort']);
+        if (baseData) creatorUsers = [...baseData];
+      }
     } catch {}
 
-    // Also fetch any users who might have posted even if role is not strictly creator
     const creatorUserIds = new Set(creatorUsers.map(u => u.uid));
+
+    // Ensure selected verified creators and verified users are always included even if their database role was 'subscriber'
+    try {
+      const { data: selectedUsers } = await supabase
+        .from('users')
+        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified')
+        .or('is_verified.eq.true,kyc_status.eq.verified,email.eq.hadq@gmail.com,email.eq.nataliangina62@gmail.com,email.eq.ellarains00@gmail.com');
+      if (selectedUsers) {
+        selectedUsers.forEach(su => {
+          if (!creatorUserIds.has(su.uid)) {
+            creatorUsers.push(su);
+            creatorUserIds.add(su.uid);
+          }
+        });
+      }
+    } catch {}
     const postingUidsToFetch = Array.from(postsByCreator.keys()).filter(id => !creatorUserIds.has(id) && !id.startsWith('creator-') && !id.startsWith('escort-'));
     if (postingUidsToFetch.length > 0) {
       try {
@@ -2724,7 +2747,8 @@ export const getDiscoverCreators = async () => {
 
       const rawCover = pCover || uCover || localCover || storageCover || postCover;
       const cover = rawCover || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80';
-      const isDiscoverFeatured = Boolean(u.payout_kyc_required);
+      const isSelectedCreator = isSelectedVerifiedCreator(creatorName, (u as any).email, u.uid);
+      const isDiscoverFeatured = isSelectedCreator || Boolean(u.payout_kyc_required);
 
       // Self-heal: persist resolved cover back to DB in background if not yet set
       if (rawCover && hasUploadedCoverPhoto(rawCover)) {
@@ -2760,7 +2784,7 @@ export const getDiscoverCreators = async () => {
         avatar,
         cover,
         hasPosts,
-        isVerified: isCreatorVerified(
+        isVerified: isSelectedCreator || isCreatorVerified(
           u.uid,
           (u as any).is_verified ?? p?.is_verified ?? (local as any)?.is_verified,
           (u as any).kyc_status || p?.kyc_status || (local as any)?.kyc_status
@@ -2775,7 +2799,7 @@ export const getDiscoverCreators = async () => {
     const completedRealCreators = realCreators.filter(c => {
       const hasPhoto = hasUploadedProfilePhoto(c.avatar);
       const hasCover = hasUploadedCoverPhoto(c.cover);
-      return shouldIncludeCreatorInDiscover(c.isDiscoverFeatured, hasPhoto, hasCover);
+      return shouldIncludeCreatorInDiscover(c.isDiscoverFeatured, hasPhoto, hasCover, c.isVerified);
     });
 
     // Sort: creators with active posts come first
@@ -3054,7 +3078,7 @@ export const getAdminCreators = async () => {
       const hasId = Boolean(idDocUrl);
       const hasSelfie = Boolean(selfieUrl);
       const kycStatus = (u as any).kyc_status || p?.kyc_status || (local as any)?.kyc_status || (hasId ? 'pending' : 'unverified');
-      const isVerified = isCreatorVerified(
+      const isVerified = isSelectedVerifiedCreator(name, (u as any).email, u.uid) || isCreatorVerified(
         u.uid,
         (u as any).is_verified ?? p?.is_verified ?? (local as any)?.is_verified,
         kycStatus
@@ -4465,8 +4489,12 @@ export interface NotificationItem {
     net_amount: number;
     payer_name: string;
     payer_avatar?: string;
+    creator_name?: string;
+    creator_avatar?: string;
     recipient_name: string;
     recipient_avatar?: string;
+    currency?: string;
+    type?: string;
     status: string;
     payment_method: string;
     reference?: string;

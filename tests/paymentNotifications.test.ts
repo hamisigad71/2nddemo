@@ -91,8 +91,11 @@ describe('admin payment notifications', () => {
     assert.equal(notif.payment_details.gross_amount, 1000);
     assert.equal(notif.payment_details.platform_fee, 300);
     assert.equal(notif.payment_details.net_amount, 700);
+    assert.equal(notif.payment_details.currency, 'KES');
     assert.equal(notif.payment_details.payer_name, 'John Doe');
     assert.equal(notif.payment_details.creator_name, 'Sarah Jenkins');
+    assert.equal(notif.payment_details.creator_avatar, 'https://cdn.example.com/sarah.jpg');
+    assert.equal(notif.payment_details.type, 'subscription');
     assert.equal(notif.payment_details.payment_method, 'M-Pesa');
     assert.match(notif.message, /John Doe/);
     assert.match(notif.message, /Sarah Jenkins/);

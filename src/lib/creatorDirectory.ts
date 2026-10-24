@@ -8,11 +8,41 @@ export type CreatorDirectoryCandidate = {
 
 export type CreatorDirectoryFilter = 'all' | 'verified' | 'trending' | 'popular' | 'new';
 
+export const SELECTED_VERIFIED_CREATOR_NAMES = new Set([
+  'fatma loki',
+  'natalia ngina',
+  'ella rains',
+]);
+
+export const SELECTED_VERIFIED_CREATOR_EMAILS = new Set([
+  'hadq@gmail.com',
+  'nataliangina62@gmail.com',
+  'ellarains00@gmail.com',
+]);
+
+export const SELECTED_VERIFIED_CREATOR_UIDS = new Set([
+  '347f9665-49b7-4458-9ef2-457e19d60a80', // fatma loki
+  '135c3008-8a65-4474-86fc-6782228e54f9', // Natalia Ngina
+  'cb31eb35-25ca-4dc7-983d-f9de8065001f', // Ella Rains
+]);
+
+export const isSelectedVerifiedCreator = (
+  name?: string | null,
+  email?: string | null,
+  uid?: string | null,
+): boolean => {
+  if (name && SELECTED_VERIFIED_CREATOR_NAMES.has(name.trim().toLowerCase())) return true;
+  if (email && SELECTED_VERIFIED_CREATOR_EMAILS.has(email.trim().toLowerCase())) return true;
+  if (uid && SELECTED_VERIFIED_CREATOR_UIDS.has(uid)) return true;
+  return false;
+};
+
 export const shouldIncludeCreatorInDiscover = (
   isExplicitlyFeatured: boolean,
   hasUploadedAvatar: boolean,
   hasUploadedCover: boolean,
-): boolean => isExplicitlyFeatured || (hasUploadedAvatar && hasUploadedCover);
+  isVerified?: boolean,
+): boolean => isExplicitlyFeatured || Boolean(isVerified) || (hasUploadedAvatar && hasUploadedCover);
 
 type FilterableCreator = {
   isVerified?: boolean;

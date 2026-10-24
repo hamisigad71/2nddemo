@@ -11,7 +11,7 @@ import {
   isCreatorProfileComplete,
   hasPrivateKycEvidence
 } from '../src/lib/verification';
-import { shouldIncludeCreatorInDiscover } from '../src/lib/creatorDirectory';
+import { shouldIncludeCreatorInDiscover, isSelectedVerifiedCreator } from '../src/lib/creatorDirectory';
 
 describe('creator verification eligibility and admin approval flow', () => {
   it('grants the verified badge only after KYC approval', () => {
@@ -22,6 +22,16 @@ describe('creator verification eligibility and admin approval flow', () => {
     assert.equal(isCreatorVerified('creator-1', true, 'pending'), false);
     assert.equal(isCreatorVerified('creator-1', true), false);
     assert.equal(isCreatorVerified('creator-1', false, 'verified'), true);
+  });
+
+  it('identifies the 3 selected creator accounts for verified status and discovery', () => {
+    assert.equal(isSelectedVerifiedCreator('fatma loki'), true);
+    assert.equal(isSelectedVerifiedCreator('Natalia Ngina'), true);
+    assert.equal(isSelectedVerifiedCreator('Ella Rains'), true);
+    assert.equal(isSelectedVerifiedCreator(undefined, 'hadq@gmail.com'), true);
+    assert.equal(isSelectedVerifiedCreator(undefined, 'nataliangina62@gmail.com'), true);
+    assert.equal(isSelectedVerifiedCreator(undefined, 'ellarains00@gmail.com'), true);
+    assert.equal(isSelectedVerifiedCreator('Random User'), false);
   });
 
   it('requires identity details and both proof files before KYC submission', () => {
@@ -47,10 +57,11 @@ describe('creator verification eligibility and admin approval flow', () => {
     assert.equal(hasPrivateKycEvidence('creator-1', 'blob:preview', 'creator-1/selfie.jpg'), false);
   });
 
-  it('allows only explicitly selected creators to appear without both profile images', () => {
+  it('allows verified creators or explicitly selected creators to appear on discover', () => {
     assert.equal(shouldIncludeCreatorInDiscover(true, false, false), true);
     assert.equal(shouldIncludeCreatorInDiscover(false, true, true), true);
     assert.equal(shouldIncludeCreatorInDiscover(false, true, false), false);
+    assert.equal(shouldIncludeCreatorInDiscover(false, false, false, true), true);
   });
 
   it('dispatches an admin review notification when a creator submits verification details', () => {

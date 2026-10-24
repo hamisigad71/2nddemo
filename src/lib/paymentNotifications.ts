@@ -125,6 +125,7 @@ export const buildTransactionPaymentNotification = (
       payer_name: payer,
       payer_avatar: payerAvatar,
       creator_name: recipient,
+      creator_avatar: recipientAvatar,
       recipient_name: recipient,
       recipient_avatar: recipientAvatar,
       status: status,

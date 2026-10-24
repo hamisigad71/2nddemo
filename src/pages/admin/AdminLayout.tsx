@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserCheck, DollarSign,
   BarChart3, Settings, Menu, LogOut, Bell, ChevronRight,
   Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart, Megaphone, Lock,
-  CheckCheck, Radio, Video, UserPlus, X, Receipt, ArrowRight, ArrowUpRight, CheckCircle2, CreditCard
+  CheckCheck, Radio, Video, UserPlus, X, Receipt, ArrowRight, CreditCard
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';

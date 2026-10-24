@@ -4,27 +4,43 @@
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS payout_kyc_required boolean NOT NULL DEFAULT false;
 
--- Ensure the names resolve to exactly one creator account each before changing
--- any account, so an unexpected production dataset fails closed.
+-- Ensure the names or emails resolve to the exact accounts.
+-- This table holds the exact user ids used by later updates.
+DROP TABLE IF EXISTS pg_temp.selected_creator_verification_targets;
+CREATE TEMP TABLE selected_creator_verification_targets (
+  target_name text PRIMARY KEY,
+  user_id text NOT NULL UNIQUE
+);
+
 DO $$
 DECLARE
   target_name text;
-  matching_count integer;
+  matching_user_ids text[];
 BEGIN
   FOREACH target_name IN ARRAY ARRAY['fatma loki', 'natalia ngina', 'ella rains']
   LOOP
-    SELECT count(*)
-    INTO matching_count
-    FROM public.users
-    WHERE lower(btrim(name)) = target_name
-      AND role IN ('creator', 'pending_creator');
+    SELECT array_agg(DISTINCT users.uid::text ORDER BY users.uid::text)
+    INTO matching_user_ids
+    FROM public.users AS users
+    LEFT JOIN public.creator_profiles AS profiles
+      ON profiles.user_id::text = users.uid::text
+    WHERE (
+        lower(btrim(users.name)) = target_name
+        OR lower(btrim(profiles.display_name)) = target_name
+        OR (target_name = 'fatma loki' AND lower(users.email) = 'hadq@gmail.com')
+        OR (target_name = 'natalia ngina' AND lower(users.email) = 'nataliangina62@gmail.com')
+        OR (target_name = 'ella rains' AND lower(users.email) = 'ellarains00@gmail.com')
+      );
 
-    IF matching_count <> 1 THEN
+    IF COALESCE(cardinality(matching_user_ids), 0) <> 1 THEN
       RAISE EXCEPTION
         'Expected exactly one creator account named "%", found %; no selected account changes were applied.',
         target_name,
-        matching_count;
+        COALESCE(cardinality(matching_user_ids), 0);
     END IF;
+
+    INSERT INTO selected_creator_verification_targets (target_name, user_id)
+    VALUES (target_name, matching_user_ids[1]);
   END LOOP;
 END;
 $$;
@@ -33,20 +49,68 @@ $$;
 -- operation. The setting is transaction-local and does not change app roles.
 SELECT set_config('request.jwt.claim.role', 'service_role', true);
 
+-- 1. Upgrade public.users to verified active creators
 UPDATE public.users
-SET kyc_status = 'verified',
+SET role = 'creator',
+    status = 'active',
+    kyc_status = 'verified',
     is_verified = true,
-    payout_kyc_required = true
-WHERE lower(btrim(name)) IN ('fatma loki', 'natalia ngina', 'ella rains')
-  AND role IN ('creator', 'pending_creator');
+    payout_kyc_required = true,
+    cover_image = COALESCE(cover_image, 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80')
+WHERE uid::text IN (SELECT user_id FROM selected_creator_verification_targets);
 
-UPDATE public.creator_profiles AS profiles
-SET kyc_status = 'verified',
-    is_verified = true
-FROM public.users AS users
-WHERE profiles.user_id::text = users.uid::text
-  AND users.payout_kyc_required = true;
+-- 2. Ensure each creator has a verified creator profile
+INSERT INTO public.creator_profiles (
+  user_id,
+  display_name,
+  bio,
+  location,
+  monthly_price,
+  cover_image,
+  avatar,
+  avatar_url,
+  is_active,
+  is_verified,
+  kyc_status,
+  tags,
+  promo_discount,
+  promo_active,
+  total_subscribers,
+  created_at,
+  updated_at
+)
+SELECT
+  u.uid::text,
+  u.name,
+  'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
+  'Nairobi, Kenya',
+  1000,
+  COALESCE(u.cover_image, 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80'),
+  u.avatar,
+  u.avatar,
+  true,
+  true,
+  'verified',
+  ARRAY['VIP Content', 'Direct Chat', 'Exclusive Photos'],
+  50,
+  true,
+  0,
+  now(),
+  now()
+FROM public.users u
+WHERE u.uid::text IN (SELECT user_id FROM selected_creator_verification_targets)
+ON CONFLICT (user_id) DO UPDATE
+SET
+  display_name = COALESCE(creator_profiles.display_name, EXCLUDED.display_name),
+  is_active = true,
+  is_verified = true,
+  kyc_status = 'verified',
+  cover_image = COALESCE(creator_profiles.cover_image, EXCLUDED.cover_image),
+  avatar = COALESCE(creator_profiles.avatar, EXCLUDED.avatar),
+  avatar_url = COALESCE(creator_profiles.avatar_url, EXCLUDED.avatar_url),
+  updated_at = now();
 
+-- 3. Trigger to prevent account owner tampering with selected creator KYC status
 CREATE OR REPLACE FUNCTION public.prevent_selected_creator_kyc_bypass()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -62,29 +126,27 @@ BEGIN
          AND admin_user.role = 'admin'
      )
   THEN
-    IF TG_TABLE_NAME = 'users'
-       AND NEW.payout_kyc_required IS DISTINCT FROM OLD.payout_kyc_required
-    THEN
-      RAISE EXCEPTION 'Only an administrator can change payout identity requirements';
-    END IF;
+    IF TG_TABLE_NAME = 'users' THEN
+      IF NEW.payout_kyc_required IS DISTINCT FROM OLD.payout_kyc_required THEN
+        RAISE EXCEPTION 'Only an administrator can change payout identity requirements';
+      END IF;
 
-    IF TG_TABLE_NAME = 'users'
-       AND OLD.payout_kyc_required
-       AND NEW.kyc_status IS DISTINCT FROM OLD.kyc_status
-    THEN
-      RAISE EXCEPTION 'Selected creator verification status cannot be changed by the account owner';
-    END IF;
-
-    IF TG_TABLE_NAME = 'creator_profiles'
-       AND NEW.kyc_status IS DISTINCT FROM OLD.kyc_status
-       AND EXISTS (
-         SELECT 1
-         FROM public.users selected_user
-         WHERE selected_user.uid::text = OLD.user_id::text
-           AND selected_user.payout_kyc_required
-       )
-    THEN
-      RAISE EXCEPTION 'Selected creator verification status cannot be changed by the account owner';
+      IF OLD.payout_kyc_required
+         AND NEW.kyc_status IS DISTINCT FROM OLD.kyc_status
+      THEN
+        RAISE EXCEPTION 'Selected creator verification status cannot be changed by the account owner';
+      END IF;
+    ELSIF TG_TABLE_NAME = 'creator_profiles' THEN
+      IF NEW.kyc_status IS DISTINCT FROM OLD.kyc_status
+         AND EXISTS (
+           SELECT 1
+           FROM public.users selected_user
+           WHERE selected_user.uid::text = OLD.user_id::text
+             AND selected_user.payout_kyc_required
+         )
+      THEN
+        RAISE EXCEPTION 'Selected creator verification status cannot be changed by the account owner';
+      END IF;
     END IF;
   END IF;
   RETURN NEW;
@@ -101,6 +163,7 @@ CREATE TRIGGER protect_selected_creator_profile_kyc
 BEFORE UPDATE OF kyc_status ON public.creator_profiles
 FOR EACH ROW EXECUTE FUNCTION public.prevent_selected_creator_kyc_bypass();
 
+-- 4. Trigger to require National ID and selfie before withdrawal/payout can be requested
 CREATE OR REPLACE FUNCTION public.require_selected_creator_payout_documents()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -155,3 +218,20 @@ DROP TRIGGER IF EXISTS require_selected_creator_payout_documents ON public.trans
 CREATE TRIGGER require_selected_creator_payout_documents
 BEFORE INSERT OR UPDATE ON public.transactions
 FOR EACH ROW EXECUTE FUNCTION public.require_selected_creator_payout_documents();
+
+-- 5. Return updated records for verification
+SELECT
+  u.uid,
+  u.name,
+  u.email,
+  u.role,
+  u.kyc_status,
+  u.is_verified,
+  u.payout_kyc_required,
+  p.display_name,
+  p.is_verified AS profile_verified,
+  p.kyc_status AS profile_kyc,
+  p.is_active AS profile_active
+FROM public.users u
+LEFT JOIN public.creator_profiles p ON p.user_id::text = u.uid::text
+WHERE u.uid::text IN (SELECT user_id FROM selected_creator_verification_targets);
