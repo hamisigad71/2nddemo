@@ -20,6 +20,24 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS dob date;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS legal_name text;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS national_id_number text;
 
+-- Also mirror columns on creator_profiles table so all creator queries succeed without schema cache errors
+ALTER TABLE public.creator_profiles ADD COLUMN IF NOT EXISTS kyc_status text DEFAULT 'unverified';
+ALTER TABLE public.creator_profiles ADD COLUMN IF NOT EXISTS is_verified boolean DEFAULT false;
+ALTER TABLE public.creator_profiles ADD COLUMN IF NOT EXISTS legal_name text;
+ALTER TABLE public.creator_profiles ADD COLUMN IF NOT EXISTS national_id_number text;
+ALTER TABLE public.creator_profiles ADD COLUMN IF NOT EXISTS dob date;
+ALTER TABLE public.creator_profiles ADD COLUMN IF NOT EXISTS kyc_id_url text;
+ALTER TABLE public.creator_profiles ADD COLUMN IF NOT EXISTS kyc_selfie_url text;
+
+-- Ensure public storage buckets exist so ID documents and creator media can be uploaded and viewed
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('kyc-documents', 'kyc-documents', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('Daysman Gad', 'Daysman Gad', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
 -- Users may submit their own KYC information; verification status is changed by admins.
 DROP POLICY IF EXISTS "Users can update their own KYC details" ON public.users;
 CREATE POLICY "Users can update their own KYC details"
