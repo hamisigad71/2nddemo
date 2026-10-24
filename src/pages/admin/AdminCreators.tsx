@@ -338,7 +338,9 @@ const AdminCreators = () => {
                           <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-3 py-1.5 bg-[#0d0e12] text-yellow-500 hover:text-yellow-400 hover:border-yellow-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-yellow-500/20 transition-all active:scale-95">Suspend</button>
                         )}
                         {c.status === 'suspended' && (
-                          <button onClick={() => handleStatusChange(c.id, 'active')} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95">Restore</button>
+                          <button onClick={() => handleStatusChange(c.id, 'active')} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 shadow-md shadow-emerald-500/10 flex items-center gap-1 cursor-pointer" title="Unsuspend creator and restore account">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Unsuspend
+                          </button>
                         )}
                         <button
                           onClick={() => setDeleteModalCreator(c)}

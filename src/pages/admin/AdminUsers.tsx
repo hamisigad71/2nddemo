@@ -388,10 +388,10 @@ const AdminUsers = () => {
                               ) : (
                                 <button 
                                   onClick={() => handleToggleBan(u.id, u.status)}
-                                  className="px-3 py-1.5 bg-[#0d0e12] text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
-                                  title="Restore Subscriber"
+                                  className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer"
+                                  title="Unsuspend Subscriber and restore account"
                                 >
-                                  <UserCheck className="w-3.5 h-3.5" /> Restore
+                                  <UserCheck className="w-3.5 h-3.5" /> Unsuspend
                                 </button>
                               )}
                               <button

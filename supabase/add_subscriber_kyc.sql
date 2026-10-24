@@ -5,6 +5,10 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS kyc_status text DEFAULT 'unver
 ALTER TABLE public.users ALTER COLUMN kyc_status SET DEFAULT 'unverified';
 UPDATE public.users SET kyc_status = 'unverified' WHERE kyc_status IS NULL;
 
+-- Backward-compatibility: Ensure is_verified column also exists so cached browser queries and legacy admin actions never fail
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_verified boolean DEFAULT false;
+UPDATE public.users SET is_verified = (kyc_status = 'verified') WHERE is_verified IS NULL;
+
 -- Store private storage object paths, not public URLs, for sensitive identity documents.
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS kyc_id_url text;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS kyc_selfie_url text;

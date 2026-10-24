@@ -2946,7 +2946,11 @@ export const getAdminCreators = async () => {
         category: p?.niche || local?.category || (p?.tags && p.tags[0]) || 'Various',
         subs: p?.total_subscribers || local?.total_subscribers || 0,
         revenue: `KES ${(p?.total_earnings || 0).toLocaleString()}`,
-        status: u.role === 'creator' ? 'active' : u.role === 'suspended_creator' ? 'suspended' : 'pending',
+        status: (u.status === 'suspended' || u.role === 'suspended_creator' || (typeof window !== 'undefined' && localStorage.getItem(`tgd_user_status_${u.uid}`) === 'suspended'))
+          ? 'suspended'
+          : (u.status === 'pending' || u.role === 'pending_creator')
+          ? 'pending'
+          : 'active',
         joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }) : 'Recent',
         hasId,
         hasSelfie,
@@ -3636,6 +3640,15 @@ export const updateUserStatus = async (userId: string, newStatus: 'active' | 'ba
           localStorage.setItem(`tgd_user_status_${userId}`, newStatus);
         } catch {}
         window.dispatchEvent(new CustomEvent('account_status_changed', { detail: { userId, status: newStatus } }));
+        window.dispatchEvent(new CustomEvent('creators_updated'));
+        window.dispatchEvent(new CustomEvent('posts_updated'));
+      }
+    } else if (newStatus === 'active') {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem(`tgd_user_status_${userId}`);
+        } catch {}
+        window.dispatchEvent(new CustomEvent('account_status_changed', { detail: { userId, status: 'active' } }));
         window.dispatchEvent(new CustomEvent('creators_updated'));
         window.dispatchEvent(new CustomEvent('posts_updated'));
       }
