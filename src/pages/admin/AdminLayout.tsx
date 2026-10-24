@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   getAdminPayouts, 
   getAdminNotifications, 
+  getAdminApplications,
   markAdminNotificationAsRead, 
   markAllAdminNotificationsAsRead, 
   type NotificationItem 
@@ -29,23 +30,25 @@ interface AdminNavItem {
 }
 
 const navItems: AdminNavItem[] = [
-  { label: 'Overview',        icon: LayoutDashboard, path: '/admin' },
-  { label: 'Ads & Campaigns', icon: Megaphone,       path: '/admin/ads', isNew: true },
-  { label: 'Creators',        icon: UserCheck,       path: '/admin/creators' },
-  { label: 'Subscribers / Fans', icon: Users,        path: '/admin/users' },
-  { label: 'Transactions',    icon: DollarSign,      path: '/admin/transactions' },
-  { label: 'Payouts',         icon: Wallet,          path: '/admin/payouts', isNew: true },
-  { label: 'Content',         icon: Rss,             path: '/admin/content' },
-  { label: 'Reports',         icon: Flag,            path: '/admin/reports' },
-  { label: 'Analytics',       icon: BarChart3,       path: '/admin/analytics' },
-  { label: 'Audit Log',       icon: Shield,          path: '/admin/audit-log', isNew: true },
-  { label: 'Settings',        icon: Settings,        path: '/admin/settings' },
-  { label: 'Escort Apps',     icon: Heart,           path: '/admin/escorts' },
+  { label: 'Overview',           icon: LayoutDashboard, path: '/admin' },
+  { label: 'Applications & KYC', icon: UserPlus,        path: '/admin/applications', isNew: true },
+  { label: 'Ads & Campaigns',    icon: Megaphone,       path: '/admin/ads' },
+  { label: 'Creators',           icon: UserCheck,       path: '/admin/creators' },
+  { label: 'Subscribers / Fans', icon: Users,           path: '/admin/users' },
+  { label: 'Transactions',       icon: DollarSign,      path: '/admin/transactions' },
+  { label: 'Payouts',            icon: Wallet,          path: '/admin/payouts' },
+  { label: 'Content',            icon: Rss,             path: '/admin/content' },
+  { label: 'Reports',            icon: Flag,            path: '/admin/reports' },
+  { label: 'Analytics',          icon: BarChart3,       path: '/admin/analytics' },
+  { label: 'Audit Log',          icon: Shield,          path: '/admin/audit-log' },
+  { label: 'Settings',           icon: Settings,        path: '/admin/settings' },
+  { label: 'Escort Apps',        icon: Heart,           path: '/admin/escorts' },
 ];
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [open, setOpen] = useState(false);
   const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0);
+  const [pendingAppsCount, setPendingAppsCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [adminNotifications, setAdminNotifications] = useState<NotificationItem[]>([]);
   const location = useLocation();
@@ -70,14 +73,26 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         setPendingPayoutsCount(pending);
       } catch {}
     };
+
+    const checkPendingApps = async () => {
+      try {
+        const apps = await getAdminApplications();
+        setPendingAppsCount(apps.length);
+      } catch {}
+    };
+
     checkPendingPayouts();
+    checkPendingApps();
     loadNotifications();
 
     const handlePayoutUpdate = () => checkPendingPayouts();
+    const handleAppsUpdate = () => checkPendingApps();
     const handleNotifUpdate = () => loadNotifications();
 
     window.addEventListener('payouts_updated', handlePayoutUpdate);
     window.addEventListener('wallet_updated', handlePayoutUpdate);
+    window.addEventListener('applications_updated', handleAppsUpdate);
+    window.addEventListener('creators_updated', handleAppsUpdate);
     window.addEventListener('admin_notifications_updated', handleNotifUpdate);
     window.addEventListener('notifications_updated', handleNotifUpdate);
 
@@ -113,6 +128,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     return () => {
       window.removeEventListener('payouts_updated', handlePayoutUpdate);
       window.removeEventListener('wallet_updated', handlePayoutUpdate);
+      window.removeEventListener('applications_updated', handleAppsUpdate);
+      window.removeEventListener('creators_updated', handleAppsUpdate);
       window.removeEventListener('admin_notifications_updated', handleNotifUpdate);
       window.removeEventListener('notifications_updated', handleNotifUpdate);
       supabase.removeChannel(channel);
@@ -142,7 +159,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto no-scrollbar custom-scrollbar">
         {navItems.map(({ label, icon: Icon, path, badge, isNew }) => {
           const active = location.pathname === path;
-          const computedBadge = path === '/admin/payouts' && pendingPayoutsCount > 0 ? pendingPayoutsCount : badge;
+          const computedBadge =
+            path === '/admin/payouts' && pendingPayoutsCount > 0
+              ? pendingPayoutsCount
+              : path === '/admin/applications' && pendingAppsCount > 0
+              ? pendingAppsCount
+              : badge;
           return (
             <Link
               key={path}

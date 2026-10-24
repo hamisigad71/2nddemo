@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Users, DollarSign, ShieldAlert, ArrowUpRight, ArrowDownRight, BarChart3, Activity, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { TrendingUp, Users, DollarSign, ShieldAlert, ArrowUpRight, ArrowDownRight, BarChart3, Activity, CheckCircle, Clock, Loader2, UserCheck } from 'lucide-react';
 import AdminLayout from './AdminLayout';
 import { getAdminOverviewStats, getAdminTransactions, getAdminCreators } from '../../lib/db';
 
@@ -64,12 +65,13 @@ const AdminOverview = () => {
       up: statsData.totalFans > 0,
     },
     {
-      label: 'Pending Escort & KYC Reviews',
+      label: 'Pending Creator KYC & Applications',
       value: `${statsData.pendingReviews}`,
-      sub: statsData.pendingReviews > 0 ? 'Applications awaiting verification' : 'All clear',
+      sub: statsData.pendingReviews > 0 ? 'Review & approve creators' : 'All clear',
       icon: ShieldAlert,
       color: statsData.pendingReviews > 0 ? 'destructive' : 'primary',
       up: statsData.pendingReviews === 0,
+      link: '/admin/applications',
     },
   ];
 
@@ -85,32 +87,51 @@ const AdminOverview = () => {
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">Live Platform Overview</h1>
             <p className="text-muted-foreground text-sm mt-1">Real-time live database metrics from The Gents Dollhouse.</p>
           </div>
-          {loading && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.08] px-3.5 py-1.5 rounded-full self-start">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
-              <span>Syncing metrics...</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin/applications"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-red-600/20"
+            >
+              <UserCheck className="w-4 h-4" />
+              Review Applications
+            </Link>
+            {loading && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400 bg-white/[0.04] border border-white/[0.08] px-3.5 py-1.5 rounded-full self-start">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
+                <span>Syncing metrics...</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCards.map(({ label, value, sub, icon: Icon, up }, i) => (
-            <div key={i} className="bg-muted/30 border border-border rounded-2xl p-5 hover:border-primary/30 transition-colors group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Icon className="w-5 h-5 text-primary" />
+          {statCards.map(({ label, value, sub, icon: Icon, up, link }: any, i) => {
+            const Content = (
+              <div className="bg-muted/30 border border-border rounded-2xl p-5 hover:border-primary/30 transition-colors group h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <Icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className={`flex items-center gap-1 text-xs font-bold ${up ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {up ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                    {up ? 'Live' : 'Action'}
+                  </span>
                 </div>
-                <span className={`flex items-center gap-1 text-xs font-bold ${up ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {up ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-                  {up ? 'Live' : 'Notice'}
-                </span>
+                <div className="text-2xl font-black text-foreground mb-1">{value}</div>
+                <div className="text-xs text-muted-foreground">{label}</div>
+                <div className={`text-[10px] font-semibold mt-1 ${up ? 'text-emerald-400' : 'text-zinc-500'}`}>{sub}</div>
               </div>
-              <div className="text-2xl font-black text-foreground mb-1">{value}</div>
-              <div className="text-xs text-muted-foreground">{label}</div>
-              <div className={`text-[10px] font-semibold mt-1 ${up ? 'text-emerald-400' : 'text-zinc-500'}`}>{sub}</div>
-            </div>
-          ))}
+            );
+
+            return link ? (
+              <Link key={i} to={link} className="block transition-transform hover:-translate-y-0.5">
+                {Content}
+              </Link>
+            ) : (
+              <div key={i}>{Content}</div>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

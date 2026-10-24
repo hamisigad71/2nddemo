@@ -38,6 +38,7 @@ const UserWallet = lazy(() => import("./pages/user/UserWallet"));
 
 // Lazy-loaded Admin Pages
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const AdminApplications = lazy(() => import("./pages/admin/AdminApplications"));
 const AdminCreators = lazy(() => import("./pages/admin/AdminCreators"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminTransactions = lazy(() => import("./pages/admin/AdminTransactions"));
@@ -161,6 +162,7 @@ const AppRoutes = () => {
                 {/* Authenticated & Passcode Protected Admin Portal */}
                 <Route element={<AdminRoute />}>
                   <Route path="/admin" element={<AdminOverview />} />
+                  <Route path="/admin/applications" element={<AdminApplications />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/creators" element={<AdminCreators />} />
                   <Route path="/admin/users" element={<AdminUsers />} />

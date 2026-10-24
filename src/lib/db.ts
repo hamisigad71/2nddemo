@@ -2731,6 +2731,11 @@ export const getAdminOverviewStats = async () => {
     const { count: creatorsCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['creator', 'pending_creator']);
     const { count: fansCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['subscriber', 'fan']);
     const { count: pendingEscortApps } = await supabase.from('escort_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+    let pendingKycCount = 0;
+    try {
+      const { count: kycCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('kyc_status', 'pending');
+      pendingKycCount = kycCount || 0;
+    } catch {}
     
     // Sum transactions for total revenue (exclude payout/withdrawal rows)
     const { data: txs } = await supabase
@@ -2760,7 +2765,7 @@ export const getAdminOverviewStats = async () => {
       totalFans: fansCount || (usersCount ? Math.max(0, usersCount - (creatorsCount || 0)) : 0),
       totalRevenue: totalRevenue,
       platformFees: platformFees,
-      pendingReviews: pendingEscortApps || 0,
+      pendingReviews: (pendingEscortApps || 0) + pendingKycCount,
       revenueHistory: dayCounts,
     };
   } catch (e) {
@@ -3039,6 +3044,382 @@ export const setCreatorVerified = async (creatorId: string, verified: boolean): 
       action_url: '/dashboard'
     }).catch(() => {});
   }
+
+  return true;
+};
+
+export interface CreatorApplicationItem {
+  id: string;
+  uid: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  legalName?: string;
+  nationalId?: string;
+  dob?: string;
+  avatar?: string;
+  coverImage?: string;
+  bio?: string;
+  role: string;
+  status: string;
+  kycStatus: 'pending' | 'verified' | 'rejected' | 'none';
+  idDocUrl?: string | null;
+  selfieUrl?: string | null;
+  createdAt: string;
+  hasBothDocs: boolean;
+  category?: string;
+  isVip?: boolean;
+}
+
+export const resolveStorageDocUrl = async (rawUrl: string | null | undefined): Promise<string | null> => {
+  if (!rawUrl) return null;
+  if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:')) {
+    return rawUrl;
+  }
+  const cleanPath = rawUrl.replace(/^kyc-documents\//, '').replace(/^kyc\//, '');
+  try {
+    const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(cleanPath, 60 * 60);
+    if (error) {
+      const { data: pubData } = supabase.storage.from('kyc-documents').getPublicUrl(cleanPath);
+      return pubData?.publicUrl || null;
+    }
+    return data?.signedUrl || null;
+  } catch {
+    const { data: pubData } = supabase.storage.from('kyc-documents').getPublicUrl(cleanPath);
+    return pubData?.publicUrl || null;
+  }
+};
+
+export const getAdminApplications = async (): Promise<CreatorApplicationItem[]> => {
+  try {
+    const [{ data: users, error: usersErr }, { data: profiles }] = await Promise.all([
+      supabase.from('users').select('*').order('created_at', { ascending: false }),
+      supabase.from('creator_profiles').select('*').catch(() => ({ data: [] })) as any,
+    ]);
+
+    if (usersErr) throw usersErr;
+
+    const profileMap = new Map<string, any>();
+    if (Array.isArray(profiles)) {
+      profiles.forEach((p: any) => {
+        if (p?.user_id) profileMap.set(p.user_id, p);
+      });
+    }
+
+    const applicationMap = new Map<string, any>();
+
+    // 1. Process DB users
+    (users || []).forEach((u: any) => {
+      const p = profileMap.get(u.uid || u.id);
+      const isPendingKyc = u.kyc_status === 'pending' || p?.kyc_status === 'pending';
+      const isPendingRole = u.role === 'pending_creator';
+      const hasIdOrSelfie = Boolean(u.kyc_id_url || u.kyc_selfie_url || p?.kyc_id_url || p?.kyc_selfie_url);
+      const isUnverified = u.kyc_status !== 'verified' && p?.kyc_status !== 'verified';
+
+      if (isPendingKyc || isPendingRole || (hasIdOrSelfie && isUnverified)) {
+        const uid = u.uid || u.id;
+        applicationMap.set(uid, {
+          id: uid,
+          uid,
+          name: u.name || p?.display_name || 'Creator Applicant',
+          email: u.email,
+          phone: u.phone,
+          legalName: u.legal_name || p?.legal_name || '',
+          nationalId: u.national_id_number || p?.national_id || '',
+          dob: u.dob || p?.dob || '',
+          avatar: u.avatar || p?.avatar_url,
+          coverImage: u.cover_image || p?.cover_url,
+          bio: u.bio || p?.bio || '',
+          role: u.role || 'pending_creator',
+          status: u.status || 'pending',
+          kycStatus: (u.kyc_status || p?.kyc_status || 'pending') as any,
+          idDocUrl: u.kyc_id_url || p?.kyc_id_url || null,
+          selfieUrl: u.kyc_selfie_url || p?.kyc_selfie_url || null,
+          createdAt: u.created_at || new Date().toISOString(),
+          category: p?.category || p?.niche || 'Digital Creator',
+          isVip: Boolean(p?.is_featured || p?.niche === 'VIP Creator'),
+        });
+      }
+    });
+
+    // 2. Merge local storage backups (tgd_creator_profile_* and pending_creator_kyc)
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('tgd_creator_profile_')) {
+            const uid = key.replace('tgd_creator_profile_', '');
+            const local = JSON.parse(localStorage.getItem(key) || '{}');
+            const isPending = local.kyc_status === 'pending' || local.role === 'pending_creator';
+            const hasDocs = Boolean(local.kyc_id_url || local.kyc_selfie_url || local.idDocument || local.selfie);
+
+            if ((isPending || hasDocs) && local.kyc_status !== 'verified') {
+              const existing = applicationMap.get(uid);
+              if (existing) {
+                if (!existing.idDocUrl && (local.kyc_id_url || local.idDocument)) existing.idDocUrl = local.kyc_id_url || local.idDocument;
+                if (!existing.selfieUrl && (local.kyc_selfie_url || local.selfie)) existing.selfieUrl = local.kyc_selfie_url || local.selfie;
+                if (!existing.legalName && local.legalName) existing.legalName = local.legalName;
+                if (!existing.nationalId && local.nationalId) existing.nationalId = local.nationalId;
+                if (!existing.dob && local.dob) existing.dob = local.dob;
+                if (!existing.coverImage && (local.cover_url || local.coverImage)) existing.coverImage = local.cover_url || local.coverImage;
+              } else {
+                applicationMap.set(uid, {
+                  id: uid,
+                  uid,
+                  name: local.name || local.display_name || 'Creator Applicant',
+                  email: local.email,
+                  phone: local.phone,
+                  legalName: local.legalName || '',
+                  nationalId: local.nationalId || '',
+                  dob: local.dob || '',
+                  avatar: local.avatar,
+                  coverImage: local.cover_url || local.coverImage,
+                  bio: local.bio || '',
+                  role: local.role || 'pending_creator',
+                  status: local.status || 'pending',
+                  kycStatus: (local.kyc_status || 'pending') as any,
+                  idDocUrl: local.kyc_id_url || local.idDocument || null,
+                  selfieUrl: local.kyc_selfie_url || local.selfie || null,
+                  createdAt: new Date().toISOString(),
+                  category: local.category || local.niche || 'Digital Creator',
+                  isVip: Boolean(local.is_vip || local.is_featured),
+                });
+              }
+            }
+          }
+        }
+
+        const pendingQueue = JSON.parse(localStorage.getItem('pending_creator_kyc') || '[]');
+        if (Array.isArray(pendingQueue)) {
+          for (const item of pendingQueue) {
+            if (!item?.uid) continue;
+            const existing = applicationMap.get(item.uid);
+            if (existing) {
+              if (!existing.idDocUrl && item.kyc_id_url) existing.idDocUrl = item.kyc_id_url;
+              if (!existing.selfieUrl && item.kyc_selfie_url) existing.selfieUrl = item.kyc_selfie_url;
+              if (!existing.legalName && item.legal_name) existing.legalName = item.legal_name;
+              if (!existing.nationalId && item.national_id) existing.nationalId = item.national_id;
+              if (!existing.dob && item.dob) existing.dob = item.dob;
+            } else {
+              applicationMap.set(item.uid, {
+                id: item.uid,
+                uid: item.uid,
+                name: item.display_name || 'Creator Applicant',
+                email: item.email,
+                phone: item.phone,
+                legalName: item.legal_name || '',
+                nationalId: item.national_id || '',
+                dob: item.dob || '',
+                avatar: item.avatar_url,
+                coverImage: item.cover_url,
+                bio: item.bio || '',
+                role: 'pending_creator',
+                status: 'pending',
+                kycStatus: 'pending',
+                idDocUrl: item.kyc_id_url || null,
+                selfieUrl: item.kyc_selfie_url || null,
+                createdAt: item.submitted_at || new Date().toISOString(),
+                category: 'Digital Creator',
+                isVip: false,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Local application queue resolution notice:', err);
+      }
+    }
+
+    const rawList = Array.from(applicationMap.values());
+
+    // 3. Resolve document URLs in parallel
+    const resolvedList: CreatorApplicationItem[] = await Promise.all(
+      rawList.map(async (app) => {
+        const [idDocUrl, selfieUrl] = await Promise.all([
+          resolveStorageDocUrl(app.idDocUrl),
+          resolveStorageDocUrl(app.selfieUrl),
+        ]);
+        const hasBothDocs = Boolean(idDocUrl && selfieUrl);
+        return {
+          ...app,
+          idDocUrl,
+          selfieUrl,
+          hasBothDocs,
+        };
+      })
+    );
+
+    return resolvedList;
+  } catch (err) {
+    console.error('getAdminApplications error:', err);
+    return [];
+  }
+};
+
+export const approveCreatorApplication = async (
+  applicantId: string,
+  approvalType: 'creator' | 'vip',
+  options?: { category?: string; niche?: string; notes?: string }
+): Promise<boolean> => {
+  if (!applicantId) throw new Error('Applicant ID is required.');
+
+  const isVip = approvalType === 'vip';
+
+  // 1. Update public.users
+  const userUpdates: Record<string, any> = {
+    role: 'creator',
+    status: 'active',
+    kyc_status: 'verified',
+  };
+
+  const { error: userError } = await supabase
+    .from('users')
+    .update(userUpdates)
+    .or(`uid.eq.${applicantId},id.eq.${applicantId}`);
+
+  if (userError) {
+    console.warn('approveCreatorApplication users update note:', userError.message);
+  }
+
+  // 2. Upsert creator_profiles
+  try {
+    const profileUpdates: Record<string, any> = {
+      user_id: applicantId,
+      is_active: true,
+      kyc_status: 'verified',
+      updated_at: new Date().toISOString(),
+    };
+    if (isVip) {
+      profileUpdates.is_featured = true;
+      profileUpdates.niche = 'VIP Creator';
+      profileUpdates.tags = ['VIP Creator', 'Exclusive Access', 'Direct Chat'];
+    }
+    if (options?.category) {
+      profileUpdates.category = options.category;
+    }
+
+    await supabase.from('creator_profiles').upsert(profileUpdates, { onConflict: 'user_id' });
+  } catch (err) {
+    console.warn('creator_profiles upsert note:', err);
+  }
+
+  // 3. Update localStorage caches & Verified Badge lists
+  if (typeof window !== 'undefined') {
+    try {
+      const existingLocal = getStoredCreatorProfile(applicantId) || {};
+      const updatedLocal = {
+        ...existingLocal,
+        role: 'creator',
+        status: 'active',
+        kyc_status: 'verified',
+        is_verified: true,
+        is_vip: isVip,
+        is_featured: isVip,
+        niche: isVip ? 'VIP Creator' : (existingLocal.niche || 'Creator'),
+        tags: isVip ? ['VIP Creator', 'Exclusive Access', 'Direct Chat'] : (existingLocal.tags || ['VIP Content', 'Direct Chat'])
+      };
+      localStorage.setItem(`tgd_creator_profile_${applicantId}`, JSON.stringify(updatedLocal));
+
+      // Remove from pending_creator_kyc queue
+      const pendingQueue = JSON.parse(localStorage.getItem('pending_creator_kyc') || '[]');
+      if (Array.isArray(pendingQueue)) {
+        localStorage.setItem(
+          'pending_creator_kyc',
+          JSON.stringify(pendingQueue.filter((item: any) => item.uid !== applicantId))
+        );
+      }
+
+      // Add to verified IDs
+      const verifiedIds = new Set(JSON.parse(localStorage.getItem('tgd_verified_creator_ids') || '[]'));
+      verifiedIds.add(applicantId);
+      localStorage.setItem('tgd_verified_creator_ids', JSON.stringify(Array.from(verifiedIds)));
+
+      // Add to VIP creator IDs if VIP
+      if (isVip) {
+        const vipIds = new Set(JSON.parse(localStorage.getItem('tgd_vip_creator_ids') || '[]'));
+        vipIds.add(applicantId);
+        localStorage.setItem('tgd_vip_creator_ids', JSON.stringify(Array.from(vipIds)));
+      }
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('creators_updated'));
+    window.dispatchEvent(new CustomEvent('profile_updated'));
+    window.dispatchEvent(new CustomEvent('applications_updated'));
+    window.dispatchEvent(new CustomEvent('posts_updated'));
+  }
+
+  // 4. Send notification to applicant
+  const notifTitle = isVip
+    ? '👑 Promoted to VIP Creator!'
+    : 'Identity & Creator Application Approved! 🎉';
+  const notifMessage = isVip
+    ? 'Congratulations! Your identity documents were verified and Admin has granted you exclusive VIP Creator status. Your profile is now featured at the top of Discover and Feed!'
+    : 'Congratulations! Your KYC documents have been approved by Admin. Your profile now has the official Blue Verified Badge and full Creator Studio access.';
+
+  createNotification(applicantId, {
+    title: notifTitle,
+    message: notifMessage,
+    type: 'system',
+    badge: isVip ? 'VIP 👑' : 'Verified',
+    link: '/dashboard',
+    action_label: 'Open Creator Studio',
+    action_url: '/dashboard'
+  }).catch(() => {});
+
+  // 5. Broadcast to subscribers/fans that a new creator is live
+  try {
+    const { data: u } = await supabase.from('users').select('name, avatar').or(`uid.eq.${applicantId},id.eq.${applicantId}`).maybeSingle();
+    notifySubscribersOfNewCreator(applicantId, u?.name || (isVip ? 'VIP Creator' : 'New Creator'), u?.avatar).catch(() => {});
+  } catch {}
+
+  return true;
+};
+
+export const rejectCreatorApplication = async (
+  applicantId: string,
+  reason?: string
+): Promise<boolean> => {
+  if (!applicantId) throw new Error('Applicant ID is required.');
+
+  // 1. Update public.users
+  await supabase
+    .from('users')
+    .update({ kyc_status: 'rejected' })
+    .or(`uid.eq.${applicantId},id.eq.${applicantId}`);
+
+  // 2. Update local storage
+  if (typeof window !== 'undefined') {
+    try {
+      const existingLocal = getStoredCreatorProfile(applicantId) || {};
+      localStorage.setItem(`tgd_creator_profile_${applicantId}`, JSON.stringify({
+        ...existingLocal,
+        kyc_status: 'rejected',
+        is_verified: false
+      }));
+
+      const pendingQueue = JSON.parse(localStorage.getItem('pending_creator_kyc') || '[]');
+      if (Array.isArray(pendingQueue)) {
+        localStorage.setItem(
+          'pending_creator_kyc',
+          JSON.stringify(pendingQueue.filter((item: any) => item.uid !== applicantId))
+        );
+      }
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('applications_updated'));
+    window.dispatchEvent(new CustomEvent('creators_updated'));
+  }
+
+  // 3. Notify user
+  createNotification(applicantId, {
+    title: 'Identity Verification Needs Review ⚠️',
+    message: reason || 'Your submitted verification documents could not be approved. Please log in and upload a clear photo of your National ID and selfie.',
+    type: 'system',
+    badge: 'Review',
+    link: '/edit-profile',
+    action_label: 'Re-submit Documents',
+    action_url: '/edit-profile'
+  }).catch(() => {});
 
   return true;
 };
