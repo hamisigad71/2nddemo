@@ -9,7 +9,7 @@ import LiveNowTray from '../../components/LiveNowTray';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { filterAndSortCreators, shouldIncludeCreatorInDiscover, type CreatorDirectoryFilter } from '../../lib/creatorDirectory';
+import { filterAndSortCreators, shouldIncludeCreatorInDiscover, type CreatorDirectoryFilter, type CreatorGenderFilter } from '../../lib/creatorDirectory';
 import './Discover.css';
 
 const Discover = () => {
@@ -17,6 +17,7 @@ const Discover = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<CreatorDirectoryFilter>('trending');
+  const [genderFilter, setGenderFilter] = useState<CreatorGenderFilter>('all');
   const [search, setSearch] = useState('');
   const [creators, setCreators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +136,7 @@ const Discover = () => {
     setSubscribeModalCreator(creator);
   };
   
-  const sorted = filterAndSortCreators(creators, activeTab);
+  const sorted = filterAndSortCreators(creators, activeTab, genderFilter);
 
   const filtered = sorted.filter(c => 
     shouldIncludeCreatorInDiscover(
@@ -185,6 +186,23 @@ const Discover = () => {
                 {label}
               </button>
             ))}
+            <div className="flex items-center gap-2 border-l border-border pl-2" role="group" aria-label="Filter creators by gender">
+              {([
+                ['all', 'All genders'],
+                ['male', 'Male'],
+                ['female', 'Female'],
+              ] as const).map(([filter, label]) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setGenderFilter(filter)}
+                  aria-pressed={genderFilter === filter}
+                  className={`discover-filter-button px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${genderFilter === filter ? 'bg-primary text-primary-foreground' : 'bg-input/30 hover:bg-input text-muted-foreground border border-transparent hover:border-border'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-full bg-input/30 hover:bg-input text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border shrink-0"

@@ -7,6 +7,7 @@ export type CreatorDirectoryCandidate = {
 };
 
 export type CreatorDirectoryFilter = 'all' | 'verified' | 'trending' | 'popular' | 'new';
+export type CreatorGenderFilter = 'all' | 'male' | 'female';
 
 export const SELECTED_VERIFIED_CREATOR_NAMES = new Set([
   'fatma loki',
@@ -45,6 +46,7 @@ export const shouldIncludeCreatorInDiscover = (
 ): boolean => isExplicitlyFeatured || Boolean(isVerified) || (hasUploadedAvatar && hasUploadedCover);
 
 type FilterableCreator = {
+  gender?: string | null;
   isVerified?: boolean;
   hasPosts?: boolean;
   postsCount?: number;
@@ -64,21 +66,20 @@ const getCreatedAtTime = (creator: FilterableCreator): number => {
 export const filterAndSortCreators = <T extends FilterableCreator>(
   creators: T[],
   filter: CreatorDirectoryFilter,
+  genderFilter: CreatorGenderFilter = 'all',
 ): T[] => {
   const eligibleCreators = filter === 'verified'
     ? creators.filter((creator) => creator.isVerified)
     : [...creators];
 
+  let sortedCreators = eligibleCreators;
+
   if (filter === 'new') {
-    return eligibleCreators.sort((a, b) => getCreatedAtTime(b) - getCreatedAtTime(a));
-  }
-
-  if (filter === 'popular') {
-    return eligibleCreators.sort((a, b) => getSubscriberCount(b.subs) - getSubscriberCount(a.subs));
-  }
-
-  if (filter === 'trending') {
-    return eligibleCreators.sort((a, b) => {
+    sortedCreators = [...eligibleCreators].sort((a, b) => getCreatedAtTime(b) - getCreatedAtTime(a));
+  } else if (filter === 'popular') {
+    sortedCreators = [...eligibleCreators].sort((a, b) => getSubscriberCount(b.subs) - getSubscriberCount(a.subs));
+  } else if (filter === 'trending') {
+    sortedCreators = [...eligibleCreators].sort((a, b) => {
       if (Boolean(a.hasPosts) !== Boolean(b.hasPosts)) {
         return a.hasPosts ? -1 : 1;
       }
@@ -86,7 +87,12 @@ export const filterAndSortCreators = <T extends FilterableCreator>(
     });
   }
 
-  return eligibleCreators;
+  if (genderFilter === 'all') return sortedCreators;
+
+  const acceptedGenders = genderFilter === 'male' ? ['man', 'male'] : ['woman', 'female'];
+  return sortedCreators.filter((creator) =>
+    acceptedGenders.includes(creator.gender?.trim().toLowerCase() || ''),
+  );
 };
 
 export const GENERIC_CREATOR_NAMES = new Set(['creator', 'vip creator', 'new creator']);

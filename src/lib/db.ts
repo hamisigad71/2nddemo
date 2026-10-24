@@ -2495,14 +2495,14 @@ export const getDiscoverCreators = async () => {
     try {
       const { data: usersData, error: uErr } = await supabase
         .from('users')
-        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required')
+        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required, gender, gender_description, dob')
         .in('role', ['creator', 'pending_creator', 'escort']);
       if (usersData) {
         creatorUsers = [...usersData];
       } else if (uErr) {
         const { data: baseData } = await supabase
           .from('users')
-          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified')
+          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, gender, gender_description, dob')
           .in('role', ['creator', 'pending_creator', 'escort']);
         if (baseData) creatorUsers = [...baseData];
       }
@@ -2514,7 +2514,7 @@ export const getDiscoverCreators = async () => {
     try {
       const { data: selectedUsers } = await supabase
         .from('users')
-        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified')
+        .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, gender, gender_description, dob')
         .or('is_verified.eq.true,kyc_status.eq.verified,email.eq.hadq@gmail.com,email.eq.nataliangina62@gmail.com,email.eq.ellarains00@gmail.com');
       if (selectedUsers) {
         selectedUsers.forEach(su => {
@@ -2530,7 +2530,7 @@ export const getDiscoverCreators = async () => {
       try {
         const { data: postingUsers } = await supabase
           .from('users')
-          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required')
+          .select('uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, payout_kyc_required, gender, gender_description, dob')
           .in('uid', postingUidsToFetch);
         if (postingUsers) {
           postingUsers.forEach(u => {
@@ -2601,6 +2601,9 @@ export const getDiscoverCreators = async () => {
               kyc_status: matchedUser?.kyc_status || p.kyc_status,
               is_verified: matchedUser?.is_verified || p.is_verified,
               payout_kyc_required: matchedUser?.payout_kyc_required || false,
+              gender: matchedUser?.gender || p.gender,
+              gender_description: matchedUser?.gender_description || p.gender_description,
+              dob: matchedUser?.dob || p.dob,
               created_at: p.created_at || matchedUser?.created_at || new Date().toISOString()
             });
             creatorUserIds.add(p.user_id);
