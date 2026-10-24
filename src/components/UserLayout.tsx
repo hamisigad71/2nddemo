@@ -4,8 +4,9 @@ import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getUserNotifications, getUserProfile } from '../lib/db';
-import { resolveUserAvatar } from '../lib/avatar';
+import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
+import { resolveUserAvatar, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../lib/avatar';
+import { isSelectedVerifiedCreator } from '../lib/creatorDirectory';
 import { supabase } from '../lib/supabase';
 import VerifiedCreatorNoticeModal from './VerifiedCreatorNoticeModal';
 
@@ -56,6 +57,32 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     if (!user?.id) return;
+
+    // Route creators and target creators to their creator onboarding or dashboard
+    getUserProfile(user.id).then(async (profile) => {
+      const isTarget = isSelectedVerifiedCreator(profile?.name || user.user_metadata?.name, user.email, user.id);
+      if (isTarget) {
+        const { data: creatorProfile } = await supabase
+          .from('creator_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const storedLocal = getStoredCreatorProfile(user.id);
+        const hasPhoto = hasUploadedProfilePhoto(profile?.avatar || creatorProfile?.avatar || storedLocal?.avatar);
+        const hasCover = hasUploadedCoverPhoto(creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image);
+        if (!hasPhoto || !hasCover) {
+          navigate(`/login?upload_photos=required&email=${encodeURIComponent(user.email || '')}`, { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+        return;
+      }
+
+      if (profile?.role === 'creator' || profile?.role === 'pending_creator') {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+    }).catch(() => {});
 
     // Trigger verification notice popup when opening account or if new subscriber hasn't seen it yet
     const pendingNotice = localStorage.getItem('show_subscriber_verification_popup') === 'true';

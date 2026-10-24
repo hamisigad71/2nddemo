@@ -26,6 +26,10 @@ import {
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import { hasPrivateKycEvidence } from '../../lib/verification';
+import {
+  getCreatorPayoutAmountError,
+  MINIMUM_CREATOR_PAYOUT_KES,
+} from '../../lib/creatorPayoutRules';
 
 const EarningsWallet = () => {
   const { user } = useAuth();
@@ -181,8 +185,8 @@ const EarningsWallet = () => {
       void refreshPayoutKycStatus();
       return;
     }
-    if (availableBalance <= 0) {
-      toast.error('No available balance to withdraw.');
+    if (availableBalance < MINIMUM_CREATOR_PAYOUT_KES) {
+      toast.error('The minimum withdrawal amount is KES 1,000.');
       return;
     }
     if (payoutKycRequired && !payoutKycEvidenceProvided) {
@@ -203,12 +207,9 @@ const EarningsWallet = () => {
     }
 
     const numericAmount = Number(withdrawAmount);
-    if (!numericAmount || numericAmount <= 0) {
-      toast.error('Please enter a valid withdrawal amount.');
-      return;
-    }
-    if (numericAmount > availableBalance) {
-      toast.error(`Amount cannot exceed your available balance of KES ${availableBalance.toLocaleString()}.`);
+    const payoutAmountError = getCreatorPayoutAmountError(numericAmount, availableBalance);
+    if (payoutAmountError) {
+      toast.error(payoutAmountError);
       return;
     }
     if (!payoutPhone || payoutPhone.replace(/\D/g, '').length < 9) {
@@ -361,7 +362,7 @@ const EarningsWallet = () => {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <button
                 onClick={openWithdrawModal}
-                disabled={withdrawStatus === 'pending' || availableBalance <= 0}
+                disabled={withdrawStatus === 'pending' || availableBalance < MINIMUM_CREATOR_PAYOUT_KES}
                 className="flex items-center justify-center gap-1.5 py-3 sm:py-4 rounded-2xl font-black text-[11px] sm:text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white bg-red-600 hover:bg-red-700 border border-red-500 shadow-[0_4px_20px_rgba(239,68,68,0.35)] cursor-pointer"
               >
                 {withdrawStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
@@ -379,6 +380,11 @@ const EarningsWallet = () => {
                 <span>Payout Number</span>
               </button>
             </div>
+            {availableBalance < MINIMUM_CREATOR_PAYOUT_KES && (
+              <p className="mt-3 text-center text-xs text-zinc-500">
+                Withdrawals are available once your balance reaches KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
+              </p>
+            )}
 
             {/* Live Support Concierge Banner */}
             <div className="pt-4 mt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -657,13 +663,16 @@ const EarningsWallet = () => {
                 </div>
                 <input
                   type="number"
-                  min={1}
+                  min={MINIMUM_CREATOR_PAYOUT_KES}
                   max={availableBalance}
                   required
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white font-black text-lg focus:outline-none focus:border-red-500"
                 />
+                <p className="mt-1.5 text-[11px] text-zinc-500">
+                  Minimum withdrawal: KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
+                </p>
               </div>
 
               <div>

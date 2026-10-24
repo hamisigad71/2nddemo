@@ -13,6 +13,9 @@ serve(async (req) => {
 
   try {
     const { amount, creatorId, phoneNumber } = await req.json()
+    if (!Number.isFinite(amount) || amount < 1000) {
+      throw new Error("The minimum withdrawal amount is KES 1,000")
+    }
 
     // Environment variables
     const consumerKey = Deno.env.get('DARAJA_CONSUMER_KEY')

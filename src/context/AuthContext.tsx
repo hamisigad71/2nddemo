@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { createUserProfile } from '../lib/db';
+import { hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../lib/avatar';
+import { SELECTED_VERIFIED_CREATOR_EMAILS, SELECTED_VERIFIED_CREATOR_UIDS } from '../lib/creatorDirectory';
 
 interface AuthContextType {
   user: User | null;
@@ -27,11 +29,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const verifyUserStatus = async (uid: string) => {
+  const verifyUserStatus = async (uid: string, userEmail?: string | null) => {
     try {
       const { data: dbUser } = await supabase
         .from('users')
-        .select('status, role')
+        .select('status, role, avatar, cover_image, email')
         .eq('uid', uid)
         .maybeSingle();
 
@@ -133,7 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       supabase.auth.getSession().then(async ({ data: { session } }) => {
         if (isCancelled) return;
         if (session?.user) {
-          const isOk = await verifyUserStatus(session.user.id);
+          const isOk = await verifyUserStatus(session.user.id, session.user.email);
           if (isOk && !isCancelled) setUser(session.user);
         } else {
           setUser(null);
@@ -149,7 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTimeout(async () => {
         if (isCancelled) return;
         if (session?.user) {
-          const isOk = await verifyUserStatus(session.user.id);
+          const isOk = await verifyUserStatus(session.user.id, session.user.email);
           if (isOk && !isCancelled) setUser(session.user);
         } else {
           setUser(null);

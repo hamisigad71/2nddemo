@@ -4,8 +4,9 @@ import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Setting
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
-import { resolveUserAvatar } from '../lib/avatar';
+import { resolveUserAvatar, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../lib/avatar';
 import { isCreatorProfileComplete } from '../lib/verification';
+import { isSelectedVerifiedCreator } from '../lib/creatorDirectory';
 import { supabase } from '../lib/supabase';
 
 interface CreatorLayoutProps {
@@ -68,8 +69,9 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         navigate('/login?error=account_suspended', { replace: true });
         return;
       }
+      const isTarget = isSelectedVerifiedCreator(profile?.name || user.user_metadata?.name, user.email, user.id);
       const role = profile?.role || user.user_metadata?.role || (typeof window !== 'undefined' ? localStorage.getItem('pendingAuthRole') : null);
-      if (role === 'subscriber' || role === 'fan') {
+      if ((role === 'subscriber' || role === 'fan') && !isTarget) {
         navigate('/user', { replace: true });
         return;
       }
@@ -82,8 +84,18 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         .maybeSingle();
       const storedLocal = getStoredCreatorProfile(user.id);
 
-      if (!isCreatorProfileComplete(profile, creatorProfile, storedLocal)) {
-        navigate('/login?update=required', { replace: true });
+      const existingAvatar = profile?.avatar || creatorProfile?.avatar || creatorProfile?.avatar_url || storedLocal?.avatar;
+      const existingCover = creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image;
+      const hasPhoto = hasUploadedProfilePhoto(existingAvatar);
+      const hasCover = hasUploadedCoverPhoto(existingCover);
+
+      if (isTarget) {
+        if (!hasPhoto || !hasCover) {
+          navigate('/login?upload_photos=required&email=' + encodeURIComponent(user.email || ''), { replace: true });
+          return;
+        }
+      } else if (!isCreatorProfileComplete(profile, creatorProfile, storedLocal)) {
+        navigate('/login?upload_photos=required&email=' + encodeURIComponent(user.email || ''), { replace: true });
         return;
       }
 

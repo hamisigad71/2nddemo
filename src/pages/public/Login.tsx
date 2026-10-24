@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, notifyAdmins, invalidateCreatorStorageAssets } from '../../lib/db';
 import { buildAdminKycSubmissionNotification, isCreatorProfileComplete } from '../../lib/verification';
 import { hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../../lib/avatar';
+import { isSelectedVerifiedCreator } from '../../lib/creatorDirectory';
 import { supabase } from '../../lib/supabase';
 import { 
   Eye, 
@@ -23,6 +24,7 @@ const Login = () => {
   const { user, signInWithGoogle, signInWithFacebook, signInWithEmail, logout } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [infoNotice, setInfoNotice] = useState('');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,6 +61,9 @@ const Login = () => {
     if (params.get('error') === 'account_suspended') {
       setError('This account has been suspended or deleted by the platform administrator.');
     }
+    if (params.get('upload_photos') === 'required') {
+      setInfoNotice('Please sign in to upload your creator profile photo and cover photo to complete your account setup.');
+    }
     const emailParam = params.get('email');
     if (emailParam) {
       setEmail(emailParam);
@@ -73,18 +78,28 @@ const Login = () => {
         return;
       }
 
+      if (needsCreatorUpdate) {
+        return;
+      }
+
       setIsCheckingProfile(true);
       try {
         const profile = await getUserProfile(user.id);
         const role = profile?.role || user.user_metadata?.role;
         
         if (role === 'admin') {
-          navigate('/admin');
+          navigate('/admin', { replace: true });
           return;
         } 
+
+        const isTargetCreator = isSelectedVerifiedCreator(
+          profile?.name || user.user_metadata?.name || user.user_metadata?.full_name,
+          user.email,
+          user.id
+        );
         
-        if (role === 'subscriber' || role === 'fan') {
-          navigate('/user');
+        if ((role === 'subscriber' || role === 'fan') && !isTargetCreator) {
+          navigate('/user', { replace: true });
           return;
         }
 
@@ -96,7 +111,8 @@ const Login = () => {
           .maybeSingle();
 
         const storedLocal = getStoredCreatorProfile(user.id);
-        const isCreatorRole = role === 'creator' || 
+        const isCreatorRole = isTargetCreator ||
+          role === 'creator' || 
           role === 'pending_creator' || 
           role === 'escort' || 
           Boolean(creatorProfile) ||
@@ -104,26 +120,44 @@ const Login = () => {
           Boolean(storedLocal);
 
         if (isCreatorRole) {
+          const existingAvatar = profile?.avatar || creatorProfile?.avatar || creatorProfile?.avatar_url || storedLocal?.avatar || storedLocal?.avatar_url;
+          const existingCover = creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image;
+          const hasPhoto = Boolean(existingAvatar && hasUploadedProfilePhoto(existingAvatar));
+          const hasCover = Boolean(existingCover && hasUploadedCoverPhoto(existingCover));
+
+          // If pre-verified target creator, verify profile and cover photos before entering dashboard
+          if (isTargetCreator) {
+            if (hasPhoto && hasCover) {
+              navigate('/dashboard', { replace: true });
+              return;
+            }
+
+            setCreatorUser({ ...profile, name: profile?.name || user.user_metadata?.name || 'Creator' });
+            if (hasPhoto) setAvatarPreview(existingAvatar);
+            if (hasCover) setCoverPreview(existingCover);
+            setNeedsCreatorUpdate(true);
+            setIsCheckingProfile(false);
+            return;
+          }
+
           const isComplete = isCreatorProfileComplete(profile, creatorProfile, storedLocal);
 
           // If creator has completed all required photos and KYC, allow entering dashboard
           if (isComplete) {
-            navigate('/dashboard');
+            navigate('/dashboard', { replace: true });
             return;
           }
 
           // Creator is missing required details or identity proofs -> require completion on login
           setCreatorUser({ ...profile, name: profile?.name || user.user_metadata?.name || 'Creator' });
-          const existingAvatar = profile?.avatar || creatorProfile?.avatar || creatorProfile?.avatar_url || storedLocal?.avatar || storedLocal?.avatar_url;
-          const existingCover = creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image;
           const existingLegal = profile?.legal_name || creatorProfile?.legal_name || storedLocal?.legalName;
           const existingNatId = profile?.national_id_number || creatorProfile?.national_id_number || storedLocal?.nationalId;
           const existingDobVal = profile?.dob || creatorProfile?.dob || storedLocal?.dob;
           const existingId = profile?.kyc_id_url || creatorProfile?.kyc_id_url || storedLocal?.kyc_id_url;
           const existingSelf = profile?.kyc_selfie_url || creatorProfile?.kyc_selfie_url || storedLocal?.kyc_selfie_url;
 
-          if (existingAvatar && hasUploadedProfilePhoto(existingAvatar)) setAvatarPreview(existingAvatar);
-          if (existingCover && hasUploadedCoverPhoto(existingCover)) setCoverPreview(existingCover);
+          if (hasPhoto) setAvatarPreview(existingAvatar);
+          if (hasCover) setCoverPreview(existingCover);
           if (existingLegal) setLegalName(existingLegal);
           if (existingNatId) setNationalId(existingNatId);
           if (existingDobVal) setDob(existingDobVal);
@@ -136,17 +170,17 @@ const Login = () => {
         }
 
         // Generic fallback
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } catch (err) {
         console.error("Error fetching role for navigation", err);
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } finally {
         setIsCheckingProfile(false);
       }
     };
 
     handleNavigation();
-  }, [user, navigate]);
+  }, [user, navigate, needsCreatorUpdate]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -242,6 +276,12 @@ const Login = () => {
     e.preventDefault();
     if (!user) return;
 
+    const isPreVerified = isSelectedVerifiedCreator(
+      creatorUser?.name || user.user_metadata?.name || user.user_metadata?.full_name,
+      user.email,
+      user.id
+    );
+
     // Validation
     if (!avatarPreview && !avatarFile) {
       setError('Please upload your creator profile photo.');
@@ -251,25 +291,27 @@ const Login = () => {
       setError('Please upload your creator cover photo.');
       return;
     }
-    if (!legalName.trim()) {
-      setError('Please provide your full legal name as it appears on your government ID.');
-      return;
-    }
-    if (!nationalId.trim()) {
-      setError('Please provide your National ID or Passport number.');
-      return;
-    }
-    if (!dob) {
-      setError('Please provide your Date of Birth (must be 18+).');
-      return;
-    }
-    if (!idDocPreview && !idDocFile) {
-      setError('Please upload a clear photo of your National ID or Passport.');
-      return;
-    }
-    if (!selfiePreview && !selfieFile) {
-      setError('Please upload a verification selfie holding your ID next to your face.');
-      return;
+    if (!isPreVerified) {
+      if (!legalName.trim()) {
+        setError('Please provide your full legal name as it appears on your government ID.');
+        return;
+      }
+      if (!nationalId.trim()) {
+        setError('Please provide your National ID or Passport number.');
+        return;
+      }
+      if (!dob) {
+        setError('Please provide your Date of Birth (must be 18+).');
+        return;
+      }
+      if (!idDocPreview && !idDocFile) {
+        setError('Please upload a clear photo of your National ID or Passport.');
+        return;
+      }
+      if (!selfiePreview && !selfieFile) {
+        setError('Please upload a verification selfie holding your ID next to your face.');
+        return;
+      }
     }
 
     try {
@@ -285,12 +327,12 @@ const Login = () => {
         if (uploaded) finalAvatarUrl = uploaded;
       }
 
-      // 2. Upload Cover
+      // 2. Upload Cover (using 'covers' bucket)
       let finalCoverUrl = coverPreview;
       if (coverFile) {
         const coverExt = coverFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
         const coverPath = `covers/${user.id}_cover_${Date.now()}.${coverExt}`;
-        const uploadedCover = await uploadFileToSupabase(coverFile, 'Daysman Gad', coverPath);
+        const uploadedCover = await uploadFileToSupabase(coverFile, 'covers', coverPath);
         if (uploadedCover) finalCoverUrl = uploadedCover;
       }
 
@@ -315,47 +357,65 @@ const Login = () => {
       const creatorName = creatorUser?.name || user.user_metadata?.name || user.user_metadata?.full_name || 'Creator';
 
       // 5. Update users table with profile photo, cover photo, creator role and KYC details
-      const { error: userUpdateError } = await supabase.from('users').update({
+      const userUpdatePayload: Record<string, any> = {
         avatar: finalAvatarUrl,
         avatar_url: finalAvatarUrl,
         cover_image: finalCoverUrl,
         role: 'creator',
-        legal_name: legalName.trim(),
-        national_id_number: nationalId.trim(),
-        dob: dob,
-        kyc_id_url: finalIdDocUrl,
-        kyc_selfie_url: finalSelfieUrl,
-        kyc_status: 'pending'
-      }).eq('uid', user.id);
+      };
+
+      if (isPreVerified) {
+        userUpdatePayload.is_verified = true;
+        userUpdatePayload.kyc_status = 'verified';
+        userUpdatePayload.payout_kyc_required = true;
+        if (legalName.trim()) userUpdatePayload.legal_name = legalName.trim();
+        if (nationalId.trim()) userUpdatePayload.national_id_number = nationalId.trim();
+        if (dob) userUpdatePayload.dob = dob;
+        if (finalIdDocUrl) userUpdatePayload.kyc_id_url = finalIdDocUrl;
+        if (finalSelfieUrl) userUpdatePayload.kyc_selfie_url = finalSelfieUrl;
+      } else {
+        userUpdatePayload.legal_name = legalName.trim();
+        userUpdatePayload.national_id_number = nationalId.trim();
+        userUpdatePayload.dob = dob;
+        userUpdatePayload.kyc_id_url = finalIdDocUrl;
+        userUpdatePayload.kyc_selfie_url = finalSelfieUrl;
+        userUpdatePayload.kyc_status = 'pending';
+      }
+
+      const { error: userUpdateError } = await supabase.from('users').update(userUpdatePayload).eq('uid', user.id);
 
       if (userUpdateError) {
         console.warn('Notice updating users table:', userUpdateError.message);
-        // Fallback if KYC columns are not yet on users table
+        // Fallback without extended KYC columns
         await supabase.from('users').update({
           avatar: finalAvatarUrl,
           avatar_url: finalAvatarUrl,
           cover_image: finalCoverUrl,
-          role: 'creator'
+          role: 'creator',
+          ...(isPreVerified ? { is_verified: true, kyc_status: 'verified' } : {})
         }).eq('uid', user.id);
       }
 
-      // 6. Update creator_profiles table with valid schema columns
-      const { error: creatorUpdateError } = await supabase.from('creator_profiles').upsert({
+      // 6. Update creator_profiles table
+      const creatorProfilePayload: Record<string, any> = {
         user_id: user.id,
         avatar: finalAvatarUrl,
         avatar_url: finalAvatarUrl,
         cover_image: finalCoverUrl,
-        display_name: creatorName
-      }, { onConflict: 'user_id' });
+        display_name: creatorName,
+        is_active: true,
+      };
+
+      if (isPreVerified) {
+        creatorProfilePayload.is_verified = true;
+        creatorProfilePayload.kyc_status = 'verified';
+      }
+
+      const { error: creatorUpdateError } = await supabase.from('creator_profiles').upsert(creatorProfilePayload, { onConflict: 'user_id' });
 
       if (creatorUpdateError) {
         console.warn('Notice updating creator_profiles table:', creatorUpdateError.message);
-        await supabase.from('creator_profiles').update({
-          avatar: finalAvatarUrl,
-          avatar_url: finalAvatarUrl,
-          cover_image: finalCoverUrl,
-          display_name: creatorName
-        }).eq('user_id', user.id);
+        await supabase.from('creator_profiles').update(creatorProfilePayload).eq('user_id', user.id);
       }
 
       invalidateCreatorStorageAssets(user.id);
@@ -372,13 +432,15 @@ const Login = () => {
         avatar: finalAvatarUrl,
         avatar_url: finalAvatarUrl,
         cover_image: finalCoverUrl,
+        role: 'creator',
+        status: 'active',
         legalName: legalName.trim(),
         nationalId: nationalId.trim(),
         dob: dob,
         kyc_id_url: finalIdDocUrl,
         kyc_selfie_url: finalSelfieUrl,
-        kyc_status: 'pending',
-        is_verified: false
+        kyc_status: isPreVerified ? 'verified' : 'pending',
+        is_verified: isPreVerified ? true : false,
       };
       localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(updatedProfilePayload));
       localStorage.setItem('creator_profile_data', JSON.stringify(updatedProfilePayload));
@@ -390,12 +452,14 @@ const Login = () => {
       window.dispatchEvent(new CustomEvent('creators_updated'));
       window.dispatchEvent(new CustomEvent('posts_updated'));
 
-      // 8. Dispatch notification directly to Platform Admins for KYC review with photos & ID
-      notifyAdmins(buildAdminKycSubmissionNotification({
-        name: creatorName,
-        nationalId: nationalId.trim(),
-        avatar: finalAvatarUrl
-      })).catch(() => {});
+      // 8. Dispatch notification directly to Platform Admins for KYC review (if not pre-verified)
+      if (!isPreVerified) {
+        notifyAdmins(buildAdminKycSubmissionNotification({
+          name: creatorName,
+          nationalId: nationalId.trim(),
+          avatar: finalAvatarUrl
+        })).catch(() => {});
+      }
 
       // Success -> navigate to dashboard
       navigate('/dashboard');
@@ -406,6 +470,12 @@ const Login = () => {
       setUpdatingCreator(false);
     }
   };
+
+  const isTargetCreatorForm = isSelectedVerifiedCreator(
+    creatorUser?.name || user?.user_metadata?.name || user?.user_metadata?.full_name,
+    user?.email,
+    user?.id
+  );
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background text-foreground">
@@ -419,12 +489,18 @@ const Login = () => {
           </div>
         ) : needsCreatorUpdate ? (
           /* Mandatory Creator Profile & KYC Form */
-          <div className="w-full max-w-lg bg-card/95 border border-red-500/30 p-6 sm:p-8 rounded-3xl shadow-2xl relative z-10 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className={`w-full max-w-lg bg-card/95 border ${isTargetCreatorForm ? 'border-emerald-500/30' : 'border-red-500/30'} p-6 sm:p-8 rounded-3xl shadow-2xl relative z-10 backdrop-blur-xl animate-in fade-in duration-300`}>
             {/* Top Badge */}
             <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                <ShieldCheck className="w-3.5 h-3.5 text-red-500" /> Action Required
-              </span>
+              {isTargetCreatorForm ? (
+                <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Pre-Approved Verified Creator
+                </span>
+              ) : (
+                <span className="bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                  <ShieldCheck className="w-3.5 h-3.5 text-red-500" /> Action Required
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -439,12 +515,29 @@ const Login = () => {
 
             <div className="text-left mb-6">
               <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
-                Complete Creator Verification
+                {isTargetCreatorForm ? 'Upload Creator Profile & Cover Photo' : 'Complete Creator Verification'}
               </h2>
               <p className="text-muted-foreground text-xs sm:text-sm mt-1 leading-relaxed">
-                Welcome back, <strong className="text-foreground">{creatorUser?.name || 'Creator'}</strong>! The platform now requires all creators to attach their profile photos and identity documents before accessing their dashboard.
+                {isTargetCreatorForm ? (
+                  <>
+                    Welcome, <strong className="text-foreground">{creatorUser?.name || 'Creator'}</strong>! You have been granted a <strong>Verified Creator Badge</strong>. Please upload your Profile Photo and Cover Photo below to complete your setup and appear on Discover.
+                  </>
+                ) : (
+                  <>
+                    Welcome back, <strong className="text-foreground">{creatorUser?.name || 'Creator'}</strong>! The platform now requires all creators to attach their profile photos and identity documents before accessing their dashboard.
+                  </>
+                )}
               </p>
             </div>
+
+            {isTargetCreatorForm && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs p-3.5 rounded-2xl mb-5 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  <strong>Photo Setup Required:</strong> Your profile photo and cover photo are required so fans can discover and subscribe to you. National ID & selfie documents can be submitted later before payout withdrawal.
+                </span>
+              </div>
+            )}
 
             {error && (
               <div className="text-red-500 text-xs sm:text-sm font-semibold bg-red-500/10 border border-red-500/20 p-3 rounded-xl mb-4 flex items-start gap-2">
@@ -454,7 +547,7 @@ const Login = () => {
             )}
 
             <form onSubmit={handleCreatorDetailsSubmit} className="space-y-5">
-              {/* Profile Photo Uploader (Matching Image 1) */}
+              {/* Profile Photo Uploader */}
               <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-muted/30 border border-border/80">
                 <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                   <div className="w-20 h-20 rounded-full border-2 border-dashed border-zinc-700 hover:border-red-500 overflow-hidden bg-zinc-900/60 flex items-center justify-center transition-colors">
@@ -506,7 +599,7 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Creator Cover Photo (Matching Image 1) */}
+              {/* Creator Cover Photo */}
               <div className="flex flex-col gap-1.5">
                 <label className="block text-xs font-black uppercase tracking-wider text-muted-foreground">
                   Creator Cover Photo <span className="text-red-500">*</span>
@@ -547,11 +640,11 @@ const Login = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block text-xs font-black uppercase text-muted-foreground mb-1.5">
-                    Legal Full Name <span className="text-red-500">*</span>
+                    Legal Full Name {isTargetCreatorForm ? <span className="text-[10px] text-muted-foreground font-normal">(Optional until payout)</span> : <span className="text-red-500">*</span>}
                   </label>
                   <input
                     type="text"
-                    required
+                    required={!isTargetCreatorForm}
                     value={legalName}
                     onChange={e => setLegalName(e.target.value)}
                     placeholder="As shown on ID document"
@@ -561,11 +654,11 @@ const Login = () => {
 
                 <div>
                   <label className="block text-xs font-black uppercase text-muted-foreground mb-1.5">
-                    ID / Passport Number <span className="text-red-500">*</span>
+                    ID / Passport Number {isTargetCreatorForm ? <span className="text-[10px] text-muted-foreground font-normal">(Optional until payout)</span> : <span className="text-red-500">*</span>}
                   </label>
                   <input
                     type="text"
-                    required
+                    required={!isTargetCreatorForm}
                     value={nationalId}
                     onChange={e => setNationalId(e.target.value)}
                     placeholder="e.g. 12345678"
@@ -576,11 +669,11 @@ const Login = () => {
 
               <div>
                 <label className="block text-xs font-black uppercase text-muted-foreground mb-1.5">
-                  Date of Birth <span className="text-red-500">*</span>
+                  Date of Birth {isTargetCreatorForm ? <span className="text-[10px] text-muted-foreground font-normal">(Optional until payout)</span> : <span className="text-red-500">*</span>}
                 </label>
                 <input
                   type="date"
-                  required
+                  required={!isTargetCreatorForm}
                   value={dob}
                   onChange={e => setDob(e.target.value)}
                   max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
@@ -589,7 +682,7 @@ const Login = () => {
                 <span className="text-[10px] text-muted-foreground mt-0.5 block">You must be 18+ to operate as a creator</span>
               </div>
 
-              {/* Upload ID Document & Selfie (Matching Image 2) */}
+              {/* Upload ID Document & Selfie */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 {/* 1. National ID Upload */}
                 <div
@@ -617,7 +710,7 @@ const Login = () => {
                         <UploadCloud className="w-5 h-5" />
                       </div>
                       <div className="text-xs font-bold text-foreground mb-0.5">
-                        Upload ID Document <span className="text-red-500">*</span>
+                        Upload ID Document {isTargetCreatorForm ? <span className="text-[10px] text-muted-foreground font-normal">(Optional)</span> : <span className="text-red-500">*</span>}
                       </div>
                       <div className="text-[10px] text-muted-foreground">Front & Back of National ID or Passport</div>
                     </>
@@ -651,7 +744,7 @@ const Login = () => {
                         <Camera className="w-5 h-5" />
                       </div>
                       <div className="text-xs font-bold text-foreground mb-0.5">
-                        Upload Selfie with ID <span className="text-red-500">*</span>
+                        Upload Selfie with ID {isTargetCreatorForm ? <span className="text-[10px] text-muted-foreground font-normal">(Optional)</span> : <span className="text-red-500">*</span>}
                       </div>
                       <div className="text-[10px] text-muted-foreground">Holding ID next to your face clearly</div>
                     </>
@@ -668,12 +761,12 @@ const Login = () => {
                 {updatingCreator ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Saving & Submitting Verification...</span>
+                    <span>Saving Creator Profile...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Save & Submit Verification</span>
+                    <span>{isTargetCreatorForm ? 'Save & Activate Creator Profile' : 'Save & Submit Verification'}</span>
                   </>
                 )}
               </button>
@@ -687,6 +780,13 @@ const Login = () => {
               <p className="text-muted-foreground text-sm">Enter your credentials to access your account</p>
             </div>
             
+            {infoNotice && (
+              <div className="text-emerald-400 text-xs sm:text-sm font-semibold bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-center mb-4 flex items-center justify-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{infoNotice}</span>
+              </div>
+            )}
+
             {error && <div className="text-red-500 text-sm font-bold bg-red-500/10 p-3 rounded-lg text-center mb-4">{error}</div>}
 
             <div className="grid grid-cols-2 gap-3 mb-6">

@@ -6,6 +6,7 @@ import { fetchAllPages } from './pagination';
 import { addLocalCreatorCandidates, resolveCreatorDisplayName, GENERIC_CREATOR_NAMES, shouldIncludeCreatorInDiscover, isSelectedVerifiedCreator } from './creatorDirectory';
 import { hasPrivateKycEvidence, isKycVerified, isCreatorVerified } from './verification';
 import { calculateAge, getPublicGenderLabel } from './profileDemographics';
+import { getCreatorPayoutAmountError } from './creatorPayoutRules';
 import {
   buildCreatorSubscriptionMessage,
   buildTransactionPaymentNotification,
@@ -3831,8 +3832,9 @@ export const requestCreatorPayout = async (
   phone: string,
   method: string = 'M-Pesa'
 ) => {
-  if (!creatorId || amount <= 0) {
-    throw new Error('Please enter a valid withdrawal amount.');
+  const payoutAmountError = getCreatorPayoutAmountError(amount);
+  if (!creatorId || payoutAmountError) {
+    throw new Error(payoutAmountError || 'Please enter a valid withdrawal amount.');
   }
 
   const cleanPhone = phone.trim() || 'Not specified';

@@ -182,6 +182,10 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  IF COALESCE(NEW.gross_amount, 0) < 1000 THEN
+    RAISE EXCEPTION 'The minimum withdrawal amount is KES 1,000';
+  END IF;
+
   creator_uid := COALESCE(NEW.to_creator_id::text, NEW.from_user_id::text);
 
   SELECT payout_kyc_required, kyc_id_url, kyc_selfie_url
@@ -218,6 +222,23 @@ DROP TRIGGER IF EXISTS require_selected_creator_payout_documents ON public.trans
 CREATE TRIGGER require_selected_creator_payout_documents
 BEFORE INSERT OR UPDATE ON public.transactions
 FOR EACH ROW EXECUTE FUNCTION public.require_selected_creator_payout_documents();
+
+-- 5. Return updated records for verification
+SELECT
+  u.uid,
+  u.name,
+  u.email,
+  u.role,
+  u.kyc_status,
+  u.is_verified,
+  u.payout_kyc_required,
+  p.display_name,
+  p.is_verified AS profile_verified,
+  p.kyc_status AS profile_kyc,
+  p.is_active AS profile_active
+FROM public.users u
+LEFT JOIN public.creator_profiles p ON p.user_id::text = u.uid::text
+WHERE u.uid::text IN (SELECT user_id FROM selected_creator_verification_targets);
 
 -- 5. Return updated records for verification
 SELECT
