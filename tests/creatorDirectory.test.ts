@@ -52,4 +52,27 @@ describe('creator directory filters', () => {
   it('sorts newest creators first in the New filter', () => {
     assert.deepEqual(idsFor('new'), ['verified', 'new', 'popular', 'trending']);
   });
+
+  it('filters the selected creator gender without changing the selected sort', () => {
+    const genderedCreators = [
+      { id: 'woman-profile', gender: 'Woman', hasPosts: true, postsCount: 4 },
+      { id: 'man-profile', gender: 'Man', hasPosts: true, postsCount: 8 },
+      { id: 'woman-value', gender: 'woman', hasPosts: true, postsCount: 2 },
+      { id: 'man-value', gender: 'man', hasPosts: false, postsCount: 0 },
+      { id: 'unspecified', gender: null, hasPosts: true, postsCount: 1 },
+    ];
+
+    assert.deepEqual(
+      filterAndSortCreators(genderedCreators, 'trending', 'male').map((creator) => creator.id),
+      ['man-profile', 'man-value'],
+    );
+    assert.deepEqual(
+      filterAndSortCreators(genderedCreators, 'trending', 'female').map((creator) => creator.id),
+      ['woman-profile', 'woman-value'],
+    );
+    assert.deepEqual(
+      filterAndSortCreators(genderedCreators, 'trending').map((creator) => creator.id),
+      ['man-profile', 'woman-profile', 'woman-value', 'unspecified', 'man-value'],
+    );
+  });
 });
