@@ -13,7 +13,6 @@ import {
   addLocalCreatorCandidates,
   resolveCreatorDisplayName,
   GENERIC_CREATOR_NAMES,
-  hasCreatorDirectoryCandidate,
   isSelectedVerifiedCreator,
   isUnverifiedDiscoverUser,
 } from "./creatorDirectory";
@@ -3285,14 +3284,7 @@ export const getDiscoverCreators = async () => {
       name: "Fatma Loki",
       email: "hadq@gmail.com",
     };
-    if (
-      !hasCreatorDirectoryCandidate(
-        creatorUsers,
-        fatmaLoki.name,
-        fatmaLoki.email,
-        fatmaLoki.uid,
-      )
-    ) {
+    if (!creatorUserIds.has(fatmaLoki.uid)) {
       const local = getStoredCreatorProfile(fatmaLoki.uid);
       creatorUsers.push({
         ...fatmaLoki,

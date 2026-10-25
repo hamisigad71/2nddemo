@@ -55,22 +55,6 @@ export const isUnverifiedDiscoverUser = (
   return false;
 };
 
-export const hasCreatorDirectoryCandidate = (
-  candidates: CreatorDirectoryCandidate[],
-  name: string,
-  email: string,
-  uid: string,
-): boolean => {
-  const normalizedName = name.trim().toLowerCase();
-  const normalizedEmail = email.trim().toLowerCase();
-  return candidates.some(
-    (candidate) =>
-      candidate.uid === uid ||
-      candidate.name?.trim().toLowerCase() === normalizedName ||
-      candidate.email?.trim().toLowerCase() === normalizedEmail,
-  );
-};
-
 export const isSelectedVerifiedCreator = (
   name?: string | null,
   email?: string | null,
@@ -86,7 +70,6 @@ export const isSelectedVerifiedCreator = (
 type FilterableCreator = {
   gender?: string | null;
   isVerified?: boolean;
-  isDiscoverFeatured?: boolean;
   isDemo?: boolean;
   hasPosts?: boolean;
   postsCount?: number;
@@ -111,30 +94,19 @@ export const filterAndSortCreators = <T extends FilterableCreator>(
   const eligibleCreators = filter === 'verified'
     ? creators.filter((creator) => creator.isVerified && !creator.isDemo)
     : [...creators];
-  const compareFeatured = (a: T, b: T) =>
-    Number(Boolean(b.isDiscoverFeatured)) - Number(Boolean(a.isDiscoverFeatured));
-  let sortedCreators = [...eligibleCreators];
+  let sortedCreators = eligibleCreators;
 
   if (filter === 'new') {
-    sortedCreators.sort((a, b) =>
-      compareFeatured(a, b) || getCreatedAtTime(b) - getCreatedAtTime(a),
-    );
+    sortedCreators = [...eligibleCreators].sort((a, b) => getCreatedAtTime(b) - getCreatedAtTime(a));
   } else if (filter === 'popular') {
-    sortedCreators.sort((a, b) =>
-      compareFeatured(a, b) ||
-      getSubscriberCount(b.subs) - getSubscriberCount(a.subs),
-    );
+    sortedCreators = [...eligibleCreators].sort((a, b) => getSubscriberCount(b.subs) - getSubscriberCount(a.subs));
   } else if (filter === 'trending') {
-    sortedCreators.sort((a, b) => {
-      const featuredDifference = compareFeatured(a, b);
-      if (featuredDifference) return featuredDifference;
+    sortedCreators = [...eligibleCreators].sort((a, b) => {
       if (Boolean(a.hasPosts) !== Boolean(b.hasPosts)) {
         return a.hasPosts ? -1 : 1;
       }
       return (b.postsCount || 0) - (a.postsCount || 0);
     });
-  } else {
-    sortedCreators.sort(compareFeatured);
   }
 
   if (genderFilter === 'all') return sortedCreators;

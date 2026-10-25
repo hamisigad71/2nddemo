@@ -3,47 +3,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   filterAndSortCreators,
-  hasCreatorDirectoryCandidate,
   resolveCreatorDisplayName,
   type CreatorDirectoryFilter,
 } from '../src/lib/creatorDirectory';
-
-describe('creator directory candidate matching', () => {
-  const fatma = {
-    uid: '347f9665-49b7-4458-9ef2-457e19d60a80',
-    name: 'Fatma Loki',
-    email: 'hadq@gmail.com',
-  };
-
-  it('recognizes the creator by id, name, or email to avoid duplicate cards', () => {
-    assert.equal(
-      hasCreatorDirectoryCandidate([fatma], 'Fatma Loki', 'hadq@gmail.com', fatma.uid),
-      true,
-    );
-    assert.equal(
-      hasCreatorDirectoryCandidate(
-        [{ ...fatma, uid: 'other-id' }],
-        'Fatma Loki',
-        'hadq@gmail.com',
-        fatma.uid,
-      ),
-      true,
-    );
-    assert.equal(
-      hasCreatorDirectoryCandidate(
-        [{ ...fatma, uid: 'other-id', name: 'Other' }],
-        'Fatma Loki',
-        'hadq@gmail.com',
-        fatma.uid,
-      ),
-      true,
-    );
-    assert.equal(
-      hasCreatorDirectoryCandidate([], 'Fatma Loki', 'hadq@gmail.com', fatma.uid),
-      false,
-    );
-  });
-});
 
 describe('creator display name resolution', () => {
   it('uses the creator profile name when the users row contains a placeholder', () => {
@@ -91,32 +53,6 @@ describe('creator directory filters', () => {
     assert.deepEqual(
       filterAndSortCreators(creatorsWithDemoAccount, 'verified').map((creator) => creator.id),
       ['trending', 'verified'],
-    );
-  });
-
-  it('prioritizes discover-featured creators without treating them as verified', () => {
-    const featuredUnverified = {
-      id: 'featured-unverified',
-      isVerified: false,
-      isDiscoverFeatured: true,
-      hasPosts: false,
-      postsCount: 0,
-      subs: '0 subscribers',
-      createdAt: '2024-01-01',
-    };
-    const creatorsWithFeatured = [...creators, featuredUnverified];
-
-    for (const filter of ['all', 'trending', 'popular', 'new'] as const) {
-      assert.equal(
-        filterAndSortCreators(creatorsWithFeatured, filter)[0].id,
-        'featured-unverified',
-      );
-    }
-    assert.equal(
-      filterAndSortCreators(creatorsWithFeatured, 'verified').some(
-        (creator) => creator.id === 'featured-unverified',
-      ),
-      false,
     );
   });
 
