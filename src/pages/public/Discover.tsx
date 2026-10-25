@@ -1,9 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon } from 'lucide-react';
+import { Search, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon, Sparkles, ExternalLink } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
-import { getDiscoverCreators, getFanSubscriptions, checkUserSubscription, getUserProfile } from '../../lib/db';
+import {
+  getDiscoverCreators,
+  getFanSubscriptions,
+  checkUserSubscription,
+  getUserProfile,
+  getPlatformAds,
+  trackAdImpression,
+  trackAdClick,
+  type PlatformAd
+} from '../../lib/db';
 import { getDefaultAvatar, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../../lib/avatar';
 import LiveNowTray from '../../components/LiveNowTray';
 import SubscribeModal from '../../components/SubscribeModal';
@@ -20,6 +29,7 @@ const Discover = () => {
   const [genderFilter, setGenderFilter] = useState<CreatorGenderFilter>('all');
   const [search, setSearch] = useState('');
   const [creators, setCreators] = useState<any[]>([]);
+  const [sponsoredAds, setSponsoredAds] = useState<PlatformAd[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSubscribedIds, setActiveSubscribedIds] = useState<Set<string>>(new Set());
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -53,8 +63,14 @@ const Discover = () => {
 
   const fetchCreators = async () => {
     try {
-      const data = await getDiscoverCreators();
+      const [data, ads] = await Promise.all([
+        getDiscoverCreators(),
+        getPlatformAds('users', false)
+      ]);
       setCreators(data);
+      const activeCreatorAds = ads.filter(a => a.ad_type === 'creator' && a.status === 'active');
+      setSponsoredAds(activeCreatorAds);
+      activeCreatorAds.forEach(a => trackAdImpression(a.id));
     } catch (err) {
       console.error('Failed to load discover creators:', err);
     } finally {
@@ -73,6 +89,7 @@ const Discover = () => {
     window.addEventListener('posts_updated', handleUpdate);
     window.addEventListener('profile_updated', handleUpdate);
     window.addEventListener('creators_updated', handleUpdate);
+    window.addEventListener('tgd_ads_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
 
     // Real-time listener for newly registered creators or new posts
@@ -96,6 +113,7 @@ const Discover = () => {
       window.removeEventListener('posts_updated', handleUpdate);
       window.removeEventListener('profile_updated', handleUpdate);
       window.removeEventListener('creators_updated', handleUpdate);
+      window.removeEventListener('tgd_ads_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
       supabase.removeChannel(channel);
     };
@@ -138,17 +156,16 @@ const Discover = () => {
   
   const sorted = filterAndSortCreators(creators, activeTab, genderFilter);
 
-  const filtered = sorted.filter(c => 
-    shouldIncludeCreatorInDiscover(
-      Boolean(c.isDiscoverFeatured),
-      hasUploadedProfilePhoto(c.avatar),
-      hasUploadedCoverPhoto(c.cover),
-    ) &&
-    (c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.handle.toLowerCase().includes(search.toLowerCase()) ||
-    c.category.toLowerCase().includes(search.toLowerCase()) ||
-    c.location.toLowerCase().includes(search.toLowerCase()))
-  );
+  const searchClean = search.trim().toLowerCase();
+  const filtered = sorted.filter(c => {
+    if (!searchClean) return true;
+    return (
+      Boolean(c.name && c.name.toLowerCase().includes(searchClean)) || 
+      Boolean(c.handle && c.handle.toLowerCase().includes(searchClean)) ||
+      Boolean(c.category && c.category.toLowerCase().includes(searchClean)) ||
+      Boolean(c.location && c.location.toLowerCase().includes(searchClean))
+    );
+  });
 
   return (
     <>
@@ -218,6 +235,74 @@ const Discover = () => {
       <main className="discover-main flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8 pb-24 md:pb-8 space-y-8">
         {/* Live Broadcasts Carousel */}
         <LiveNowTray />
+
+        {/* Sponsored Creators Spotlight */}
+        {sponsoredAds.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <h2 className="text-sm sm:text-base font-black text-foreground tracking-tight">
+                  Featured & Sponsored Creators
+                </h2>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2.5 py-0.5 rounded-full border border-border">
+                Platform Spotlight
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {sponsoredAds.map(ad => (
+                <div
+                  key={ad.id}
+                  onClick={() => {
+                    trackAdClick(ad.id);
+                    if (ad.creator_id) {
+                      navigate(`/creator/${ad.creator_id}`);
+                    } else if (ad.link_url) {
+                      window.open(ad.link_url, '_blank');
+                    }
+                  }}
+                  className="group relative bg-gradient-to-r from-card to-card/60 border border-amber-500/30 hover:border-amber-500/60 rounded-2xl p-3.5 flex items-center gap-3.5 transition-all shadow-sm hover:shadow-md cursor-pointer overflow-hidden"
+                >
+                  <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 border border-border/80">
+                    <img
+                      src={ad.creator_avatar || ad.image_url}
+                      alt={ad.creator_name || ad.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-1 left-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 block ring-2 ring-black" />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs sm:text-sm font-black text-foreground truncate">
+                        {ad.creator_name || ad.sponsor_name}
+                      </span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="ml-auto text-[9px] font-black uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md shrink-0">
+                        Sponsored
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground line-clamp-1 font-medium">
+                      {ad.title}
+                    </p>
+
+                    <div className="flex items-center gap-2 text-[10px] text-primary font-bold">
+                      <span>View Profile & Exclusive Content</span>
+                      <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-4 sm:mb-6">

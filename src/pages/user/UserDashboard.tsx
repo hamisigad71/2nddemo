@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock, Sparkles, ArrowRight } from 'lucide-react';
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
-import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getStoredCreatorProfile, getCreatorProfile } from '../../lib/db';
+import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getStoredCreatorProfile, getCreatorProfile, getPlatformAds, trackAdImpression, trackAdClick, type PlatformAd } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { getEscorts } from '../../lib/mockData';
 import FeedImage from '../../components/FeedImage';
@@ -192,66 +192,71 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
 
   return (
     <>
-      <article className="bg-card border border-border overflow-hidden shadow-sm flex flex-col transition-all duration-300 hover:border-border/80 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
+      <article className="bg-card border border-border/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col mb-4 sm:mb-6">
 
-        {/* Single creator header */}
+        {/* Creator Header */}
         <div
           onClick={() => navigate(profileRoute)}
-          className="relative h-20 sm:h-24 w-full overflow-hidden cursor-pointer group/creator border-b border-border bg-card select-none"
+          className="relative px-4 sm:px-5 py-3.5 w-full flex items-center justify-between gap-3 border-b border-border/50 bg-card select-none group/creator cursor-pointer transition-colors hover:bg-muted/20"
         >
-          <div className="relative z-10 h-full flex items-center justify-between gap-3 px-4 sm:px-5">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative shrink-0">
-                <img
-                  src={avatarUrl}
-                  alt={creatorName}
-                  referrerPolicy="no-referrer"
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-border shadow-md transition-all group-hover/creator:ring-primary/50"
-                />
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative shrink-0">
+              <img
+                src={avatarUrl}
+                alt={creatorName}
+                referrerPolicy="no-referrer"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover ring-2 ring-primary/20 shadow-sm transition-all group-hover/creator:ring-primary/60"
+              />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-card shadow-sm" />
+            </div>
+
+            <div className="min-w-0 space-y-0.5">
+              <div className="font-black text-sm sm:text-base text-foreground flex items-center gap-1.5 leading-tight">
+                <span className="truncate group-hover/creator:text-primary transition-colors">{creatorName}</span>
+                {(post.isVerified || post.users?.isVerified) && (
+                  <span title="Verified Creator" className="shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500" />
+                  </span>
+                )}
               </div>
-              <div className="min-w-0">
-                <div className="font-black text-sm sm:text-base text-foreground flex items-center gap-1 drop-shadow-sm">
-                  <span className="truncate">{creatorName}</span>
-                  {(post.isVerified || post.users?.isVerified) && (
-                    <span title="Verified Creator"><CheckCircle2 className="w-4 h-4 text-white fill-blue-500 shrink-0" /></span>
-                  )}
-                </div>
-                <p className="text-[11px] sm:text-xs text-muted-foreground font-medium truncate">{creatorHandle}</p>
-                <p className="text-[10px] text-muted-foreground/80 mt-0.5">{timeAgo}</p>
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground font-medium truncate">
+                <span className="truncate">{creatorHandle}</span>
+                <span className="text-muted-foreground/60">•</span>
+                <span className="shrink-0 text-muted-foreground/80">{timeAgo}</span>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {!post.is_locked && !(post.visibility === 'subscribers' && post.media_access_granted) && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsSubscribeOpen(true);
-                  }}
-                  className="inline-flex items-center text-[10px] sm:text-[11px] font-black text-white bg-red-600 hover:bg-red-500 border border-red-500/80 px-2.5 sm:px-3 py-1.5 rounded-full shadow-[0_2px_10px_rgba(220,38,38,0.4)] transition-all active:scale-95 cursor-pointer"
-                >
-                  Subscribe
-                </button>
-              )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {!post.is_locked && !(post.visibility === 'subscribers' && post.media_access_granted) && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(profileRoute);
+                  setIsSubscribeOpen(true);
                 }}
-                className="p-1.5 text-zinc-300 hover:text-white transition-colors"
-                title="View profile"
+                className="inline-flex items-center text-xs font-black text-white bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 px-3.5 py-1.5 rounded-full shadow-md shadow-red-600/20 active:scale-95 transition-all cursor-pointer"
               >
-                <MoreHorizontal className="w-5 h-5" />
+                Subscribe
               </button>
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(profileRoute);
+              }}
+              className="p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted/50 transition-colors"
+              title="View profile"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
         {/* Media */}
         {(post.media_url || shouldLockMedia) && (
-          <div className="relative bg-zinc-950 overflow-hidden group select-none min-h-[340px] sm:min-h-[420px] flex items-center justify-center">
+          <div className={`relative bg-zinc-950 overflow-hidden group select-none flex items-center justify-center ${shouldLockMedia ? 'min-h-[360px] sm:min-h-[440px]' : 'w-full'}`}>
             {shouldLockMedia ? (
               <>
                 {/* Ambient aesthetic blurred backdrop using locked video/media or creator avatar */}
@@ -321,42 +326,51 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
           </div>
         )}
 
-        {/* ── Actions Bar Matching OnlyFans Screenshot ── */}
-        <div className="px-4 sm:px-5 py-3 flex items-center justify-between bg-card border-b border-border/50">
-          <div className="flex items-center gap-3 sm:gap-6">
+        {/* ── Actions Bar ── */}
+        <div className="px-4 sm:px-5 py-3 flex items-center justify-between bg-card border-b border-border/40">
+          <div className="flex items-center gap-4 sm:gap-5">
             {/* Heart / Like */}
             <button
               onClick={handleToggleLike}
-              className={`transition-all active:scale-75 cursor-pointer ${isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex items-center gap-1.5 transition-all active:scale-75 cursor-pointer ${
+                isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+              }`}
               title="Like"
             >
-              <Heart className={`w-6 h-6 transition-transform ${isLiked ? 'fill-red-500 text-red-500 scale-110' : 'group-hover:scale-105'}`} />
+              <Heart
+                className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 ${
+                  isLiked ? 'fill-red-500 text-red-500 scale-110 drop-shadow-[0_2px_8px_rgba(239,68,68,0.4)]' : 'hover:scale-110'
+                }`}
+              />
             </button>
 
             {/* Comment */}
             <button
               onClick={handleToggleComments}
-              className={`flex items-center gap-1.5 transition-all active:scale-75 cursor-pointer ${showComments ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex items-center gap-1.5 transition-all active:scale-75 cursor-pointer ${
+                showComments ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
               title="Comment"
             >
-              <MessageCircle className="w-6 h-6" />
-              {commentsCount > 0 && <span className="text-xs font-bold">{commentsCount}</span>}
+              <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-200" />
             </button>
 
-            {/* $ SEND TIP pill button */}
+            {/* Send Tip Pill */}
             <button
               onClick={() => setIsTipOpen(true)}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-muted/60 hover:bg-muted text-foreground border border-border text-xs font-black tracking-wider uppercase transition-all hover:border-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/60 text-xs font-black tracking-wider uppercase transition-all shadow-sm hover:shadow-[0_0_12px_rgba(16,185,129,0.2)] active:scale-95 cursor-pointer"
             >
-              <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black">$</span>
+              <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black leading-none">$</span>
               <span>SEND TIP</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSaved(!isSaved)}
-              className={`p-1.5 rounded-full transition-all active:scale-90 cursor-pointer ${isSaved ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`p-1.5 rounded-full transition-all active:scale-90 cursor-pointer ${
+                isSaved ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'
+              }`}
               title="Save Post"
             >
               <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
@@ -365,21 +379,31 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
         </div>
 
         {/* ── Like Counter & Caption ── */}
-        <div className="px-4 sm:px-5 pt-3 pb-4 bg-card flex flex-col gap-1.5">
-          <div className="text-xs font-black text-foreground tracking-wide">
-            {likesCount} {likesCount === 1 ? 'like' : 'likes'}
+        <div className="px-4 sm:px-5 py-3.5 bg-card space-y-1.5">
+          <div className="text-xs font-black text-foreground tracking-wide flex items-center gap-1.5">
+            <span>{likesCount.toLocaleString()} {likesCount === 1 ? 'like' : 'likes'}</span>
           </div>
 
           {post.content && (
-            <p className="text-[13px] leading-relaxed text-foreground/90">
+            <div className="text-[13px] sm:text-sm leading-relaxed text-foreground">
               <span
                 onClick={() => navigate(profileRoute)}
                 className="font-black text-foreground mr-2 hover:text-red-500 cursor-pointer transition-colors"
               >
                 {creatorName}
               </span>
-              {post.content}
-            </p>
+              <span className="text-foreground/90 font-normal">{post.content}</span>
+            </div>
+          )}
+
+          {/* Quick comments link preview */}
+          {commentsCount > 0 && !showComments && (
+            <button
+              onClick={handleToggleComments}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors pt-0.5 cursor-pointer block font-medium"
+            >
+              View all {commentsCount} {commentsCount === 1 ? 'comment' : 'comments'}
+            </button>
           )}
         </div>
 
@@ -464,17 +488,119 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
   );
 };
 
+// ─── Sponsored Ad Card Component ─────────────────────────────────────────────
+
+const SponsoredFeedCard = ({ ad }: { ad: PlatformAd }) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    trackAdImpression(ad.id);
+  }, [ad.id]);
+
+  const isCreatorAd = ad.ad_type === 'creator' || ad.category === 'creator_spotlight';
+  const targetUrl = ad.cta_url || (ad.creator_id ? `/creator/${ad.creator_id}` : '/discover');
+
+  return (
+    <div className="bg-[#0D0E12] border border-amber-500/30 hover:border-amber-500/60 transition-all rounded-3xl overflow-hidden shadow-2xl relative group">
+      {/* Top Header */}
+      <div className="p-3.5 sm:p-4 flex items-center justify-between border-b border-zinc-800/80 bg-zinc-950/60">
+        <div 
+          onClick={() => {
+            trackAdClick(ad.id);
+            navigate(targetUrl);
+          }}
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer min-w-0"
+        >
+          {ad.creator_avatar ? (
+            <img src={ad.creator_avatar} alt="" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-amber-500/40 shrink-0" />
+          ) : (
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-600/20 text-red-400 font-black flex items-center justify-center shrink-0 border border-red-500/30 text-xs">
+              {ad.sponsor_name[0] || 'A'}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5 truncate">
+              <span>{ad.sponsor_name}</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20 shrink-0" />
+            </div>
+            <div className="text-[10px] text-zinc-400 font-medium truncate">
+              {ad.creator_handle || 'Sponsored Promotion'}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md ${
+            isCreatorAd
+              ? 'bg-amber-500 text-black border border-amber-300'
+              : 'bg-rose-600 text-white border border-rose-400'
+          }`}>
+            <Sparkles className="w-3 h-3 fill-current" />
+            {ad.badge || (isCreatorAd ? 'Sponsored Creator' : 'Featured Announcement')}
+          </span>
+        </div>
+      </div>
+
+      {/* Media Banner */}
+      <div 
+        onClick={() => {
+          trackAdClick(ad.id);
+          navigate(targetUrl);
+        }}
+        className="relative aspect-[16/10] overflow-hidden bg-black cursor-pointer"
+      >
+        <img
+          src={ad.image_url}
+          alt={ad.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25 pointer-events-none" />
+
+        <div className="absolute bottom-3 left-4 right-4 text-white pointer-events-none">
+          <h4 className="text-sm sm:text-base font-black tracking-tight text-white drop-shadow-md">
+            {ad.title}
+          </h4>
+        </div>
+      </div>
+
+      {/* Card Body & Call to Action */}
+      <div className="p-4 sm:p-5 space-y-3.5">
+        <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2">
+          {ad.description}
+        </p>
+
+        <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="text-[10px] sm:text-[11px] text-zinc-500 font-medium">
+            Sponsored by <strong className="text-zinc-300">{ad.sponsor_name}</strong>
+          </div>
+
+          <button
+            onClick={() => {
+              trackAdClick(ad.id);
+              navigate(targetUrl);
+            }}
+            className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-red-600/30 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer min-h-11"
+          >
+            <span>{ad.cta_text || 'View Profile & Subscribe'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Empty State ─────────────────────────────────────────────────────────────
 
 const EmptyFeed = () => (
-  <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
-    <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
-      <Rss className="w-8 h-8 text-muted-foreground" />
+  <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+      <Rss className="w-7 h-7 text-muted-foreground" />
     </div>
     <div>
-      <h3 className="font-bold text-lg mb-1">Your feed is empty</h3>
-      <p className="text-muted-foreground text-sm max-w-xs">
-        Subscribe to your favourite creators to start seeing their posts here in real-time.
+      <h3 className="font-bold text-lg mb-1">Your feed is ready</h3>
+      <p className="text-muted-foreground text-xs sm:text-sm max-w-xs">
+        Check out the featured creators below and subscribe to start seeing their private posts in real-time.
       </p>
     </div>
   </div>
@@ -487,10 +613,27 @@ const LIMIT = 30;
 const UserDashboard = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
+  const [sponsoredAds, setSponsoredAds] = useState<PlatformAd[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Load platform sponsored ads for subscribers with real-time update listeners
+  useEffect(() => {
+    const loadAds = () => {
+      getPlatformAds('users', false).then(ads => {
+        setSponsoredAds(ads);
+      }).catch(() => {});
+    };
+    loadAds();
+    window.addEventListener('tgd_ads_updated', loadAds);
+    window.addEventListener('storage', loadAds);
+    return () => {
+      window.removeEventListener('tgd_ads_updated', loadAds);
+      window.removeEventListener('storage', loadAds);
+    };
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -598,11 +741,37 @@ const UserDashboard = () => {
       </div>
 
       <div className="max-w-xl mx-auto flex flex-col gap-5">
-        {posts.length === 0 && !loading && <EmptyFeed />}
+        {posts.length === 0 && !loading && (
+          <>
+            <EmptyFeed />
+            {sponsoredAds.length > 0 && (
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2 px-1">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Featured Creator Spotlight</span>
+                </div>
+                {sponsoredAds.slice(0, 2).map(ad => (
+                  <SponsoredFeedCard key={ad.id} ad={ad} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
-        {posts.map((post, index) => (
-          <FeedPost key={post.id} post={post} currentUserId={user?.id || ''} priority={index < 2} />
-        ))}
+        {posts.map((post, index) => {
+          const shouldInjectAd = sponsoredAds.length > 0 && (index + 1) % 3 === 0;
+          const adIndex = Math.floor(index / 3) % sponsoredAds.length;
+          const adToInject = shouldInjectAd ? sponsoredAds[adIndex] : null;
+
+          return (
+            <div key={post.id} className="contents">
+              <FeedPost post={post} currentUserId={user?.id || ''} priority={index < 2} />
+              {adToInject && (
+                <SponsoredFeedCard ad={adToInject} />
+              )}
+            </div>
+          );
+        })}
 
         <div ref={sentinelRef} className="h-4" />
 

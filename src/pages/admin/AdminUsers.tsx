@@ -35,13 +35,15 @@ const AdminUsers = () => {
 
   const handleDeleteUser = async () => {
     if (!deleteModalUser) return;
+    const target = deleteModalUser;
     setDeleting(true);
+    // Instant optimistic removal from UI
+    setUsersList(prev => prev.filter(u => u.id !== target.id));
+    setDeleteModalUser(null);
     try {
-      const success = await deleteUserAccount(deleteModalUser.id);
+      const success = await deleteUserAccount(target.id);
       if (success) {
-        toast.success(`Subscriber ${deleteModalUser.name} permanently deleted.`);
-        setDeleteModalUser(null);
-        await fetchUsers();
+        toast.success(`Subscriber ${target.name} permanently deleted.`);
       } else {
         toast.error('Failed to delete subscriber.');
       }
@@ -49,6 +51,7 @@ const AdminUsers = () => {
       toast.error(err?.message || 'Error deleting subscriber.');
     } finally {
       setDeleting(false);
+      await fetchUsers();
     }
   };
 

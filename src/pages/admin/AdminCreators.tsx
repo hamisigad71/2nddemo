@@ -25,6 +25,7 @@ const AdminCreators = () => {
   const [filter, setFilter] = useState('all');
   const [deleteModalCreator, setDeleteModalCreator] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [kycModalCreator, setKycModalCreator] = useState<any | null>(null);
   const [resolvedDocs, setResolvedDocs] = useState<Record<string, { id: string | null; selfie: string | null }>>({});
 
@@ -42,13 +43,15 @@ const AdminCreators = () => {
 
   const handleDeleteCreator = async () => {
     if (!deleteModalCreator) return;
+    const target = deleteModalCreator;
     setDeleting(true);
+    // Instant optimistic removal from UI
+    setCreatorsList(prev => prev.filter(c => c.id !== target.id));
+    setDeleteModalCreator(null);
     try {
-      const success = await deleteUserAccount(deleteModalCreator.id);
+      const success = await deleteUserAccount(target.id);
       if (success) {
-        toast.success(`Creator ${deleteModalCreator.name} permanently deleted.`);
-        setDeleteModalCreator(null);
-        await loadCreators();
+        toast.success(`Creator ${target.name} permanently deleted.`);
       } else {
         toast.error('Failed to delete creator.');
       }
@@ -56,6 +59,7 @@ const AdminCreators = () => {
       toast.error(err?.message || 'Error deleting creator.');
     } finally {
       setDeleting(false);
+      await loadCreators();
     }
   };
 
@@ -89,8 +93,12 @@ const AdminCreators = () => {
   }, []);
 
   const handleStatusChange = async (id: string, newStatus: 'active' | 'pending' | 'suspended') => {
+    const creator = creatorsList.find(c => c.id === id);
+    setActionLoadingId(id);
+    // Instant optimistic status update
+    setCreatorsList(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+
     try {
-      const creator = creatorsList.find(c => c.id === id);
       const hasFilledKyc = Boolean((creator?.hasId && creator?.hasSelfie) || creator?.kycStatus === 'pending');
       
       await updateCreatorStatus(id, newStatus);
@@ -100,14 +108,18 @@ const AdminCreators = () => {
           await setCreatorVerified(id, true);
           toast.success(`${creator?.name || 'Creator'} approved and verified with blue badge! 👑`);
         } else {
-          toast.success(`${creator?.name || 'Creator'} approved as active. (KYC documents not yet submitted)`);
+          toast.success(`${creator?.name || 'Creator'} restored to active status.`);
         }
+      } else if (newStatus === 'suspended') {
+        toast.success(`Creator ${creator?.name || ''} has been suspended.`);
       } else {
         toast.success(`Creator status changed to ${newStatus}`);
       }
-      await loadCreators(); // Refresh data
     } catch (err: any) {
       toast.error(err?.message || 'Failed to update creator status');
+    } finally {
+      setActionLoadingId(null);
+      await loadCreators(); // Refresh data
     }
   };
 
@@ -330,21 +342,45 @@ const AdminCreators = () => {
                         )}
                         {c.status === 'pending' && (
                           <>
-                            <button onClick={() => handleStatusChange(c.id, 'active')} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[11px] uppercase tracking-wider font-black rounded-xl border border-red-500 shadow-lg shadow-red-600/20 transition-all active:scale-95">Approve</button>
-                            <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-3 py-1.5 bg-[#0d0e12] text-zinc-400 hover:text-red-400 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95">Reject</button>
+                            <button 
+                              onClick={() => handleStatusChange(c.id, 'active')} 
+                              disabled={actionLoadingId === c.id}
+                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[11px] uppercase tracking-wider font-black rounded-xl border border-red-500 shadow-lg shadow-red-600/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {actionLoadingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Approve'}
+                            </button>
+                            <button 
+                              onClick={() => handleStatusChange(c.id, 'suspended')} 
+                              disabled={actionLoadingId === c.id}
+                              className="px-3 py-1.5 bg-[#0d0e12] text-zinc-400 hover:text-red-400 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
                           </>
                         )}
                         {c.status === 'active' && (
-                          <button onClick={() => handleStatusChange(c.id, 'suspended')} className="px-3 py-1.5 bg-[#0d0e12] text-yellow-500 hover:text-yellow-400 hover:border-yellow-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-yellow-500/20 transition-all active:scale-95">Suspend</button>
+                          <button 
+                            onClick={() => handleStatusChange(c.id, 'suspended')} 
+                            disabled={actionLoadingId === c.id}
+                            className="px-3 py-1.5 bg-[#0d0e12] text-yellow-500 hover:text-yellow-400 hover:border-yellow-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-yellow-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                            title="Suspend creator and terminate active sessions"
+                          >
+                            {actionLoadingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Suspend'}
+                          </button>
                         )}
                         {c.status === 'suspended' && (
-                          <button onClick={() => handleStatusChange(c.id, 'active')} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 shadow-md shadow-emerald-500/10 flex items-center gap-1 cursor-pointer" title="Unsuspend creator and restore account">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Unsuspend
+                          <button 
+                            onClick={() => handleStatusChange(c.id, 'active')} 
+                            disabled={actionLoadingId === c.id}
+                            className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 shadow-md shadow-emerald-500/10 flex items-center gap-1 cursor-pointer disabled:opacity-50" 
+                            title="Unsuspend creator and restore account"
+                          >
+                            {actionLoadingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5" /> Unsuspend</>}
                           </button>
                         )}
                         <button
                           onClick={() => setDeleteModalCreator(c)}
-                          className="px-3 py-1.5 bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+                          className="px-3 py-1.5 bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                           title="Permanently Delete Creator"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete

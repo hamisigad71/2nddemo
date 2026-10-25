@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, UserCheck, DollarSign,
   BarChart3, Settings, Menu, LogOut, Bell, ChevronRight,
   Rss, Sun, Moon, User, Wallet, Flag, Shield, Heart, Megaphone, Lock,
-  CheckCheck, Radio, Video, UserPlus, X, Receipt, ArrowRight, CreditCard
+  CheckCheck, Radio, Video, UserPlus, X, Receipt, ArrowRight
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -158,7 +158,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
   const paymentNotifs = adminNotifications.filter(isPaymentNotif);
   const paymentNotifsCount = paymentNotifs.length;
-  const unreadPaymentsCount = paymentNotifs.filter(n => !n.is_read).length;
   const unreadNotifsCount = adminNotifications.filter(n => !n.is_read).length;
   const totalUnreadBadge = unreadNotifsCount + pendingPayoutsCount;
   const displayedNotifs = notifTab === 'payments' ? paymentNotifs : adminNotifications;
@@ -289,28 +288,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Live Payments Quick Trigger */}
-            <button
-              onClick={() => {
-                setNotifTab('payments');
-                setShowNotifications(true);
-              }}
-              title="View platform payments feed"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-400 border border-emerald-500/30 text-xs font-black transition-all active:scale-95 shadow-sm group cursor-pointer"
-            >
-              <CreditCard className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden sm:inline">Live Payments</span>
-              {unreadPaymentsCount > 0 ? (
-                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500 text-black text-[10px] font-black">
-                  {unreadPaymentsCount}
-                </span>
-              ) : paymentNotifsCount > 0 ? (
-                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                  {paymentNotifsCount}
-                </span>
-              ) : null}
-            </button>
-
             {/* Notification Center */}
             <div className="relative">
               <button
@@ -332,33 +309,34 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className={`${adminNotificationPopoverClassName} bg-[#0c0d12] border border-zinc-800 rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-150`}>
+                  <div className={`${adminNotificationPopoverClassName} bg-[#0c0d12] border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col min-h-0 max-h-[calc(100dvh-5.5rem)] sm:max-h-[min(540px,calc(100dvh-5.5rem))] animate-in fade-in zoom-in-95 duration-150`}>
                     {/* Header */}
-                    <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60">
-                      <div className="flex items-center gap-2">
-                        <Bell className="w-4 h-4 text-red-500" />
-                        <span className="text-sm font-black text-white">Platform Notifications</span>
+                    <div className="p-3 sm:p-4 border-b border-zinc-800 flex items-center justify-between gap-2 bg-zinc-950/60">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Bell className="w-4 h-4 text-red-500 shrink-0" />
+                        <span className="text-sm font-black text-white truncate">Platform Notifications</span>
                         {totalUnreadBadge > 0 && (
-                          <span className="px-1.5 py-0.5 rounded-full bg-red-600/20 text-red-400 border border-red-500/30 text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded-full bg-red-600/20 text-red-400 border border-red-500/30 text-[10px] font-bold whitespace-nowrap">
                             {totalUnreadBadge} new
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 items-center gap-1">
                         {unreadNotifsCount > 0 && (
                           <button
                             onClick={async () => {
                               await markAllAdminNotificationsAsRead();
                               setAdminNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
                             }}
-                            className="text-[11px] font-bold text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+                            className="min-h-11 px-2 text-[11px] font-bold text-zinc-400 hover:text-white flex items-center gap-1 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                           >
                             <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> Read all
                           </button>
                         )}
                         <button
                           onClick={() => setShowNotifications(false)}
-                          className="p-1 text-zinc-500 hover:text-white transition-colors"
+                          aria-label="Close notifications"
+                          className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -369,7 +347,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     <div className="p-2 border-b border-zinc-800/80 bg-zinc-950/40 flex items-center gap-2">
                       <button
                         onClick={() => setNotifTab('all')}
-                        className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 min-h-11 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                           notifTab === 'all'
                             ? 'bg-zinc-800 text-white shadow-sm'
                             : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
@@ -386,7 +364,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
                       <button
                         onClick={() => setNotifTab('payments')}
-                        className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`flex-1 min-h-11 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                           notifTab === 'payments'
                             ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-950/40'
                             : 'text-zinc-400 hover:text-emerald-400 hover:bg-emerald-950/30'
@@ -429,7 +407,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     )}
 
                     {/* Notification Stream */}
-                    <div className="overflow-y-auto divide-y divide-zinc-800/60 custom-scrollbar max-h-84">
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain divide-y divide-zinc-800/60 custom-scrollbar">
                       {displayedNotifs.length === 0 ? (
                         <div className="py-12 px-6 text-center text-zinc-500">
                           {notifTab === 'payments' ? (
@@ -466,7 +444,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                             const status = details?.status || 'completed';
 
                             return (
-                              <div
+                              <button
+                                type="button"
                                 key={notif.id}
                                 onClick={async () => {
                                   await markAdminNotificationAsRead(notif.id);
@@ -476,7 +455,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                   setShowNotifications(false);
                                   navigate(notif.action_url || '/admin/transactions');
                                 }}
-                                className={`p-3.5 hover:bg-emerald-950/30 transition-all cursor-pointer relative border-l-2 ${
+                                className={`block w-full p-3.5 text-left hover:bg-emerald-950/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 transition-all cursor-pointer relative border-l-2 ${
                                   !notif.is_read
                                     ? 'bg-emerald-950/20 border-emerald-500'
                                     : 'border-transparent opacity-90'
@@ -487,26 +466,26 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                 )}
 
                                 {/* Top Row: Amount & Badges */}
-                                <div className="flex items-center justify-between gap-2 mb-2 pr-4">
+                                <div className="flex flex-col items-start gap-2 mb-2 pr-4 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
                                   <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
                                       <Receipt className="w-4 h-4" />
                                     </div>
-                                    <div>
-                                      <div className="text-xs font-black text-emerald-400 tracking-tight flex items-center gap-1.5">
+                                    <div className="min-w-0">
+                                      <div className="text-sm font-black text-emerald-400 tracking-tight flex flex-wrap items-center gap-x-1.5">
                                         <span>+{currency} {gross.toLocaleString()}</span>
-                                        <span className="text-[10px] font-bold text-zinc-400 capitalize">
+                                        <span className="text-[11px] font-bold text-zinc-300 capitalize">
                                           ({details?.type || notif.type || 'payment'})
                                         </span>
                                       </div>
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60">
+                                  <div className="flex flex-wrap items-center gap-1.5 pl-10 min-[380px]:pl-0">
+                                    <span className="text-[10px] font-extrabold uppercase px-2 py-1 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60">
                                       {method}
                                     </span>
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full border ${
                                       status === 'completed'
                                         ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                                         : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
@@ -517,22 +496,22 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                 </div>
 
                                 {/* Flow Row: Payer -> Creator */}
-                                <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2 mb-2 flex items-center justify-between text-xs">
+                                <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2.5 mb-2 flex items-center justify-between gap-2 text-xs">
                                   <div className="flex items-center gap-1.5 min-w-0 max-w-[42%]">
                                     {details?.payer_avatar ? (
-                                      <img src={details.payer_avatar} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                      <img src={details.payer_avatar} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                                     ) : (
                                       <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                                     )}
-                                    <span className="text-[11px] font-bold text-zinc-200 truncate">{payerName}</span>
+                                    <span className="text-xs font-bold text-zinc-200 truncate">{payerName}</span>
                                   </div>
 
                                   <ArrowRight className="w-3 h-3 text-zinc-600 shrink-0 mx-1" />
 
                                   <div className="flex items-center gap-1.5 min-w-0 max-w-[42%] justify-end text-right">
-                                    <span className="text-[11px] font-bold text-red-400 truncate">{creatorName}</span>
+                                    <span className="text-xs font-bold text-red-400 truncate">{creatorName}</span>
                                     {details?.creator_avatar ? (
-                                      <img src={details.creator_avatar} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                      <img src={details.creator_avatar} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                                     ) : (
                                       <UserPlus className="w-3.5 h-3.5 text-red-400 shrink-0" />
                                     )}
@@ -540,17 +519,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                 </div>
 
                                 {/* Financial Split Row */}
-                                <div className="flex items-center justify-between text-[10px] text-zinc-400 px-0.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-emerald-400/90 font-bold">Platform: +{currency} {fee.toLocaleString()}</span>
-                                    <span className="text-zinc-600">•</span>
-                                    <span className="text-zinc-300">Creator: {currency} {creatorShare.toLocaleString()}</span>
+                                <div className="grid grid-cols-2 gap-2 px-0.5 text-[11px]">
+                                  <div className="min-w-0 rounded-lg bg-emerald-500/5 px-2 py-1.5">
+                                    <div className="text-zinc-400">Platform fee</div>
+                                    <div className="truncate font-bold text-emerald-300">+{currency} {fee.toLocaleString()}</div>
                                   </div>
-                                  <span className="text-[9px] text-zinc-500">
-                                    {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
+                                  <div className="min-w-0 rounded-lg bg-zinc-800/50 px-2 py-1.5">
+                                    <div className="text-zinc-400">Creator share</div>
+                                    <div className="truncate font-bold text-zinc-200">{currency} {creatorShare.toLocaleString()}</div>
+                                  </div>
                                 </div>
-                              </div>
+                                <div className="mt-2 text-right text-[11px] text-zinc-400">
+                                  {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </button>
                             );
                           }
 
@@ -559,7 +541,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                           const isVideo = notif.badge?.toLowerCase().includes('video');
 
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={notif.id}
                               onClick={async () => {
                                 await markAdminNotificationAsRead(notif.id);
@@ -572,7 +555,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                   navigate(targetUrl);
                                 }
                               }}
-                              className={`p-3.5 hover:bg-zinc-900/60 transition-colors cursor-pointer flex items-start gap-3 relative ${
+                              className={`w-full p-3.5 text-left hover:bg-zinc-900/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500 transition-colors cursor-pointer flex items-start gap-3 relative ${
                                 !notif.is_read ? 'bg-zinc-950/40' : 'opacity-85'
                               }`}
                             >
@@ -594,7 +577,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-1 mb-0.5">
-                                  <span className="text-xs font-black text-white truncate">{notif.title}</span>
+                                  <span className="text-sm font-black text-white truncate">{notif.title}</span>
                                   {notif.badge && (
                                     <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md shrink-0 ${
                                       isLive 
@@ -607,30 +590,30 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">{notif.message}</p>
-                                <div className="mt-1 text-[9px] text-zinc-500">
+                                <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">{notif.message}</p>
+                                <div className="mt-1 text-[11px] text-zinc-400">
                                   {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(notif.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                 </div>
                               </div>
-                            </div>
+                              </button>
                           );
                         })
                       )}
                     </div>
 
                     {/* Footer */}
-                    <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/80 flex items-center justify-between text-[11px]">
+                    <div className="p-2 sm:p-3 border-t border-zinc-800/80 bg-zinc-950/80 flex items-center justify-between gap-2 text-xs">
                       <Link
                         to="/admin/transactions"
                         onClick={() => setShowNotifications(false)}
-                        className="text-emerald-400 hover:text-emerald-300 transition-colors font-bold flex items-center gap-1"
+                        className="min-h-11 px-2 text-emerald-300 hover:text-emerald-200 transition-colors font-bold flex items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                       >
                         <Receipt className="w-3.5 h-3.5" /> All Payments &rarr;
                       </Link>
                       <Link
                         to="/admin/creators"
                         onClick={() => setShowNotifications(false)}
-                        className="text-zinc-400 hover:text-white transition-colors font-bold"
+                        className="min-h-11 px-2 text-zinc-300 hover:text-white transition-colors font-bold flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                       >
                         Manage Creators &rarr;
                       </Link>

@@ -5,8 +5,8 @@ import { adminNotificationPopoverClassName } from '../src/lib/adminNotificationL
 describe('admin notification popover layout', () => {
   it('anchors the popover to the mobile viewport and preserves desktop bell alignment', () => {
     assert.match(adminNotificationPopoverClassName, /\bfixed\b/);
-    assert.match(adminNotificationPopoverClassName, /\bleft-2\b/);
-    assert.match(adminNotificationPopoverClassName, /\bright-2\b/);
+    assert.match(adminNotificationPopoverClassName, /\binset-x-3\b/);
+    assert.match(adminNotificationPopoverClassName, /\bbottom-3\b/);
     assert.match(adminNotificationPopoverClassName, /\bsm:absolute\b/);
     assert.match(adminNotificationPopoverClassName, /\bsm:right-0\b/);
   });
