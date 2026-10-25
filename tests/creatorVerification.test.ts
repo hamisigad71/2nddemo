@@ -8,6 +8,7 @@ import {
   buildAdminKycSubmissionNotification,
   canApproveKyc,
   resolveKycApprovalPayload,
+  resolveCreatorVerificationPayloads,
   isCreatorProfileComplete,
   hasPrivateKycEvidence,
 } from "../src/lib/verification";
@@ -38,6 +39,8 @@ describe("creator verification eligibility and admin approval flow", () => {
       isSelectedVerifiedCreator(undefined, "ellarains00@gmail.com"),
       true,
     );
+    assert.equal(isSelectedVerifiedCreator("nimo"), true);
+    assert.equal(isSelectedVerifiedCreator(undefined, "nimoblip@gmail.com"), true);
     // Explicitly unverified users on discover
     assert.equal(isSelectedVerifiedCreator("fatma loki"), false);
     assert.equal(isSelectedVerifiedCreator(undefined, "hadq@gmail.com"), false);
@@ -207,6 +210,17 @@ describe("creator verification eligibility and admin approval flow", () => {
       ),
       false,
     );
+  });
+
+  it("persists admin verification status consistently to users and creator profiles", () => {
+    assert.deepEqual(resolveCreatorVerificationPayloads("verified"), {
+      users: { kyc_status: "verified", is_verified: true },
+      creatorProfiles: { kyc_status: "verified", is_verified: true },
+    });
+    assert.deepEqual(resolveCreatorVerificationPayloads("rejected"), {
+      users: { kyc_status: "rejected", is_verified: false },
+      creatorProfiles: { kyc_status: "rejected", is_verified: false },
+    });
   });
 
   it("enforces mandatory creator cards on login when profile photos or KYC are missing", () => {

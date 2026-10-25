@@ -123,6 +123,16 @@ export const resolveKycApprovalPayload = (action: 'verified' | 'rejected') => {
   };
 };
 
+export const resolveCreatorVerificationPayloads = (
+  action: 'verified' | 'rejected',
+) => {
+  const payload = resolveKycApprovalPayload(action);
+  return {
+    users: payload,
+    creatorProfiles: { ...payload },
+  };
+};
+
 export const isCreatorProfileComplete = (
   userRow: any,
   creatorProfileRow?: any,

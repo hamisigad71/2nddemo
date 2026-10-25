@@ -20,6 +20,7 @@ import {
   hasPrivateKycEvidence,
   isKycVerified,
   isCreatorVerified,
+  resolveCreatorVerificationPayloads,
 } from "./verification";
 import { calculateAge, getPublicGenderLabel } from "./profileDemographics";
 import { getCreatorPayoutAmountError } from "./creatorPayoutRules";
@@ -3267,7 +3268,7 @@ export const getDiscoverCreators = async () => {
           "uid, name, email, avatar, role, phone, created_at, cover_image, status, kyc_status, is_verified, gender, gender_description, dob",
         )
         .or(
-          "is_verified.eq.true,kyc_status.eq.verified,email.eq.hadq@gmail.com,email.eq.nataliangina62@gmail.com,email.eq.ellarains00@gmail.com",
+          "is_verified.eq.true,kyc_status.eq.verified,email.eq.hadq@gmail.com,email.eq.nataliangina62@gmail.com,email.eq.ellarains00@gmail.com,email.eq.nimoblip@gmail.com",
         );
       if (selectedUsers) {
         selectedUsers.forEach((su) => {
@@ -4238,11 +4239,12 @@ export const setCreatorVerified = async (
   if (!creator) throw new Error("Creator account was not found.");
 
   const local = getStoredCreatorProfile(creatorId);
-  const { data: creatorProfile } = await supabase
+  const { data: creatorProfile, error: profileLookupError } = await supabase
     .from("creator_profiles")
     .select("*")
     .eq("user_id", creatorId)
     .maybeSingle();
+  if (profileLookupError) throw profileLookupError;
 
   const hasId = Boolean(
     creator?.kyc_id_url ||
@@ -4271,18 +4273,24 @@ export const setCreatorVerified = async (
     );
   }
 
-  const targetKycStatus = verified ? "verified" : "rejected";
+  const targetStatus = verified ? "verified" : "rejected";
+  const { users, creatorProfiles } =
+    resolveCreatorVerificationPayloads(targetStatus);
 
   const { error: updateError } = await supabase
     .from("users")
-    .update({
-      kyc_status: targetKycStatus,
-    })
+    .update(users)
     .eq("uid", creatorId);
 
-  if (updateError) {
-    console.warn("users kyc_status update notice:", updateError.message);
-  }
+  if (updateError) throw updateError;
+
+  const { error: profileUpdateError } = await supabase
+    .from("creator_profiles")
+    .upsert(
+      { user_id: creatorId, ...creatorProfiles },
+      { onConflict: "user_id" },
+    );
+  if (profileUpdateError) throw profileUpdateError;
 
   if (typeof window !== "undefined") {
     try {
@@ -4291,8 +4299,7 @@ export const setCreatorVerified = async (
         `tgd_creator_profile_${creatorId}`,
         JSON.stringify({
           ...existingLocal,
-          kyc_status: targetKycStatus,
-          is_verified: verified,
+          ...creatorProfiles,
         }),
       );
 
@@ -4308,7 +4315,9 @@ export const setCreatorVerified = async (
         "tgd_verified_creator_ids",
         JSON.stringify(Array.from(verifiedIds)),
       );
-    } catch {}
+    } catch (error) {
+      console.warn("Could not update local creator verification cache:", error);
+    }
 
     window.dispatchEvent(new CustomEvent("creators_updated"));
     window.dispatchEvent(new CustomEvent("posts_updated"));

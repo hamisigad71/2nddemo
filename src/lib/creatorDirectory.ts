@@ -14,12 +14,14 @@ export const SELECTED_VERIFIED_CREATOR_NAMES = new Set([
   'natalia ngina',
   'ella rains',
   'sir collo',
+  'nimo',
 ]);
 
 export const SELECTED_VERIFIED_CREATOR_EMAILS = new Set([
   'nataliangina62@gmail.com',
   'ellarains00@gmail.com',
   'sircollo51@gmail.com',
+  'nimoblip@gmail.com',
 ]);
 
 export const SELECTED_VERIFIED_CREATOR_UIDS = new Set([

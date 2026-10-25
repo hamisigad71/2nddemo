@@ -191,18 +191,7 @@ const AdminUsers = () => {
       )) {
         throw new Error('Cannot approve KYC until all identity details and proof documents are submitted.');
       }
-      const { error } = await supabase.from('users').update({ 
-        kyc_status: newStatus
-      }).eq('uid', id);
-      if (error) {
-        console.warn('Notice updating users kyc_status in AdminUsers:', error.message);
-      }
-
-      try {
-        await setCreatorVerified(id, newStatus === 'verified');
-      } catch (e) {
-        console.warn('Notice setting creator verified cache in AdminUsers:', e);
-      }
+      await setCreatorVerified(id, newStatus === 'verified');
 
       setPendingUsers(prev => prev.filter(u => u.uid !== id));
       setKycDocumentUrls(prev => {
