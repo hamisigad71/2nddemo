@@ -71,7 +71,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         const hasPhoto = hasUploadedProfilePhoto(profile?.avatar || creatorProfile?.avatar || storedLocal?.avatar);
         const hasCover = hasUploadedCoverPhoto(creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image);
         if (!hasPhoto || !hasCover) {
-          navigate(`/login?upload_photos=required&email=${encodeURIComponent(user.email || '')}`, { replace: true });
+          navigate('/edit-profile?tab=profile&upload_photos=required', { replace: true });
         } else {
           navigate('/dashboard', { replace: true });
         }

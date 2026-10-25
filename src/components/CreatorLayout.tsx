@@ -89,14 +89,15 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
       const hasPhoto = hasUploadedProfilePhoto(existingAvatar);
       const hasCover = hasUploadedCoverPhoto(existingCover);
 
-      if (isTarget) {
-        if (!hasPhoto || !hasCover) {
-          navigate('/login?upload_photos=required&email=' + encodeURIComponent(user.email || ''), { replace: true });
+      const isComplete = isTarget ? (hasPhoto && hasCover) : isCreatorProfileComplete(profile, creatorProfile, storedLocal);
+
+      if (!isComplete) {
+        // If creator is already logged in, do not bounce them to /login (which causes a login-dashboard redirect loop).
+        // Instead, route them directly to edit-profile so they can upload their photos and identity documents.
+        if (location.pathname !== '/edit-profile') {
+          navigate('/edit-profile?tab=profile&upload_photos=required', { replace: true });
           return;
         }
-      } else if (!isCreatorProfileComplete(profile, creatorProfile, storedLocal)) {
-        navigate('/login?upload_photos=required&email=' + encodeURIComponent(user.email || ''), { replace: true });
-        return;
       }
 
       if (profile?.avatar) setCreatorAvatar(profile.avatar);
