@@ -13,7 +13,6 @@ import {
   addLocalCreatorCandidates,
   resolveCreatorDisplayName,
   GENERIC_CREATOR_NAMES,
-  shouldIncludeCreatorInDiscover,
   isSelectedVerifiedCreator,
   isUnverifiedDiscoverUser,
 } from "./creatorDirectory";
@@ -3719,27 +3718,18 @@ export const getDiscoverCreators = async () => {
       }),
     );
 
-    // Strictly filter out any creators who have not provided their profile photo OR cover photo
-    const completedRealCreators = realCreators.filter((c) => {
-      const hasPhoto = hasUploadedProfilePhoto(c.avatar);
-      const hasCover = hasUploadedCoverPhoto(c.cover);
-      return shouldIncludeCreatorInDiscover(
-        c.isDiscoverFeatured,
-        hasPhoto,
-        hasCover,
-        c.isVerified,
-      );
-    });
+    // Include active creator accounts even when they are unverified or have incomplete profiles.
+    const discoverableRealCreators = realCreators;
 
     // Sort: creators with active posts come first
-    completedRealCreators.sort((a, b) => {
+    discoverableRealCreators.sort((a, b) => {
       if (a.hasPosts !== b.hasPosts) return a.hasPosts ? -1 : 1;
       return (b.postsCount || 0) - (a.postsCount || 0);
     });
 
     // Real registered creators first, followed by strictly 2 sample demo accounts clearly tagged
-    const existingIds = new Set(completedRealCreators.map((c) => c.id));
-    const combined: any[] = [...completedRealCreators];
+    const existingIds = new Set(discoverableRealCreators.map((c) => c.id));
+    const combined: any[] = [...discoverableRealCreators];
 
     HARDCODED_DISCOVER_CREATORS.slice(0, 2).forEach((demo) => {
       if (

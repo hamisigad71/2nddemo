@@ -32,6 +32,10 @@ describe('creator directory filters', () => {
 
   const idsFor = (filter: CreatorDirectoryFilter) =>
     filterAndSortCreators(creators, filter).map((creator) => creator.id);
+  const creatorsWithDemoAccount = [
+    ...creators,
+    { id: 'demo-verified', name: 'Demo Verified', isVerified: true, isDemo: true, hasPosts: false, postsCount: 0, subs: '0 subscribers', createdAt: '2025-05-01' },
+  ];
 
   it('shows every creator in the All Creators filter', () => {
     assert.deepEqual(idsFor('all'), ['new', 'trending', 'popular', 'verified']);
@@ -39,6 +43,17 @@ describe('creator directory filters', () => {
 
   it('only shows verified creators in the Verified filter', () => {
     assert.deepEqual(idsFor('verified'), ['trending', 'verified']);
+  });
+
+  it('keeps unverified creators in the other filters and excludes demo accounts from Verified', () => {
+    assert.deepEqual(
+      filterAndSortCreators(creatorsWithDemoAccount, 'all').map((creator) => creator.id),
+      ['new', 'trending', 'popular', 'verified', 'demo-verified'],
+    );
+    assert.deepEqual(
+      filterAndSortCreators(creatorsWithDemoAccount, 'verified').map((creator) => creator.id),
+      ['trending', 'verified'],
+    );
   });
 
   it('ranks active feeds and post counts in the Trending filter', () => {

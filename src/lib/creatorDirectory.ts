@@ -12,11 +12,13 @@ export type CreatorGenderFilter = 'all' | 'male' | 'female';
 export const SELECTED_VERIFIED_CREATOR_NAMES = new Set([
   'natalia ngina',
   'ella rains',
+  'sir collo',
 ]);
 
 export const SELECTED_VERIFIED_CREATOR_EMAILS = new Set([
   'nataliangina62@gmail.com',
   'ellarains00@gmail.com',
+  'sircollo51@gmail.com',
 ]);
 
 export const SELECTED_VERIFIED_CREATOR_UIDS = new Set([
@@ -26,14 +28,12 @@ export const SELECTED_VERIFIED_CREATOR_UIDS = new Set([
 
 export const UNVERIFIED_DISCOVER_EMAILS = new Set([
   'hadq@gmail.com',
-  'sircollo51@gmail.com',
   'executivehideawaybarberandspa@gmail.com',
   'acholawanjiru@gmail.com',
 ]);
 
 export const UNVERIFIED_DISCOVER_NAMES = new Set([
   'fatma loki',
-  'sir collo',
   'david kimani',
   'unfiltered_culture',
   'unfiltered_culture💦😍👑',
@@ -66,16 +66,10 @@ export const isSelectedVerifiedCreator = (
   return false;
 };
 
-export const shouldIncludeCreatorInDiscover = (
-  isExplicitlyFeatured: boolean,
-  hasUploadedAvatar: boolean,
-  hasUploadedCover: boolean,
-  isVerified?: boolean,
-): boolean => isExplicitlyFeatured || Boolean(isVerified) || (hasUploadedAvatar && hasUploadedCover);
-
 type FilterableCreator = {
   gender?: string | null;
   isVerified?: boolean;
+  isDemo?: boolean;
   hasPosts?: boolean;
   postsCount?: number;
   subs?: string | number | null;
@@ -97,7 +91,7 @@ export const filterAndSortCreators = <T extends FilterableCreator>(
   genderFilter: CreatorGenderFilter = 'all',
 ): T[] => {
   const eligibleCreators = filter === 'verified'
-    ? creators.filter((creator) => creator.isVerified)
+    ? creators.filter((creator) => creator.isVerified && !creator.isDemo)
     : [...creators];
 
   let sortedCreators = eligibleCreators;

@@ -11,7 +11,7 @@ import {
   isCreatorProfileComplete,
   hasPrivateKycEvidence
 } from '../src/lib/verification';
-import { shouldIncludeCreatorInDiscover, isSelectedVerifiedCreator, isUnverifiedDiscoverUser } from '../src/lib/creatorDirectory';
+import { isSelectedVerifiedCreator, isUnverifiedDiscoverUser } from '../src/lib/creatorDirectory';
 
 describe('creator verification eligibility and admin approval flow', () => {
   it('grants the verified badge only after KYC approval', () => {
@@ -32,16 +32,16 @@ describe('creator verification eligibility and admin approval flow', () => {
     // Explicitly unverified users on discover
     assert.equal(isSelectedVerifiedCreator('fatma loki'), false);
     assert.equal(isSelectedVerifiedCreator(undefined, 'hadq@gmail.com'), false);
-    assert.equal(isSelectedVerifiedCreator('Sir Collo'), false);
-    assert.equal(isSelectedVerifiedCreator(undefined, 'sircollo51@gmail.com'), false);
+    assert.equal(isSelectedVerifiedCreator('Sir Collo'), true);
+    assert.equal(isSelectedVerifiedCreator(undefined, 'sircollo51@gmail.com'), true);
     assert.equal(isSelectedVerifiedCreator('Random User'), false);
   });
 
   it('identifies unverified discover users for display without verified badge', () => {
     assert.equal(isUnverifiedDiscoverUser('fatma loki'), true);
     assert.equal(isUnverifiedDiscoverUser(undefined, 'hadq@gmail.com'), true);
-    assert.equal(isUnverifiedDiscoverUser('Sir Collo'), true);
-    assert.equal(isUnverifiedDiscoverUser(undefined, 'sircollo51@gmail.com'), true);
+    assert.equal(isUnverifiedDiscoverUser('Sir Collo'), false);
+    assert.equal(isUnverifiedDiscoverUser(undefined, 'sircollo51@gmail.com'), false);
     assert.equal(isUnverifiedDiscoverUser('David Kimani'), true);
     assert.equal(isUnverifiedDiscoverUser(undefined, 'executivehideawaybarberandspa@gmail.com'), true);
     assert.equal(isUnverifiedDiscoverUser('Unfiltered_culture💦😍👑'), true);
@@ -70,13 +70,6 @@ describe('creator verification eligibility and admin approval flow', () => {
     assert.equal(hasPrivateKycEvidence('creator-1', 'creator-1/id.jpg', null), false);
     assert.equal(hasPrivateKycEvidence('creator-1', 'other-user/id.jpg', 'creator-1/selfie.jpg'), false);
     assert.equal(hasPrivateKycEvidence('creator-1', 'blob:preview', 'creator-1/selfie.jpg'), false);
-  });
-
-  it('allows verified creators or explicitly selected creators to appear on discover', () => {
-    assert.equal(shouldIncludeCreatorInDiscover(true, false, false), true);
-    assert.equal(shouldIncludeCreatorInDiscover(false, true, true), true);
-    assert.equal(shouldIncludeCreatorInDiscover(false, true, false), false);
-    assert.equal(shouldIncludeCreatorInDiscover(false, false, false, true), true);
   });
 
   it('dispatches an admin review notification when a creator submits verification details', () => {
