@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AdminLayout from './AdminLayout';
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import AdminLayout from "./AdminLayout";
 import {
   Megaphone,
   Plus,
@@ -20,8 +20,8 @@ import {
   ShieldCheck,
   Clock,
   Layers,
-  Crown
-} from 'lucide-react';
+  Crown,
+} from "lucide-react";
 import {
   getPlatformAds,
   createPlatformAd,
@@ -29,41 +29,41 @@ import {
   deletePlatformAd,
   getCreatorAdOrders,
   updateCreatorAdOrderStatus,
-  getAdminCreators
-} from '../../lib/db';
-import type { PlatformAd, CreatorAdOrder } from '../../lib/db';
-import { toast } from '../../context/ToastContext';
+  getAdminCreators,
+} from "../../lib/db";
+import type { PlatformAd, CreatorAdOrder } from "../../lib/db";
+import { toast } from "../../context/ToastContext";
 
 const PRESET_BANNERS = [
   {
-    name: 'Official Platform Pass',
-    url: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80',
-    category: 'company',
+    name: "Official Platform Pass",
+    url: "https://i.pinimg.com/736x/0a/34/ae/0a34ae553f30d611f2401bb0174ed46b.jpg",
+    category: "company",
   },
   {
-    name: 'Swimwear & Glamour',
-    url: 'https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg',
-    category: 'creator_spotlight',
+    name: "Swimwear & Glamour",
+    url: "https://i.pinimg.com/736x/be/39/5d/be395de0b5e63dea55bf6be0bd00a548.jpg",
+    category: "creator_spotlight",
   },
   {
-    name: 'Fitness & Lifestyle',
-    url: 'https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg',
-    category: 'creator_spotlight',
+    name: "Fitness & Lifestyle",
+    url: "https://i.pinimg.com/736x/63/d3/79/63d3791235f63c60e78d9a868b6bea67.jpg",
+    category: "creator_spotlight",
   },
   {
-    name: 'Luxury Beach Retreat',
-    url: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
-    category: 'luxury',
+    name: "Luxury Beach Retreat",
+    url: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80",
+    category: "luxury",
   },
   {
-    name: 'Champagne & VIP Dining',
-    url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80',
-    category: 'nightlife',
+    name: "Champagne & VIP Dining",
+    url: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=80",
+    category: "nightlife",
   },
   {
-    name: 'High Fashion Studio',
-    url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
-    category: 'creator_spotlight',
+    name: "High Fashion Studio",
+    url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80",
+    category: "creator_spotlight",
   },
 ];
 
@@ -75,12 +75,18 @@ const AdminAds: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Active view tab
-  const [currentTab, setCurrentTab] = useState<'campaigns' | 'orders'>('campaigns');
+  const [currentTab, setCurrentTab] = useState<"campaigns" | "orders">(
+    "campaigns",
+  );
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'creator' | 'company'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "creator" | "company">(
+    "all",
+  );
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">(
+    "all",
+  );
 
   // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -90,20 +96,20 @@ const AdminAds: React.FC = () => {
 
   // Form state for creating Ad
   const [formData, setFormData] = useState({
-    ad_type: 'creator' as 'creator' | 'company',
-    selectedCreatorId: '',
-    title: '',
-    description: '',
+    ad_type: "creator" as "creator" | "company",
+    selectedCreatorId: "",
+    title: "",
+    description: "",
     image_url: PRESET_BANNERS[1].url,
-    target_audience: 'all' as 'all' | 'users' | 'creators',
-    category: 'creator_spotlight' as PlatformAd['category'],
-    sponsor_name: '',
-    badge: 'Sponsored Creator',
-    perk_value: '',
-    cta_text: 'View Profile & Subscribe',
-    cta_url: '/creator/',
+    target_audience: "all" as "all" | "users" | "creators",
+    category: "creator_spotlight" as PlatformAd["category"],
+    sponsor_name: "",
+    badge: "Sponsored Creator",
+    perk_value: "",
+    cta_text: "View Profile & Subscribe",
+    cta_url: "/creator/",
     price_paid: 1500,
-    status: 'active' as 'active' | 'paused',
+    status: "active" as "active" | "paused",
     durationDays: 7,
   });
 
@@ -111,7 +117,7 @@ const AdminAds: React.FC = () => {
     setLoading(true);
     try {
       const [fetchedAds, fetchedOrders, fetchedCreators] = await Promise.all([
-        getPlatformAds('all', true),
+        getPlatformAds("all", true),
         getCreatorAdOrders(),
         getAdminCreators(),
       ]);
@@ -119,7 +125,7 @@ const AdminAds: React.FC = () => {
       setCreatorOrders(fetchedOrders);
       setCreatorsList(fetchedCreators || []);
     } catch (err) {
-      console.error('Failed to load admin ads data:', err);
+      console.error("Failed to load admin ads data:", err);
     } finally {
       setLoading(false);
     }
@@ -129,29 +135,34 @@ const AdminAds: React.FC = () => {
     loadData();
 
     const handleUpdate = () => loadData();
-    window.addEventListener('tgd_ads_updated', handleUpdate);
-    window.addEventListener('tgd_ad_orders_updated', handleUpdate);
+    window.addEventListener("tgd_ads_updated", handleUpdate);
+    window.addEventListener("tgd_ad_orders_updated", handleUpdate);
     return () => {
-      window.removeEventListener('tgd_ads_updated', handleUpdate);
-      window.removeEventListener('tgd_ad_orders_updated', handleUpdate);
+      window.removeEventListener("tgd_ads_updated", handleUpdate);
+      window.removeEventListener("tgd_ad_orders_updated", handleUpdate);
     };
   }, []);
 
   // Filtered ads
   const filteredAds = useMemo(() => {
-    return ads.filter(ad => {
+    return ads.filter((ad) => {
       const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = !q ||
+      const matchesSearch =
+        !q ||
         ad.title.toLowerCase().includes(q) ||
         ad.sponsor_name.toLowerCase().includes(q) ||
         ad.description.toLowerCase().includes(q) ||
         (ad.creator_name && ad.creator_name.toLowerCase().includes(q));
 
       const matchesType =
-        typeFilter === 'all' ? true : (ad.ad_type || (ad.category === 'creator_spotlight' ? 'creator' : 'company')) === typeFilter;
+        typeFilter === "all"
+          ? true
+          : (ad.ad_type ||
+              (ad.category === "creator_spotlight" ? "creator" : "company")) ===
+            typeFilter;
 
       const matchesStatus =
-        statusFilter === 'all' ? true : ad.status === statusFilter;
+        statusFilter === "all" ? true : ad.status === statusFilter;
 
       return matchesSearch && matchesType && matchesStatus;
     });
@@ -159,23 +170,38 @@ const AdminAds: React.FC = () => {
 
   // Overall analytics
   const stats = useMemo(() => {
-    const totalActive = ads.filter(a => a.status === 'active').length;
-    const totalImpressions = ads.reduce((acc, a) => acc + (a.impressions || 0), 0);
+    const totalActive = ads.filter((a) => a.status === "active").length;
+    const totalImpressions = ads.reduce(
+      (acc, a) => acc + (a.impressions || 0),
+      0,
+    );
     const totalClicks = ads.reduce((acc, a) => acc + (a.clicks || 0), 0);
-    const avgCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(1) : '0.0';
-    const totalAdRevenue = ads.reduce((acc, a) => acc + (a.price_paid || 0), 0) +
-      creatorOrders.filter(o => o.payment_status === 'paid').reduce((acc, o) => acc + (o.amount || 0), 0);
+    const avgCTR =
+      totalImpressions > 0
+        ? ((totalClicks / totalImpressions) * 100).toFixed(1)
+        : "0.0";
+    const totalAdRevenue =
+      ads.reduce((acc, a) => acc + (a.price_paid || 0), 0) +
+      creatorOrders
+        .filter((o) => o.payment_status === "paid")
+        .reduce((acc, o) => acc + (o.amount || 0), 0);
 
-    return { totalActive, totalImpressions, totalClicks, avgCTR, totalAdRevenue };
+    return {
+      totalActive,
+      totalImpressions,
+      totalClicks,
+      avgCTR,
+      totalAdRevenue,
+    };
   }, [ads, creatorOrders]);
 
   // Auto-populate form when selecting a Creator
   const handleSelectCreator = (creatorId: string) => {
-    const creator = creatorsList.find(c => c.id === creatorId);
+    const creator = creatorsList.find((c) => c.id === creatorId);
     if (!creator) return;
 
     const bannerUrl = creator.coverUrl || creator.img || PRESET_BANNERS[1].url;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       selectedCreatorId: creator.id,
       sponsor_name: `${creator.name} Official`,
@@ -184,48 +210,56 @@ const AdminAds: React.FC = () => {
         ? `Catch exclusive ${creator.category.toLowerCase()} shoots, VIP live streams, and backstage content. Subscribe now to unlock full feed access!`
         : `Explore private photos, VIP broadcasts, and interactive shows. Join ${creator.name}'s inner circle today!`,
       image_url: bannerUrl,
-      badge: 'Sponsored Creator',
-      perk_value: creator.revenue ? 'Instant Access' : 'VIP Access',
-      cta_text: 'View Profile & Subscribe',
+      badge: "Sponsored Creator",
+      perk_value: creator.revenue ? "Instant Access" : "VIP Access",
+      cta_text: "View Profile & Subscribe",
       cta_url: `/creator/${creator.id}`,
-      target_audience: 'all',
-      category: 'creator_spotlight',
+      target_audience: "all",
+      category: "creator_spotlight",
     }));
   };
 
   // Switch between Creator Ad and Company Ad mode
-  const handleTypeToggle = (type: 'creator' | 'company') => {
-    if (type === 'creator') {
+  const handleTypeToggle = (type: "creator" | "company") => {
+    if (type === "creator") {
       const defaultCreator = creatorsList[0];
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        ad_type: 'creator',
-        category: 'creator_spotlight',
-        badge: 'Sponsored Creator',
-        cta_text: 'View Profile & Subscribe',
-        target_audience: 'all',
-        title: defaultCreator ? `Featured Creator: ${defaultCreator.name} ✨` : 'Featured Creator Spotlight',
-        sponsor_name: defaultCreator ? `${defaultCreator.name} Official` : 'Creator Promotion',
-        cta_url: defaultCreator ? `/creator/${defaultCreator.id}` : '/discover',
-        image_url: defaultCreator?.coverUrl || defaultCreator?.img || PRESET_BANNERS[1].url,
-        selectedCreatorId: defaultCreator?.id || '',
+        ad_type: "creator",
+        category: "creator_spotlight",
+        badge: "Sponsored Creator",
+        cta_text: "View Profile & Subscribe",
+        target_audience: "all",
+        title: defaultCreator
+          ? `Featured Creator: ${defaultCreator.name} ✨`
+          : "Featured Creator Spotlight",
+        sponsor_name: defaultCreator
+          ? `${defaultCreator.name} Official`
+          : "Creator Promotion",
+        cta_url: defaultCreator ? `/creator/${defaultCreator.id}` : "/discover",
+        image_url:
+          defaultCreator?.coverUrl ||
+          defaultCreator?.img ||
+          PRESET_BANNERS[1].url,
+        selectedCreatorId: defaultCreator?.id || "",
         price_paid: 1500,
         durationDays: 7,
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        ad_type: 'company',
-        category: 'company',
-        badge: 'Official Platform Promo',
-        title: 'The Gents DollHouse Official VIP Experience',
-        sponsor_name: 'The Gents DollHouse Official',
-        description: 'Unlock unrestricted access to verified Kenyan creators, live video broadcasts, and exclusive platform privileges.',
+        ad_type: "company",
+        category: "company",
+        badge: "Official Platform Promo",
+        title: "The Gents DollHouse Official VIP Experience",
+        sponsor_name: "The Gents DollHouse Official",
+        description:
+          "Unlock unrestricted access to verified Kenyan creators, live video broadcasts, and exclusive platform privileges.",
         image_url: PRESET_BANNERS[0].url,
-        cta_text: 'Explore All Creators',
-        cta_url: '/discover',
-        target_audience: 'all',
-        selectedCreatorId: '',
+        cta_text: "Explore All Creators",
+        cta_url: "/discover",
+        target_audience: "all",
+        selectedCreatorId: "",
         price_paid: 0,
         durationDays: 30,
       }));
@@ -236,20 +270,22 @@ const AdminAds: React.FC = () => {
   const handleOpenFromOrder = (order: CreatorAdOrder) => {
     setActiveOrderId(order.id);
     setFormData({
-      ad_type: 'creator',
+      ad_type: "creator",
       selectedCreatorId: order.creator_id,
       title: order.title || `Featured Creator: ${order.creator_name}`,
-      description: order.description || `Special sponsored feature for ${order.creator_name}. Check out her private feed & subscribe today!`,
+      description:
+        order.description ||
+        `Special sponsored feature for ${order.creator_name}. Check out her private feed & subscribe today!`,
       image_url: order.image_url || PRESET_BANNERS[1].url,
-      target_audience: 'all',
-      category: 'creator_spotlight',
+      target_audience: "all",
+      category: "creator_spotlight",
       sponsor_name: `${order.creator_name} Spotlight`,
-      badge: 'Sponsored Creator',
+      badge: "Sponsored Creator",
       perk_value: order.package_name,
-      cta_text: 'View Profile & Subscribe',
+      cta_text: "View Profile & Subscribe",
       cta_url: `/creator/${order.creator_id}`,
       price_paid: order.amount || 1500,
-      status: 'active',
+      status: "active",
       durationDays: order.duration_days || 7,
     });
     setIsCreateModalOpen(true);
@@ -257,34 +293,41 @@ const AdminAds: React.FC = () => {
 
   // Toggle active / paused
   const handleToggleStatus = async (ad: PlatformAd) => {
-    const nextStatus = ad.status === 'active' ? 'paused' : 'active';
+    const nextStatus = ad.status === "active" ? "paused" : "active";
     try {
       await updatePlatformAd(ad.id, { status: nextStatus });
-      toast.success(`Ad campaign ${nextStatus === 'active' ? 'resumed' : 'paused'}`);
+      toast.success(
+        `Ad campaign ${nextStatus === "active" ? "resumed" : "paused"}`,
+      );
       loadData();
     } catch {
-      toast.error('Failed to update status');
+      toast.error("Failed to update status");
     }
   };
 
   // Delete Ad
   const handleDeleteAd = async (id: string, title: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete "${title}"?`)) return;
+    if (
+      !window.confirm(`Are you sure you want to permanently delete "${title}"?`)
+    )
+      return;
     try {
       await deletePlatformAd(id);
-      toast.success('Ad campaign deleted successfully');
+      toast.success("Ad campaign deleted successfully");
       loadData();
     } catch {
-      toast.error('Failed to delete ad');
+      toast.error("Failed to delete ad");
     }
   };
 
   // Copy link
   const handleCopyLink = (ad: PlatformAd) => {
-    const fullUrl = ad.cta_url.startsWith('http') ? ad.cta_url : `${window.location.origin}${ad.cta_url}`;
+    const fullUrl = ad.cta_url.startsWith("http")
+      ? ad.cta_url
+      : `${window.location.origin}${ad.cta_url}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedId(ad.id);
-    toast.success('Ad direct link copied to clipboard');
+    toast.success("Ad direct link copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -292,7 +335,7 @@ const AdminAds: React.FC = () => {
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.sponsor_name.trim()) {
-      toast.error('Please fill in the title and sponsor name');
+      toast.error("Please fill in the title and sponsor name");
       return;
     }
 
@@ -300,15 +343,29 @@ const AdminAds: React.FC = () => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + (formData.durationDays || 7));
 
-      const matchedCreator = creatorsList.find(c => c.id === formData.selectedCreatorId);
+      const matchedCreator = creatorsList.find(
+        (c) => c.id === formData.selectedCreatorId,
+      );
 
       const created = await createPlatformAd({
         ad_type: formData.ad_type,
-        creator_id: formData.ad_type === 'creator' ? (formData.selectedCreatorId || undefined) : undefined,
-        creator_name: formData.ad_type === 'creator' ? (matchedCreator?.name || formData.sponsor_name) : undefined,
-        creator_avatar: formData.ad_type === 'creator' ? (matchedCreator?.img || null) : undefined,
-        creator_handle: formData.ad_type === 'creator' ? `@${(matchedCreator?.name || 'creator').toLowerCase().replace(/[^a-z0-9]/g, '')}` : undefined,
-        price_paid: formData.ad_type === 'creator' ? formData.price_paid : 0,
+        creator_id:
+          formData.ad_type === "creator"
+            ? formData.selectedCreatorId || undefined
+            : undefined,
+        creator_name:
+          formData.ad_type === "creator"
+            ? matchedCreator?.name || formData.sponsor_name
+            : undefined,
+        creator_avatar:
+          formData.ad_type === "creator"
+            ? matchedCreator?.img || null
+            : undefined,
+        creator_handle:
+          formData.ad_type === "creator"
+            ? `@${(matchedCreator?.name || "creator").toLowerCase().replace(/[^a-z0-9]/g, "")}`
+            : undefined,
+        price_paid: formData.ad_type === "creator" ? formData.price_paid : 0,
         duration_days: formData.durationDays,
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -316,34 +373,44 @@ const AdminAds: React.FC = () => {
         target_audience: formData.target_audience,
         category: formData.category,
         sponsor_name: formData.sponsor_name.trim(),
-        badge: formData.badge.trim() || (formData.ad_type === 'creator' ? 'Sponsored Creator' : 'Platform Promo'),
+        badge:
+          formData.badge.trim() ||
+          (formData.ad_type === "creator"
+            ? "Sponsored Creator"
+            : "Platform Promo"),
         perk_value: formData.perk_value.trim() || undefined,
-        cta_text: formData.cta_text.trim() || 'View Profile & Subscribe',
-        cta_url: formData.cta_url.trim() || '/discover',
+        cta_text: formData.cta_text.trim() || "View Profile & Subscribe",
+        cta_url: formData.cta_url.trim() || "/discover",
         status: formData.status,
         expires_at: expiresAt.toISOString(),
       });
 
       if (activeOrderId) {
-        await updateCreatorAdOrderStatus(activeOrderId, 'published', created.id);
+        await updateCreatorAdOrderStatus(
+          activeOrderId,
+          "published",
+          created.id,
+        );
         setActiveOrderId(null);
       }
 
       toast.success(
-        formData.ad_type === 'creator'
-          ? `🎉 Sponsored Ad for ${matchedCreator?.name || 'Creator'} published for all subscribers!`
-          : 'Official Company Announcement published successfully!'
+        formData.ad_type === "creator"
+          ? `🎉 Sponsored Ad for ${matchedCreator?.name || "Creator"} published for all subscribers!`
+          : "Official Company Announcement published successfully!",
       );
 
       setIsCreateModalOpen(false);
       loadData();
     } catch (err) {
       console.error(err);
-      toast.error('Error creating ad campaign');
+      toast.error("Error creating ad campaign");
     }
   };
 
-  const pendingOrdersCount = creatorOrders.filter(o => o.status === 'pending').length;
+  const pendingOrdersCount = creatorOrders.filter(
+    (o) => o.status === "pending",
+  ).length;
 
   return (
     <AdminLayout>
@@ -363,7 +430,8 @@ const AdminAds: React.FC = () => {
                   </span>
                 </h1>
                 <p className="text-xs sm:text-sm text-zinc-400 font-medium mt-1">
-                  Post company announcements or promote paying creators to all subscribers across the platform.
+                  Post company announcements or promote paying creators to all
+                  subscribers across the platform.
                 </p>
               </div>
             </div>
@@ -373,7 +441,7 @@ const AdminAds: React.FC = () => {
             <button
               onClick={() => {
                 setActiveOrderId(null);
-                handleTypeToggle('creator');
+                handleTypeToggle("creator");
                 setIsCreateModalOpen(true);
               }}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black px-4 sm:px-5 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-600/30 active:scale-95 cursor-pointer min-h-11"
@@ -388,7 +456,9 @@ const AdminAds: React.FC = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Active Ads</span>
+              <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Active Ads
+              </span>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white mt-2">
@@ -401,7 +471,9 @@ const AdminAds: React.FC = () => {
 
           <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Ad Impressions</span>
+              <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Ad Impressions
+              </span>
               <Eye className="w-4 h-4 text-zinc-500" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white mt-2">
@@ -414,7 +486,9 @@ const AdminAds: React.FC = () => {
 
           <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Ad Clicks</span>
+              <span className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Ad Clicks
+              </span>
               <MousePointerClick className="w-4 h-4 text-zinc-500" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white mt-2">
@@ -427,7 +501,9 @@ const AdminAds: React.FC = () => {
 
           <div className="bg-[#0D0E12] border border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold text-emerald-400 uppercase tracking-wider">Promo Revenue</span>
+              <span className="text-[11px] sm:text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                Promo Revenue
+              </span>
               <DollarSign className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-2 truncate">
@@ -442,11 +518,11 @@ const AdminAds: React.FC = () => {
         {/* Main Tab Navigation: Active Campaigns vs Creator Ad Orders */}
         <div className="flex items-center gap-2 border-b border-zinc-800 pb-3 overflow-x-auto hide-scrollbar">
           <button
-            onClick={() => setCurrentTab('campaigns')}
+            onClick={() => setCurrentTab("campaigns")}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap min-h-11 ${
-              currentTab === 'campaigns'
-                ? 'bg-zinc-800 text-white shadow-md border border-zinc-700'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+              currentTab === "campaigns"
+                ? "bg-zinc-800 text-white shadow-md border border-zinc-700"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
             }`}
           >
             <Layers className="w-4 h-4 text-red-500" />
@@ -454,11 +530,11 @@ const AdminAds: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setCurrentTab('orders')}
+            onClick={() => setCurrentTab("orders")}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap min-h-11 relative ${
-              currentTab === 'orders'
-                ? 'bg-zinc-800 text-white shadow-md border border-zinc-700'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+              currentTab === "orders"
+                ? "bg-zinc-800 text-white shadow-md border border-zinc-700"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-400" />
@@ -471,7 +547,7 @@ const AdminAds: React.FC = () => {
           </button>
         </div>
 
-        {currentTab === 'campaigns' && (
+        {currentTab === "campaigns" && (
           <>
             {/* Filter Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0D0E12] border border-zinc-800/80 p-3 sm:p-4 rounded-2xl">
@@ -482,7 +558,7 @@ const AdminAds: React.FC = () => {
                   type="text"
                   placeholder="Search ads, creators, or announcements..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-[#14151B] border border-zinc-700/60 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-colors"
                 />
               </div>
@@ -490,26 +566,32 @@ const AdminAds: React.FC = () => {
               {/* Segmented Type Filter */}
               <div className="flex flex-wrap items-center gap-1.5 bg-[#14151B] border border-zinc-800 p-1 rounded-xl">
                 <button
-                  onClick={() => setTypeFilter('all')}
+                  onClick={() => setTypeFilter("all")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                    typeFilter === 'all' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+                    typeFilter === "all"
+                      ? "bg-zinc-800 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   All Ads
                 </button>
                 <button
-                  onClick={() => setTypeFilter('creator')}
+                  onClick={() => setTypeFilter("creator")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                    typeFilter === 'creator' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+                    typeFilter === "creator"
+                      ? "bg-zinc-800 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   <Crown className="w-3.5 h-3.5 text-amber-400" />
                   <span>Promoted Creators</span>
                 </button>
                 <button
-                  onClick={() => setTypeFilter('company')}
+                  onClick={() => setTypeFilter("company")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                    typeFilter === 'company' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+                    typeFilter === "company"
+                      ? "bg-zinc-800 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
@@ -520,7 +602,7 @@ const AdminAds: React.FC = () => {
               {/* Status filter */}
               <select
                 value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value as any)}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
                 className="bg-[#14151B] border border-zinc-800 text-xs font-bold text-zinc-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-zinc-700"
               >
                 <option value="all">All Statuses</option>
@@ -537,13 +619,16 @@ const AdminAds: React.FC = () => {
             ) : filteredAds.length === 0 ? (
               <div className="p-16 text-center bg-[#0D0E12] border border-zinc-800/80 rounded-3xl">
                 <Megaphone className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
-                <p className="font-bold text-white text-base">No advertising campaigns found</p>
+                <p className="font-bold text-white text-base">
+                  No advertising campaigns found
+                </p>
                 <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
-                  Click &quot;Post New Ad&quot; to publish an ad for a creator or company announcement.
+                  Click &quot;Post New Ad&quot; to publish an ad for a creator
+                  or company announcement.
                 </p>
                 <button
                   onClick={() => {
-                    handleTypeToggle('creator');
+                    handleTypeToggle("creator");
                     setIsCreateModalOpen(true);
                   }}
                   className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all"
@@ -553,17 +638,22 @@ const AdminAds: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredAds.map(ad => {
-                  const ctr = ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : '0.0';
-                  const isCreatorAd = ad.ad_type === 'creator' || ad.category === 'creator_spotlight';
+                {filteredAds.map((ad) => {
+                  const ctr =
+                    ad.impressions > 0
+                      ? ((ad.clicks / ad.impressions) * 100).toFixed(1)
+                      : "0.0";
+                  const isCreatorAd =
+                    ad.ad_type === "creator" ||
+                    ad.category === "creator_spotlight";
 
                   return (
                     <div
                       key={ad.id}
                       className={`bg-[#0D0E12] border rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-200 group ${
-                        ad.status === 'active'
-                          ? 'border-zinc-800/90 hover:border-zinc-700 shadow-xl'
-                          : 'border-zinc-800/40 opacity-70'
+                        ad.status === "active"
+                          ? "border-zinc-800/90 hover:border-zinc-700 shadow-xl"
+                          : "border-zinc-800/40 opacity-70"
                       }`}
                     >
                       {/* Media Header */}
@@ -577,20 +667,31 @@ const AdminAds: React.FC = () => {
 
                         {/* Top Badges */}
                         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
-                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1.5 ${
-                            isCreatorAd
-                              ? 'bg-amber-500 text-black border border-amber-300'
-                              : 'bg-rose-600 text-white border border-rose-400'
-                          }`}>
-                            {isCreatorAd ? <Crown className="w-3 h-3 fill-black" /> : <ShieldCheck className="w-3 h-3" />}
-                            {ad.badge || (isCreatorAd ? 'Sponsored Creator' : 'Company Promo')}
+                          <span
+                            className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1.5 ${
+                              isCreatorAd
+                                ? "bg-amber-500 text-black border border-amber-300"
+                                : "bg-rose-600 text-white border border-rose-400"
+                            }`}
+                          >
+                            {isCreatorAd ? (
+                              <Crown className="w-3 h-3 fill-black" />
+                            ) : (
+                              <ShieldCheck className="w-3 h-3" />
+                            )}
+                            {ad.badge ||
+                              (isCreatorAd
+                                ? "Sponsored Creator"
+                                : "Company Promo")}
                           </span>
 
-                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                            ad.status === 'active'
-                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                              : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-                          }`}>
+                          <span
+                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                              ad.status === "active"
+                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                                : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                            }`}
+                          >
                             {ad.status}
                           </span>
                         </div>
@@ -599,13 +700,19 @@ const AdminAds: React.FC = () => {
                         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
                           <div className="flex items-center gap-2 min-w-0 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
                             {ad.creator_avatar ? (
-                              <img src={ad.creator_avatar} alt="" className="w-6 h-6 rounded-full object-cover border border-white/20 shrink-0" />
+                              <img
+                                src={ad.creator_avatar}
+                                alt=""
+                                className="w-6 h-6 rounded-full object-cover border border-white/20 shrink-0"
+                              />
                             ) : (
                               <div className="w-6 h-6 rounded-full bg-red-600/30 flex items-center justify-center text-[10px] font-bold shrink-0">
                                 {ad.sponsor_name[0]}
                               </div>
                             )}
-                            <span className="text-xs font-black truncate">{ad.sponsor_name}</span>
+                            <span className="text-xs font-black truncate">
+                              {ad.sponsor_name}
+                            </span>
                           </div>
 
                           {ad.price_paid ? (
@@ -631,28 +738,46 @@ const AdminAds: React.FC = () => {
                         <div className="pt-3 border-t border-zinc-800/80">
                           <div className="grid grid-cols-3 gap-2 py-2 px-3 bg-[#14151B] rounded-xl text-center">
                             <div>
-                              <div className="text-[10px] font-bold text-zinc-500 uppercase">Views</div>
-                              <div className="text-xs font-black text-white mt-0.5">{ad.impressions.toLocaleString()}</div>
+                              <div className="text-[10px] font-bold text-zinc-500 uppercase">
+                                Views
+                              </div>
+                              <div className="text-xs font-black text-white mt-0.5">
+                                {ad.impressions.toLocaleString()}
+                              </div>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold text-zinc-500 uppercase">Clicks</div>
-                              <div className="text-xs font-black text-white mt-0.5">{ad.clicks.toLocaleString()}</div>
+                              <div className="text-[10px] font-bold text-zinc-500 uppercase">
+                                Clicks
+                              </div>
+                              <div className="text-xs font-black text-white mt-0.5">
+                                {ad.clicks.toLocaleString()}
+                              </div>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold text-zinc-500 uppercase">CTR</div>
-                              <div className="text-xs font-black text-emerald-400 mt-0.5">{ctr}%</div>
+                              <div className="text-[10px] font-bold text-zinc-500 uppercase">
+                                CTR
+                              </div>
+                              <div className="text-xs font-black text-emerald-400 mt-0.5">
+                                {ctr}%
+                              </div>
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-2 px-1">
                             <span className="flex items-center gap-1">
                               <Users className="w-3.5 h-3.5 text-zinc-500" />
-                              Audience: <strong className="text-zinc-200 capitalize">{ad.target_audience}</strong>
+                              Audience:{" "}
+                              <strong className="text-zinc-200 capitalize">
+                                {ad.target_audience}
+                              </strong>
                             </span>
                             {ad.expires_at && (
                               <span className="flex items-center gap-1 text-[10px] text-zinc-500">
                                 <Clock className="w-3 h-3" />
-                                {new Date(ad.expires_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                {new Date(ad.expires_at).toLocaleDateString(
+                                  [],
+                                  { month: "short", day: "numeric" },
+                                )}
                               </span>
                             )}
                           </div>
@@ -663,11 +788,15 @@ const AdminAds: React.FC = () => {
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleToggleStatus(ad)}
-                              title={ad.status === 'active' ? 'Pause Campaign' : 'Resume Campaign'}
+                              title={
+                                ad.status === "active"
+                                  ? "Pause Campaign"
+                                  : "Resume Campaign"
+                              }
                               className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                                ad.status === 'active'
-                                  ? 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800'
-                                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                                ad.status === "active"
+                                  ? "bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                                  : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
                               }`}
                             >
                               <Power className="w-3.5 h-3.5" />
@@ -686,7 +815,11 @@ const AdminAds: React.FC = () => {
                               title="Copy Profile / Action Link"
                               className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-all cursor-pointer"
                             >
-                              {copiedId === ad.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                              {copiedId === ad.id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
                             </button>
                           </div>
 
@@ -707,7 +840,7 @@ const AdminAds: React.FC = () => {
           </>
         )}
 
-        {currentTab === 'orders' && (
+        {currentTab === "orders" && (
           <div className="space-y-4">
             <div className="bg-[#0D0E12] border border-zinc-800 rounded-3xl p-4 sm:p-6 shadow-xl">
               <div className="flex items-center justify-between mb-4">
@@ -717,7 +850,9 @@ const AdminAds: React.FC = () => {
                     Creator Paid Promotion Queue
                   </h2>
                   <p className="text-xs text-zinc-400 mt-1">
-                    Creators who paid to have the admin feature them to all subscribers. Click &quot;Review &amp; Publish&quot; to push their ad live immediately.
+                    Creators who paid to have the admin feature them to all
+                    subscribers. Click &quot;Review &amp; Publish&quot; to push
+                    their ad live immediately.
                   </p>
                 </div>
               </div>
@@ -728,11 +863,18 @@ const AdminAds: React.FC = () => {
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-800/80">
-                  {creatorOrders.map(order => (
-                    <div key={order.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {creatorOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
                       <div className="flex items-start gap-3 min-w-0">
                         {order.creator_avatar ? (
-                          <img src={order.creator_avatar} alt="" className="w-12 h-12 rounded-2xl object-cover border border-zinc-700 shrink-0" />
+                          <img
+                            src={order.creator_avatar}
+                            alt=""
+                            className="w-12 h-12 rounded-2xl object-cover border border-zinc-700 shrink-0"
+                          />
                         ) : (
                           <div className="w-12 h-12 rounded-2xl bg-red-600/20 text-red-400 font-black flex items-center justify-center shrink-0">
                             {order.creator_name[0]}
@@ -740,10 +882,17 @@ const AdminAds: React.FC = () => {
                         )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-black text-white">{order.creator_name}</span>
-                            <span className="text-xs text-zinc-500 font-bold">{order.creator_handle || `@${order.creator_name.toLowerCase().replace(/\s+/g, '')}`}</span>
+                            <span className="text-sm font-black text-white">
+                              {order.creator_name}
+                            </span>
+                            <span className="text-xs text-zinc-500 font-bold">
+                              {order.creator_handle ||
+                                `@${order.creator_name.toLowerCase().replace(/\s+/g, "")}`}
+                            </span>
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase">
-                              {order.payment_status === 'paid' ? 'Paid via M-Pesa' : 'Pending Payment'}
+                              {order.payment_status === "paid"
+                                ? "Paid via M-Pesa"
+                                : "Pending Payment"}
                             </span>
                           </div>
                           <p className="text-xs text-zinc-300 font-semibold mt-1">
@@ -753,9 +902,13 @@ const AdminAds: React.FC = () => {
                             {order.description}
                           </p>
                           <div className="flex items-center gap-3 text-[11px] text-zinc-400 mt-1.5 font-medium">
-                            <span className="text-emerald-400 font-bold">KES {order.amount.toLocaleString()}</span>
+                            <span className="text-emerald-400 font-bold">
+                              KES {order.amount.toLocaleString()}
+                            </span>
                             <span>&bull;</span>
-                            <span>{order.package_name} ({order.duration_days} Days)</span>
+                            <span>
+                              {order.package_name} ({order.duration_days} Days)
+                            </span>
                             <span>&bull;</span>
                             <span>Phone: {order.phone}</span>
                           </div>
@@ -763,9 +916,10 @@ const AdminAds: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 self-end md:self-center">
-                        {order.status === 'published' ? (
+                        {order.status === "published" ? (
                           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 text-zinc-400 text-xs font-bold border border-zinc-700">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Published Live
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />{" "}
+                            Published Live
                           </span>
                         ) : (
                           <button
@@ -796,8 +950,12 @@ const AdminAds: React.FC = () => {
                     <Plus className="w-5 h-5" />
                   </span>
                   <div>
-                    <h2 className="text-base sm:text-lg font-black text-white">Create &amp; Publish Ad</h2>
-                    <p className="text-[11px] sm:text-xs text-zinc-400">Target all subscribers across Home Feed and Discover.</p>
+                    <h2 className="text-base sm:text-lg font-black text-white">
+                      Create &amp; Publish Ad
+                    </h2>
+                    <p className="text-[11px] sm:text-xs text-zinc-400">
+                      Target all subscribers across Home Feed and Discover.
+                    </p>
                   </div>
                 </div>
                 <button
@@ -809,7 +967,10 @@ const AdminAds: React.FC = () => {
               </div>
 
               {/* Form Body */}
-              <form onSubmit={handleCreateSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+              <form
+                onSubmit={handleCreateSubmit}
+                className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1"
+              >
                 {/* Campaign Mode Switcher */}
                 <div>
                   <label className="text-xs font-bold text-zinc-300 block mb-1.5 uppercase tracking-wider">
@@ -818,11 +979,11 @@ const AdminAds: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 p-1.5 bg-[#14151B] border border-zinc-800 rounded-2xl">
                     <button
                       type="button"
-                      onClick={() => handleTypeToggle('creator')}
+                      onClick={() => handleTypeToggle("creator")}
                       className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        formData.ad_type === 'creator'
-                          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-black shadow-md font-black'
-                          : 'text-zinc-400 hover:text-white'
+                        formData.ad_type === "creator"
+                          ? "bg-gradient-to-r from-amber-500 to-yellow-500 text-black shadow-md font-black"
+                          : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       <Crown className="w-4 h-4" />
@@ -831,11 +992,11 @@ const AdminAds: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => handleTypeToggle('company')}
+                      onClick={() => handleTypeToggle("company")}
                       className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                        formData.ad_type === 'company'
-                          ? 'bg-red-600 text-white shadow-md font-black'
-                          : 'text-zinc-400 hover:text-white'
+                        formData.ad_type === "company"
+                          ? "bg-red-600 text-white shadow-md font-black"
+                          : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       <ShieldCheck className="w-4 h-4" />
@@ -845,7 +1006,7 @@ const AdminAds: React.FC = () => {
                 </div>
 
                 {/* Creator Selector when in Creator Promotion Mode */}
-                {formData.ad_type === 'creator' && (
+                {formData.ad_type === "creator" && (
                   <div className="bg-[#14151B]/80 border border-amber-500/20 rounded-2xl p-3.5 space-y-2">
                     <label className="text-xs font-black text-amber-400 flex items-center gap-1.5">
                       <Crown className="w-3.5 h-3.5" />
@@ -853,18 +1014,21 @@ const AdminAds: React.FC = () => {
                     </label>
                     <select
                       value={formData.selectedCreatorId}
-                      onChange={e => handleSelectCreator(e.target.value)}
+                      onChange={(e) => handleSelectCreator(e.target.value)}
                       className="w-full bg-[#0D0E12] border border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-amber-500 transition-colors"
                     >
-                      <option value="">-- Choose a creator from platform --</option>
-                      {creatorsList.map(c => (
+                      <option value="">
+                        -- Choose a creator from platform --
+                      </option>
+                      {creatorsList.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.name} ({c.email || 'Creator'})
+                          {c.name} ({c.email || "Creator"})
                         </option>
                       ))}
                     </select>
                     <p className="text-[10px] text-zinc-500">
-                      Selecting automatically fills creator avatar, profile link, and cover photo.
+                      Selecting automatically fills creator avatar, profile
+                      link, and cover photo.
                     </p>
                   </div>
                 )}
@@ -880,21 +1044,30 @@ const AdminAds: React.FC = () => {
                       required
                       placeholder="e.g. Featured Creator: Wairimu K. ✨"
                       value={formData.title}
-                      onChange={e => setFormData({ ...formData, title: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, title: e.target.value })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-colors"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-zinc-300 block mb-1.5">
-                      {formData.ad_type === 'creator' ? 'Creator / Sponsor Label *' : 'Company Name *'}
+                      {formData.ad_type === "creator"
+                        ? "Creator / Sponsor Label *"
+                        : "Company Name *"}
                     </label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Wairimu K. Official"
                       value={formData.sponsor_name}
-                      onChange={e => setFormData({ ...formData, sponsor_name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          sponsor_name: e.target.value,
+                        })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-colors"
                     />
                   </div>
@@ -910,7 +1083,9 @@ const AdminAds: React.FC = () => {
                     required
                     placeholder="Short description enticing subscribers to view and subscribe..."
                     value={formData.description}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     className="w-full bg-[#14151B] border border-zinc-800 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 resize-none"
                   />
                 </div>
@@ -921,18 +1096,24 @@ const AdminAds: React.FC = () => {
                     Feature Photo / Banner URL *
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-2">
-                    {PRESET_BANNERS.map(preset => (
+                    {PRESET_BANNERS.map((preset) => (
                       <button
                         type="button"
                         key={preset.name}
-                        onClick={() => setFormData({ ...formData, image_url: preset.url })}
+                        onClick={() =>
+                          setFormData({ ...formData, image_url: preset.url })
+                        }
                         className={`relative rounded-xl overflow-hidden h-14 border transition-all cursor-pointer ${
                           formData.image_url === preset.url
-                            ? 'border-red-500 ring-2 ring-red-500/30'
-                            : 'border-zinc-800 hover:border-zinc-600'
+                            ? "border-red-500 ring-2 ring-red-500/30"
+                            : "border-zinc-800 hover:border-zinc-600"
                         }`}
                       >
-                        <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
+                        <img
+                          src={preset.url}
+                          alt={preset.name}
+                          className="w-full h-full object-cover"
+                        />
                       </button>
                     ))}
                   </div>
@@ -941,7 +1122,9 @@ const AdminAds: React.FC = () => {
                     type="url"
                     placeholder="Or enter custom image URL (https://...)"
                     value={formData.image_url}
-                    onChange={e => setFormData({ ...formData, image_url: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, image_url: e.target.value })
+                    }
                     className="w-full bg-[#14151B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-colors"
                   />
                 </div>
@@ -956,7 +1139,9 @@ const AdminAds: React.FC = () => {
                       type="text"
                       placeholder="e.g. Sponsored Creator or VIP Spotlight"
                       value={formData.badge}
-                      onChange={e => setFormData({ ...formData, badge: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, badge: e.target.value })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
                     />
                   </div>
@@ -970,7 +1155,12 @@ const AdminAds: React.FC = () => {
                       min={0}
                       step={100}
                       value={formData.price_paid}
-                      onChange={e => setFormData({ ...formData, price_paid: Number(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          price_paid: Number(e.target.value) || 0,
+                        })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 font-bold"
                     />
                   </div>
@@ -986,7 +1176,9 @@ const AdminAds: React.FC = () => {
                       type="text"
                       placeholder="e.g. View Profile & Subscribe"
                       value={formData.cta_text}
-                      onChange={e => setFormData({ ...formData, cta_text: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cta_text: e.target.value })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 font-bold"
                     />
                   </div>
@@ -999,7 +1191,9 @@ const AdminAds: React.FC = () => {
                       type="text"
                       placeholder="/creator/... or https://..."
                       value={formData.cta_url}
-                      onChange={e => setFormData({ ...formData, cta_url: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cta_url: e.target.value })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
                     />
                   </div>
@@ -1013,11 +1207,20 @@ const AdminAds: React.FC = () => {
                     </label>
                     <select
                       value={formData.target_audience}
-                      onChange={e => setFormData({ ...formData, target_audience: e.target.value as any })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          target_audience: e.target.value as any,
+                        })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 text-xs font-bold text-zinc-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-zinc-700"
                     >
-                      <option value="users">Subscribers / Fans (Home Feed)</option>
-                      <option value="all">Universal (All Platform Users)</option>
+                      <option value="users">
+                        Subscribers / Fans (Home Feed)
+                      </option>
+                      <option value="all">
+                        Universal (All Platform Users)
+                      </option>
                       <option value="creators">Creators Only</option>
                     </select>
                   </div>
@@ -1028,7 +1231,12 @@ const AdminAds: React.FC = () => {
                     </label>
                     <select
                       value={formData.durationDays}
-                      onChange={e => setFormData({ ...formData, durationDays: Number(e.target.value) || 7 })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          durationDays: Number(e.target.value) || 7,
+                        })
+                      }
                       className="w-full bg-[#14151B] border border-zinc-800 text-xs font-bold text-zinc-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-zinc-700"
                     >
                       <option value={3}>3 Days (Quick Boost)</option>
@@ -1068,7 +1276,8 @@ const AdminAds: React.FC = () => {
             <div className="bg-[#0D0E12] border border-zinc-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
               <div className="flex items-center justify-between p-4 border-b border-zinc-800">
                 <span className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-red-500" /> Subscriber Feed Preview
+                  <Eye className="w-4 h-4 text-red-500" /> Subscriber Feed
+                  Preview
                 </span>
                 <button
                   onClick={() => setPreviewAd(null)}
@@ -1084,7 +1293,11 @@ const AdminAds: React.FC = () => {
                   <div className="p-3.5 flex items-center justify-between border-b border-zinc-800/80 bg-zinc-950/40">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {previewAd.creator_avatar ? (
-                        <img src={previewAd.creator_avatar} alt="" className="w-9 h-9 rounded-full object-cover border border-amber-500/40 shrink-0" />
+                        <img
+                          src={previewAd.creator_avatar}
+                          alt=""
+                          className="w-9 h-9 rounded-full object-cover border border-amber-500/40 shrink-0"
+                        />
                       ) : (
                         <div className="w-9 h-9 rounded-full bg-red-600/20 text-red-400 font-bold flex items-center justify-center shrink-0">
                           {previewAd.sponsor_name[0]}
@@ -1096,25 +1309,33 @@ const AdminAds: React.FC = () => {
                           <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20 shrink-0" />
                         </div>
                         <div className="text-[10px] text-zinc-500 font-medium truncate">
-                          {previewAd.creator_handle || 'Sponsored Promotion'}
+                          {previewAd.creator_handle || "Sponsored Promotion"}
                         </div>
                       </div>
                     </div>
 
                     <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      {previewAd.badge || 'Sponsored'}
+                      {previewAd.badge || "Sponsored"}
                     </span>
                   </div>
 
                   {/* Banner Image */}
                   <div className="relative aspect-[16/10] overflow-hidden bg-black">
-                    <img src={previewAd.image_url} alt={previewAd.title} className="w-full h-full object-cover" />
+                    <img
+                      src={previewAd.image_url}
+                      alt={previewAd.title}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   {/* Card Content */}
                   <div className="p-4 space-y-3">
-                    <h4 className="text-sm font-black text-white">{previewAd.title}</h4>
-                    <p className="text-xs text-zinc-400 leading-relaxed">{previewAd.description}</p>
+                    <h4 className="text-sm font-black text-white">
+                      {previewAd.title}
+                    </h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      {previewAd.description}
+                    </p>
                     <button
                       onClick={() => {
                         setPreviewAd(null);

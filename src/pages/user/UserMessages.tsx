@@ -30,6 +30,7 @@ import type { ChatParticipant, ChatMessage } from '../../lib/db';
 import { validateChatMessage, stripDigits } from '../../lib/chatFilter';
 import { supabase } from '../../lib/supabase';
 import { resolveUserAvatar, getDefaultAvatar } from '../../lib/avatar';
+import { formatLastSeenStatus } from '../../lib/dateUtils';
 
 const UserMessages = () => {
   const { user } = useAuth();
@@ -500,7 +501,27 @@ const UserMessages = () => {
                       <span>{selectedCreator.name}</span>
                       <CheckCircle2 className="w-4 h-4 text-white fill-blue-500" />
                     </div>
-                    <div className="text-xs text-zinc-400 flex items-center gap-1">
+                    <div className="text-xs text-zinc-400 flex items-center gap-2">
+                      {(() => {
+                        const presence = formatLastSeenStatus((selectedCreator as any).last_seen);
+                        return (
+                          <span className="flex items-center gap-1.5">
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                presence.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'
+                              }`}
+                            />
+                            <span
+                              className={`text-[11px] font-medium ${
+                                presence.isOnline ? 'text-emerald-400 font-semibold' : 'text-zinc-400'
+                              }`}
+                            >
+                              {presence.label}
+                            </span>
+                          </span>
+                        );
+                      })()}
+                      <span className="text-zinc-600">•</span>
                       {isSubscribed ? (
                         <span className="text-emerald-400 font-semibold flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

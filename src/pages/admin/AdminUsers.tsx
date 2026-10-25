@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { getAdminUsers, updateUserStatus, deleteUserAccount, setCreatorVerified } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
 import { resolveUserAvatar } from '../../lib/avatar';
+import { formatLastSeenStatus } from '../../lib/dateUtils';
 
 const statusStyles: Record<string, string> = {
   active: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
@@ -230,7 +231,13 @@ const AdminUsers = () => {
   };
 
   const filtered = usersList.filter(u => {
-    const matchFilter = filter === 'all' || u.status === filter;
+    const presence = formatLastSeenStatus(u.last_seen);
+    const matchFilter =
+      filter === 'all'
+        ? true
+        : filter === 'online'
+          ? presence.isOnline
+          : u.status === filter;
     const matchSearch = (u.name || '').toLowerCase().includes(search.toLowerCase()) || 
                         (u.email || '').toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
@@ -300,16 +307,19 @@ const AdminUsers = () => {
               
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-2 md:pb-0">
                 <div className="flex bg-[#0d0e12] border border-zinc-800 p-1.5 rounded-2xl">
-                  {['all', 'active', 'banned'].map(s => (
+                  {['all', 'online', 'active', 'banned'].map(s => (
                     <button
                       key={s}
                       onClick={() => setFilter(s)}
-                      className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                      className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                         filter === s 
                           ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 border border-red-500' 
                           : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                       }`}
                     >
+                      {s === 'online' && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      )}
                       {s}
                     </button>
                   ))}
@@ -338,6 +348,7 @@ const AdminUsers = () => {
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Subscriptions</th>
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Spent</th>
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Account Status</th>
+                        <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Last Active</th>
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Date Joined</th>
                         <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-right pr-8">Actions</th>
                       </tr>
@@ -374,6 +385,31 @@ const AdminUsers = () => {
                             <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-black px-3 py-1.5 rounded-full border ${statusStyles[u.status] || statusStyles.active}`}>
                               {u.status}
                             </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {(() => {
+                              const presence = formatLastSeenStatus(u.last_seen);
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`relative flex h-2 w-2 rounded-full shrink-0 ${
+                                      presence.isOnline ? 'bg-emerald-400' : 'bg-zinc-600'
+                                    }`}
+                                  >
+                                    {presence.isOnline && (
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    )}
+                                  </span>
+                                  <span
+                                    className={`text-xs font-semibold whitespace-nowrap ${
+                                      presence.isOnline ? 'text-emerald-400' : 'text-zinc-400'
+                                    }`}
+                                  >
+                                    {presence.label}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="px-6 py-4 text-zinc-400 text-xs font-medium">
                             {u.joined}

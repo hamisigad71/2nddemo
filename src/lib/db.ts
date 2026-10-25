@@ -930,6 +930,13 @@ export const uploadFileToSupabase = async (
           contentType: fileToUpload.type || "image/jpeg",
         });
       if (!error) {
+        try {
+          const { data: signedData } = await supabase.storage
+            .from(b)
+            .createSignedUrl(cleanPath, 60 * 60 * 24 * 30);
+          if (signedData?.signedUrl) return signedData.signedUrl;
+        } catch {}
+
         const { data } = supabase.storage.from(b).getPublicUrl(cleanPath);
         if (data?.publicUrl) return data.publicUrl;
       } else {
@@ -1022,22 +1029,40 @@ const resolvePrivatePostMedia = async (
 
       let mediaUrl = post.media_url;
 
-      // If media is a relative storage path, create signed URL or public URL
+      // Clean up deprecated or blocked Pinterest CDN links
       if (
         mediaUrl &&
-        !/^https?:\/\//i.test(mediaUrl) &&
+        (mediaUrl.includes("i.pinimg.com") || mediaUrl.includes("pinterest.com"))
+      ) {
+        mediaUrl =
+          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80";
+      }
+
+      // If media is a relative storage path or a Supabase storage URL on a private bucket, create signed URL
+      if (
+        mediaUrl &&
         !mediaUrl.startsWith("data:") &&
         !mediaUrl.startsWith("blob:")
       ) {
-        try {
-          const { data, error } = await supabase.storage
-            .from("Daysman Gad")
-            .createSignedUrl(mediaUrl, 60 * 60);
-          if (!error && data?.signedUrl) {
-            mediaUrl = data.signedUrl;
+        let storagePath: string | null = null;
+        if (!/^https?:\/\//i.test(mediaUrl)) {
+          storagePath = mediaUrl;
+        } else if (mediaUrl.includes("/storage/v1/object/public/")) {
+          const split = mediaUrl.split(/\/storage\/v1\/object\/public\/[^/]+\//);
+          if (split[1]) storagePath = decodeURIComponent(split[1]);
+        }
+
+        if (storagePath) {
+          try {
+            const { data, error } = await supabase.storage
+              .from("Daysman Gad")
+              .createSignedUrl(storagePath, 60 * 60 * 24);
+            if (!error && data?.signedUrl) {
+              mediaUrl = data.signedUrl;
+            }
+          } catch (err) {
+            console.warn("Could not authorize private post media:", err);
           }
-        } catch (err) {
-          console.warn("Could not authorize private post media:", err);
         }
       }
 
@@ -3651,6 +3676,12 @@ export const getDiscoverCreators = async () => {
           avatar,
           cover,
           hasPosts,
+          last_seen:
+            (u as any).last_seen ||
+            (local as any)?.last_seen ||
+            getUserLastSeen(u.uid) ||
+            null,
+          last_seen: (u as any).last_seen || (local as any)?.last_seen || getUserLastSeen(u.uid) || null,
           isVerified:
             isSelectedCreator ||
             isCreatorVerified(
@@ -4146,6 +4177,11 @@ export const getAdminCreators = async () => {
         dob,
         isVerified,
         kycStatus,
+        last_seen:
+          (u as any).last_seen ||
+          (local as any)?.last_seen ||
+          getUserLastSeen(u.uid) ||
+          null,
       };
     });
   } catch (err) {
@@ -5008,6 +5044,7 @@ export const getAdminUsers = async () => {
               year: "numeric",
             })
           : "Recent",
+        last_seen: (u as any).last_seen || getUserLastSeen(u.uid) || null,
         img: resolveUserAvatar(u.avatar, u.name),
       };
     });
@@ -5071,6 +5108,49 @@ export const updateUserStatus = async (
   } catch (err) {
     console.error("Error updating user status:", err);
   }
+};
+
+/**
+ * Retrieves cached last_seen timestamp for a user or creator.
+ */
+export const getUserLastSeen = (userId: string): string | null => {
+  if (typeof window === "undefined" || !userId) return null;
+  try {
+    return localStorage.getItem(`tgd_last_seen_${userId}`) || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Records an active heartbeat for the user or creator, keeping presence status fresh.
+ * Writes to localStorage immediately and syncs asynchronously to Supabase.
+ */
+export const updateUserLastSeen = async (userId: string): Promise<string> => {
+  const now = new Date().toISOString();
+  if (!userId) return now;
+
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(`tgd_last_seen_${userId}`, now);
+      window.dispatchEvent(
+        new CustomEvent("tgd_presence_updated", {
+          detail: { userId, lastSeen: now },
+        }),
+      );
+    } catch {}
+  }
+
+  try {
+    await supabase
+      .from("users")
+      .update({ last_seen: now })
+      .or(`uid.eq.${userId},id.eq.${userId}`);
+  } catch (err) {
+    // Non-blocking fallback
+  }
+
+  return now;
 };
 
 export const requestCreatorPayout = async (
@@ -6921,6 +7001,7 @@ export interface ChatParticipant {
   handle?: string;
   role: "creator" | "subscriber";
   isOnline?: boolean;
+  last_seen?: string | null;
   isSubscribed?: boolean;
   subscriptionExpiresAt?: string;
   subscriptionTier?: string;
@@ -7251,6 +7332,8 @@ export const getUserChatConversations = async (
               `@${(profile?.name || "creator").toLowerCase().replace(/\s+/g, "")}`,
             role: "creator",
             isOnline: true,
+            last_seen: pAny?.last_seen || getUserLastSeen(s.creator_id) || null,
+            last_seen: (pAny?.last_seen) || getUserLastSeen(s.creator_id) || null,
             isSubscribed: true,
             subscriptionExpiresAt: s.expires_at,
             subscriptionTier: s.tier_name || "VIP Tier",
@@ -7286,6 +7369,9 @@ export const getUserChatConversations = async (
                   `@${(profile?.name || "creator").toLowerCase().replace(/\s+/g, "")}`,
                 role: "creator",
                 isOnline: true,
+                last_seen:
+                  pAny?.last_seen || getUserLastSeen(creatorId) || null,
+                last_seen: (pAny?.last_seen) || getUserLastSeen(creatorId) || null,
                 isSubscribed: true,
                 subscriptionExpiresAt: parsed.expires_at,
                 subscriptionTier: parsed.tier_name || "VIP Tier",
@@ -7311,6 +7397,9 @@ export const getUserChatConversations = async (
                   `@${(profile?.name || "creator").toLowerCase().replace(/\s+/g, "")}`,
                 role: "creator",
                 isOnline: true,
+                last_seen:
+                  pAny?.last_seen || getUserLastSeen(creatorId) || null,
+                last_seen: (pAny?.last_seen) || getUserLastSeen(creatorId) || null,
                 isSubscribed: !!sub,
                 subscriptionExpiresAt: sub?.expires_at,
                 subscriptionTier: sub?.tier_name,
@@ -7405,6 +7494,11 @@ export const getCreatorChatConversations = async (
             avatar: resolveUserAvatar(userProfile?.avatar, userProfile?.name),
             role: "subscriber",
             isOnline: true,
+            last_seen:
+              (userProfile as any)?.last_seen ||
+              getUserLastSeen(s.fan_id) ||
+              null,
+            last_seen: (userProfile as any)?.last_seen || getUserLastSeen(s.fan_id) || null,
             isSubscribed: true,
             subscriptionExpiresAt: s.expires_at,
             subscriptionTier: s.tier_name || "VIP Tier",
@@ -7428,6 +7522,7 @@ export const getCreatorChatConversations = async (
               avatar: resolveUserAvatar(f.avatar, f.name),
               role: "subscriber",
               isOnline: true,
+              last_seen: getUserLastSeen(f.id) || null,
               isSubscribed: true,
               subscriptionTier: f.tier || "VIP Tier",
             });
@@ -7449,6 +7544,11 @@ export const getCreatorChatConversations = async (
               avatar: resolveUserAvatar(userProfile?.avatar, userProfile?.name),
               role: "subscriber",
               isOnline: true,
+              last_seen:
+                (userProfile as any)?.last_seen ||
+                getUserLastSeen(fanId) ||
+                null,
+              last_seen: (userProfile as any)?.last_seen || getUserLastSeen(fanId) || null,
               isSubscribed: !!sub,
               subscriptionTier: sub?.tier_name || "Active Subscriber",
             });
@@ -7772,7 +7872,7 @@ export const DEFAULT_PLATFORM_ADS: PlatformAd[] = [
     description:
       "Elevate your membership with unrestricted 24/7 access to all verified Kenyan creators, HD live streams, and bespoke escort directory privileges.",
     image_url:
-      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80",
+      "https://i.pinimg.com/736x/0a/34/ae/0a34ae553f30d611f2401bb0174ed46b.jpg",
     target_audience: "all",
     category: "company",
     sponsor_name: "The Gents DollHouse Official",

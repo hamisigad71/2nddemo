@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { createUserProfile } from '../lib/db';
+import { createUserProfile, updateUserLastSeen } from '../lib/db';
 
 interface AuthContextType {
   user: User | null;
@@ -99,6 +99,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(statusChannel);
       window.removeEventListener('account_status_changed', handleStatusEviction);
+    };
+  }, [user?.id]);
+
+  // Real-time presence & last_seen heartbeat: tracks active user presence across the platform
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Immediately record last_seen on login / load
+    updateUserLastSeen(user.id).catch(() => {});
+
+    // Periodic heartbeat every 2 minutes while tab is active/visible
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        updateUserLastSeen(user.id).catch(() => {});
+      }
+    }, 120_000);
+
+    // Refresh last_seen when the user returns/focuses back to the tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        updateUserLastSeen(user.id).catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user?.id]);
 

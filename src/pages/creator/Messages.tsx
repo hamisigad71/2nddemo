@@ -23,6 +23,7 @@ import type { ChatParticipant, ChatMessage } from '../../lib/db';
 import { validateChatMessage, stripDigits } from '../../lib/chatFilter';
 import { supabase } from '../../lib/supabase';
 import { resolveUserAvatar, getDefaultAvatar } from '../../lib/avatar';
+import { formatLastSeenStatus } from '../../lib/dateUtils';
 
 const Messages = () => {
   const { user } = useAuth();
@@ -435,8 +436,26 @@ const Messages = () => {
                       <span>{selectedFan.name}</span>
                       <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                     </div>
-                    <div className="text-[11px] font-semibold text-emerald-500 tracking-wide uppercase">
-                      {selectedFan.subscriptionTier || 'Active Subscriber'}
+                    <div className="text-[11px] flex items-center gap-2">
+                      {(() => {
+                        const presence = formatLastSeenStatus((selectedFan as any).last_seen);
+                        return (
+                          <span className="flex items-center gap-1">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                presence.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'
+                              }`}
+                            />
+                            <span className={presence.isOnline ? 'text-emerald-400 font-semibold' : 'text-zinc-400'}>
+                              {presence.label}
+                            </span>
+                          </span>
+                        );
+                      })()}
+                      <span className="text-zinc-600">•</span>
+                      <span className="font-semibold text-emerald-500 tracking-wide uppercase">
+                        {selectedFan.subscriptionTier || 'Active Subscriber'}
+                      </span>
                     </div>
                   </div>
                 </div>

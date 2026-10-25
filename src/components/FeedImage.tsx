@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ImageOff, Volume2, VolumeX, Play } from 'lucide-react';
 
 interface FeedImageProps {
@@ -9,6 +9,19 @@ interface FeedImageProps {
   className?: string;
 }
 
+const DEFAULT_POST_FALLBACK =
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80';
+
+const resolveSafeMediaUrl = (url?: string | null): string => {
+  if (!url || typeof url !== 'string') return DEFAULT_POST_FALLBACK;
+  const clean = url.trim();
+  // Pinterest CDN blocks cross-origin requests from browsers resulting in 403 / net::ERR_BLOCKED_BY_ORB
+  if (clean.includes('i.pinimg.com') || clean.includes('pinterest.com')) {
+    return DEFAULT_POST_FALLBACK;
+  }
+  return clean;
+};
+
 export default function FeedImage({
   src,
   alt = 'post media',
@@ -16,15 +29,29 @@ export default function FeedImage({
   isLocked = false,
   className = '',
 }: FeedImageProps) {
+  const [currentSrc, setCurrentSrc] = useState<string>(() => resolveSafeMediaUrl(src));
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [hasTriedFallback, setHasTriedFallback] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const isVideo = Boolean(
-    src && (src.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) || src.startsWith('blob:') && src.includes('video'))
-  );
+  const isVideo = useMemo(() => {
+    return Boolean(
+      currentSrc &&
+        (currentSrc.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ||
+          (currentSrc.startsWith('blob:') && currentSrc.includes('video')))
+    );
+  }, [currentSrc]);
+
+  useEffect(() => {
+    const safe = resolveSafeMediaUrl(src);
+    setCurrentSrc(safe);
+    setIsLoaded(false);
+    setHasError(false);
+    setHasTriedFallback(safe === DEFAULT_POST_FALLBACK);
+  }, [src]);
 
   useEffect(() => {
     if (isVideo && videoRef.current) {
@@ -39,6 +66,15 @@ export default function FeedImage({
       }
     }
   }, [isVideo, isLocked]);
+
+  const handleImageError = () => {
+    if (!hasTriedFallback && currentSrc !== DEFAULT_POST_FALLBACK) {
+      setHasTriedFallback(true);
+      setCurrentSrc(DEFAULT_POST_FALLBACK);
+    } else {
+      setHasError(true);
+    }
+  };
 
   const togglePlayPause = () => {
     if (isLocked || !videoRef.current) return;
@@ -93,13 +129,20 @@ export default function FeedImage({
           />
           <video
             ref={videoRef}
-            src={src}
+            src={currentSrc}
             loop
             playsInline
             muted={isMuted}
             preload={priority ? 'auto' : 'metadata'}
             onLoadedData={() => setIsLoaded(true)}
-            onError={() => setHasError(true)}
+            onError={() => {
+              if (!hasTriedFallback) {
+                setHasTriedFallback(true);
+                setCurrentSrc(DEFAULT_POST_FALLBACK);
+              } else {
+                setHasError(true);
+              }
+            }}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             className={`relative z-10 w-full h-auto max-h-[660px] object-contain transition-all duration-500 ease-out ${
@@ -141,21 +184,21 @@ export default function FeedImage({
               isLoaded ? 'opacity-40' : 'opacity-0'
             }`}
             style={{
-              backgroundImage: `url(${src})`,
+              backgroundImage: `url(${currentSrc})`,
               backgroundPosition: 'center',
               backgroundSize: 'cover',
             }}
           />
 
           <img
-            src={src}
+            src={currentSrc}
             alt={alt}
             referrerPolicy="no-referrer"
             loading={priority ? 'eager' : 'lazy'}
             decoding={priority ? 'sync' : 'async'}
             fetchPriority={priority ? 'high' : 'auto'}
             onLoad={() => setIsLoaded(true)}
-            onError={() => setHasError(true)}
+            onError={handleImageError}
             className={`relative z-10 w-full h-auto max-h-[660px] object-contain transition-all duration-500 ease-out ${
               isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'
             } ${isLocked ? 'filter blur-xl scale-110 opacity-75' : ''} ${className}`}

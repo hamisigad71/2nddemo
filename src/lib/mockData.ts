@@ -37,7 +37,7 @@ const DEFAULT_ESCORTS: EscortProfile[] = [
   {
     id: 'escort-2',
     name: 'Chloe Vibe',
-    avatar: 'https://i.pinimg.com/736x/28/8c/76/288c76c680527b6fa111cf8d0c1a8878.jpg',
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
     cover_image: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=1600&q=80',
     bio: "Fun, spontaneous and ready for an adventure. Let's make memories.",
     location: 'Mombasa, KE',
@@ -48,7 +48,7 @@ const DEFAULT_ESCORTS: EscortProfile[] = [
     age: 22,
     services: ['Beach Date', 'Nightlife', 'Travel Companion'],
     gallery: [
-      'https://i.pinimg.com/736x/2f/b1/34/2fb1345524361510ce2ea83758f2195d.jpg',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80',
     ],
   },
   {

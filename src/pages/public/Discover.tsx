@@ -14,6 +14,7 @@ import {
   type PlatformAd
 } from '../../lib/db';
 import { getDefaultAvatar } from '../../lib/avatar';
+import { formatLastSeenStatus } from '../../lib/dateUtils';
 import LiveNowTray from '../../components/LiveNowTray';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useTheme } from '../../context/ThemeContext';
@@ -408,9 +409,28 @@ const Discover = () => {
                           className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-card shadow-md object-cover bg-muted" 
                           loading="lazy" 
                         />
-                        {creator.hasPosts && (
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-card rounded-full" title="Active Feed" />
-                        )}
+                        {(() => {
+                          const presence = formatLastSeenStatus(creator.last_seen);
+                          if (presence.isOnline) {
+                            return (
+                              <span
+                                className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full flex items-center justify-center"
+                                title="Online now"
+                              >
+                                <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                              </span>
+                            );
+                          }
+                          if (creator.hasPosts) {
+                            return (
+                              <span
+                                className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-card rounded-full"
+                                title="Active Feed Creator"
+                              />
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
 
                       <div className="discover-card-price text-right pl-2">
