@@ -21,7 +21,7 @@ import {
   Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../../lib/db';
+import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } from '../../lib/db';
 import { parseNotificationDate, formatTimeAgo as formatNotificationTime } from '../../lib/dateUtils';
 
 export interface NotificationItem {
@@ -121,6 +121,12 @@ const UserNotifications = () => {
     if (user?.id) {
       markAllNotificationsAsRead(user.id);
     }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    if (!user?.id) return;
+    await deleteNotification(id, user.id);
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const filteredNotifications = useMemo(() => {
@@ -316,6 +322,15 @@ const UserNotifications = () => {
                       : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
                   }`}
                 >
+                  <button
+                    type="button"
+                    aria-label="Delete notification"
+                    onClick={() => handleDeleteNotification(item.id)}
+                    className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.08] bg-black/20 text-zinc-400 transition hover:border-rose-500/40 hover:text-rose-300"
+                  >
+                    <span className="text-lg leading-none">×</span>
+                  </button>
+
                   {/* Avatar / Monogram emblem */}
                   <div className="relative shrink-0 self-start">
                     {item.avatar ? (

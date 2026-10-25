@@ -6945,6 +6945,36 @@ export const markAllNotificationsAsRead = async (userId: string) => {
   }
 };
 
+export const deleteNotification = async (
+  notificationId: string,
+  userId?: string,
+) => {
+  try {
+    await supabase.from("notifications").delete().eq("id", notificationId);
+  } catch (err) {
+    console.warn("Error deleting notification in Supabase:", err);
+  }
+
+  if (userId) {
+    try {
+      const key = `tgd_notifications_${userId}`;
+      const stored: NotificationItem[] = JSON.parse(
+        localStorage.getItem(key) || "[]",
+      );
+      const filtered = stored.filter((item) => item.id !== notificationId);
+      localStorage.setItem(key, JSON.stringify(filtered));
+    } catch {}
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("notifications_updated", {
+        detail: { notificationId, userId },
+      }),
+    );
+  }
+};
+
 export const getAdminTransactions = async () => {
   try {
     const { data: txs, error } = await supabase

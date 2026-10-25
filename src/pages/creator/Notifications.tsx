@@ -17,7 +17,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, type NotificationItem } from '../../lib/db';
+import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, type NotificationItem } from '../../lib/db';
 import { toast } from '../../context/ToastContext';
 import { formatTimeAgo } from '../../lib/dateUtils';
 
@@ -162,6 +162,16 @@ const Notifications = () => {
       );
     } catch (err) {
       console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
+    if (!user?.id) return;
+    try {
+      await deleteNotification(notificationId, user.id);
+      setNotifications(prev => prev.filter(item => item.id !== notificationId));
+    } catch (err) {
+      console.error('Error deleting notification:', err);
     }
   };
 
@@ -320,6 +330,15 @@ const Notifications = () => {
                       : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
                   }`}
                 >
+                  <button
+                    type="button"
+                    aria-label="Delete notification"
+                    onClick={() => handleDeleteNotification(item.id)}
+                    className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.08] bg-black/20 text-zinc-400 transition hover:border-rose-500/40 hover:text-rose-300"
+                  >
+                    <span className="text-lg leading-none">×</span>
+                  </button>
+
                   {/* Category / Creator Avatar Icon */}
                   <div className="shrink-0 self-start">
                     {item.avatar ? (
