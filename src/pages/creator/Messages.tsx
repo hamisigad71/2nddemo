@@ -10,7 +10,7 @@ import {
   X, 
   ShieldAlert, 
   CheckCircle2, 
-  Sparkles,
+  MessageSquare,
   AlertCircle 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -400,7 +400,7 @@ const Messages = () => {
           {selectedFan === null ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3 text-primary">
-                <Sparkles className="w-8 h-8" />
+                <MessageSquare className="w-8 h-8" />
               </div>
               <h3 className="font-bold text-base text-foreground mb-1">Fan Inbox</h3>
               <p className="text-xs max-w-xs">

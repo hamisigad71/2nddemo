@@ -9,7 +9,7 @@ import {
   MessageCircle, 
   MoreVertical, 
   ShieldAlert, 
-  Sparkles, 
+  Gift, 
   CheckCircle2, 
   AlertCircle 
 } from 'lucide-react';
@@ -540,7 +540,7 @@ const UserMessages = () => {
                     onClick={() => setIsTipOpen(true)}
                     className="text-xs font-bold text-white bg-red-600 hover:bg-red-500 px-4 py-2 rounded-full transition-all shadow-[0_2px_10px_rgba(220,38,38,0.3)] active:scale-95 flex items-center gap-1.5"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Gift className="w-3.5 h-3.5" />
                     <span>Tip Creator 💸</span>
                   </button>
                   <button className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full transition-colors">

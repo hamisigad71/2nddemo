@@ -1,5 +1,5 @@
 import CreatorLayout from '../../components/CreatorLayout';
-import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Sparkles, Flame, Check, Trash2, AlertTriangle, X, Clock } from 'lucide-react';
+import { Camera, Save, User, ShieldCheck, Wallet, Sliders, AlertCircle, UploadCloud, Smartphone, CheckCircle2, Lock, Eye, ExternalLink, Loader2, Flame, Check, Trash2, AlertTriangle, X, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -973,7 +973,7 @@ const EditProfile = () => {
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h3 className="text-base font-black text-white flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-red-500" /> Live Subscriber View Preview
+                            <Eye className="w-4 h-4 text-red-500" /> Live Subscriber View Preview
                           </h3>
                           <p className="text-xs text-zinc-400">
                             How potential subscribers see your profile and banner on their end.

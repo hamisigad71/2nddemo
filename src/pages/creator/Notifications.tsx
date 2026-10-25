@@ -11,7 +11,7 @@ import {
   Film, 
   Loader2,
   Inbox,
-  Sparkles,
+  Star,
   ArrowUpRight,
   Check,
   CheckCircle2
@@ -37,7 +37,7 @@ function getNotificationMeta(type?: string) {
   switch (type) {
     case 'creator':
       return {
-        icon: Sparkles,
+        icon: Star,
         iconColor: 'text-amber-400',
         badgeBg: 'bg-amber-400/10 text-amber-300 border-amber-400/25',
         label: 'Creator spotlight',
@@ -339,7 +339,7 @@ const Notifications = () => {
                           {extractInitials(item.title, item.message)}
                         </div>
                         <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-amber-500/30 flex items-center justify-center">
-                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <Star className="w-3 h-3 text-amber-400 fill-amber-400/20" />
                         </div>
                       </div>
                     ) : (

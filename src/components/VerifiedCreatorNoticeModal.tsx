@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, CheckCircle2, ShieldCheck, UserCheck, Sparkles, Lock, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, ShieldCheck, UserCheck, Award, Lock, ArrowRight } from 'lucide-react';
 
 interface VerifiedCreatorNoticeModalProps {
   isOpen: boolean;
@@ -66,7 +66,7 @@ export const VerifiedCreatorNoticeModal: React.FC<VerifiedCreatorNoticeModalProp
               <CheckCircle2 className="w-9 h-9 sm:w-11 sm:h-11 text-white fill-blue-500 drop-shadow-md" />
             </div>
             <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black p-1 rounded-full ring-2 ring-[#0e0f14]">
-              <Sparkles className="w-3.5 h-3.5" />
+              <Award className="w-3.5 h-3.5" />
             </div>
           </div>
 

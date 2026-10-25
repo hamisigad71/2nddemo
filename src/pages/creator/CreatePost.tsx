@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ExternalLink, Sparkles, Eye, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, PlusCircle, Eye, CheckCircle2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
@@ -29,7 +29,7 @@ const CreatePost = () => {
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back to Dashboard
             </button>
             <h1 className="text-3xl font-black text-white tracking-tight mb-1 flex items-center gap-2">
-              Create New Post <Sparkles className="w-6 h-6 text-red-500" />
+              Create New Post <PlusCircle className="w-6 h-6 text-red-500" />
             </h1>
             <p className="text-zinc-400 text-sm">
               Upload photos and videos as public posts, subscriber-only content, or pay-per-view media. Save unfinished work as a draft.

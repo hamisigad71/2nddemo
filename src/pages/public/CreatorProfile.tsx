@@ -18,7 +18,7 @@ import {
   X,
   Flame,
   PlayCircle,
-  Sparkles,
+  Camera,
   LayoutDashboard,
   Plus,
   Edit3,
@@ -1296,7 +1296,7 @@ export default function CreatorProfile() {
             {posts.length === 0 && !isEscortDemo && (
               <div className="bg-zinc-950/60 border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center">
                 <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-4 shadow-lg shadow-red-500/10">
-                  <Sparkles className="w-7 h-7" />
+                  <Camera className="w-7 h-7" />
                 </div>
                 <h3 className="text-xl font-black text-white mb-2">No Posts Yet</h3>
                 <p className="text-zinc-400 text-sm max-w-sm mb-6 leading-relaxed">

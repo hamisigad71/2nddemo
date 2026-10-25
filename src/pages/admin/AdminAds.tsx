@@ -14,7 +14,7 @@ import {
   Users,
   Copy,
   Check,
-  Sparkles,
+  Rocket,
   DollarSign,
   ArrowRight,
   ShieldCheck,
@@ -537,7 +537,7 @@ const AdminAds: React.FC = () => {
                 : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
             }`}
           >
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <Megaphone className="w-4 h-4 text-amber-400" />
             <span>Creator Promotion Orders</span>
             {pendingOrdersCount > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black text-[10px] font-black animate-pulse">
@@ -846,7 +846,7 @@ const AdminAds: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-lg font-black text-white flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-amber-400" />
+                    <Megaphone className="w-5 h-5 text-amber-400" />
                     Creator Paid Promotion Queue
                   </h2>
                   <p className="text-xs text-zinc-400 mt-1">
@@ -926,7 +926,7 @@ const AdminAds: React.FC = () => {
                             onClick={() => handleOpenFromOrder(order)}
                             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-600/25 active:scale-95 cursor-pointer"
                           >
-                            <Sparkles className="w-4 h-4" />
+                            <Rocket className="w-4 h-4" />
                             <span>Review &amp; Publish Ad</span>
                           </button>
                         )}

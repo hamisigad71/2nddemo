@@ -11,7 +11,7 @@ import {
   isCreatorProfileComplete,
   hasPrivateKycEvidence
 } from '../src/lib/verification';
-import { shouldIncludeCreatorInDiscover, isSelectedVerifiedCreator } from '../src/lib/creatorDirectory';
+import { shouldIncludeCreatorInDiscover, isSelectedVerifiedCreator, isUnverifiedDiscoverUser } from '../src/lib/creatorDirectory';
 
 describe('creator verification eligibility and admin approval flow', () => {
   it('grants the verified badge only after KYC approval', () => {
@@ -24,14 +24,29 @@ describe('creator verification eligibility and admin approval flow', () => {
     assert.equal(isCreatorVerified('creator-1', false, 'verified'), true);
   });
 
-  it('identifies the 3 selected creator accounts for verified status and discovery', () => {
-    assert.equal(isSelectedVerifiedCreator('fatma loki'), true);
+  it('identifies selected creator accounts for verified status and respects unverified discover users', () => {
     assert.equal(isSelectedVerifiedCreator('Natalia Ngina'), true);
     assert.equal(isSelectedVerifiedCreator('Ella Rains'), true);
-    assert.equal(isSelectedVerifiedCreator(undefined, 'hadq@gmail.com'), true);
     assert.equal(isSelectedVerifiedCreator(undefined, 'nataliangina62@gmail.com'), true);
     assert.equal(isSelectedVerifiedCreator(undefined, 'ellarains00@gmail.com'), true);
+    // Explicitly unverified users on discover
+    assert.equal(isSelectedVerifiedCreator('fatma loki'), false);
+    assert.equal(isSelectedVerifiedCreator(undefined, 'hadq@gmail.com'), false);
+    assert.equal(isSelectedVerifiedCreator('Sir Collo'), false);
+    assert.equal(isSelectedVerifiedCreator(undefined, 'sircollo51@gmail.com'), false);
     assert.equal(isSelectedVerifiedCreator('Random User'), false);
+  });
+
+  it('identifies unverified discover users for display without verified badge', () => {
+    assert.equal(isUnverifiedDiscoverUser('fatma loki'), true);
+    assert.equal(isUnverifiedDiscoverUser(undefined, 'hadq@gmail.com'), true);
+    assert.equal(isUnverifiedDiscoverUser('Sir Collo'), true);
+    assert.equal(isUnverifiedDiscoverUser(undefined, 'sircollo51@gmail.com'), true);
+    assert.equal(isUnverifiedDiscoverUser('David Kimani'), true);
+    assert.equal(isUnverifiedDiscoverUser(undefined, 'executivehideawaybarberandspa@gmail.com'), true);
+    assert.equal(isUnverifiedDiscoverUser('Unfiltered_culture💦😍👑'), true);
+    assert.equal(isUnverifiedDiscoverUser(undefined, 'acholawanjiru@gmail.com'), true);
+    assert.equal(isUnverifiedDiscoverUser('Random User'), false);
   });
 
   it('requires identity details and both proof files before KYC submission', () => {

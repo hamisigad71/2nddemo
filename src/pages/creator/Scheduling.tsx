@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
-import { Clock, Image as ImageIcon, ChevronLeft, ChevronRight, Plus, Sparkles, Loader2 } from 'lucide-react';
+import { Clock, Image as ImageIcon, ChevronLeft, ChevronRight, Plus, Calendar, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getPostsByCreator } from '../../lib/db';
 
@@ -91,7 +91,7 @@ const Scheduling: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-black text-white tracking-tight mb-1 flex items-center gap-2">
-            Content Calendar <Sparkles className="w-6 h-6 text-red-500" />
+            Content Calendar <Calendar className="w-6 h-6 text-red-500" />
           </h1>
           <p className="text-zinc-400 text-sm">
             View your published timeline and scheduled drops for subscribers.

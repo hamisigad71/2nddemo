@@ -17,7 +17,7 @@ import {
   AlertCircle, 
   Loader2,
   User as UserIcon,
-  Sparkles
+  Camera
 } from 'lucide-react';
 
 const Login = () => {
@@ -532,7 +532,7 @@ const Login = () => {
 
             {isTargetCreatorForm && (
               <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs p-3.5 rounded-2xl mb-5 flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <Camera className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">
                   <strong>Photo Setup Required:</strong> Your profile photo and cover photo are required so fans can discover and subscribe to you. National ID & selfie documents can be submitted later before payout withdrawal.
                 </span>
@@ -765,7 +765,7 @@ const Login = () => {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <CheckCircle2 className="w-4 h-4 text-amber-300" />
                     <span>{isTargetCreatorForm ? 'Save & Activate Creator Profile' : 'Save & Submit Verification'}</span>
                   </>
                 )}
@@ -782,7 +782,7 @@ const Login = () => {
             
             {infoNotice && (
               <div className="text-emerald-400 text-xs sm:text-sm font-semibold bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-center mb-4 flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>{infoNotice}</span>
               </div>
             )}

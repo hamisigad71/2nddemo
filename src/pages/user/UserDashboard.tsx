@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock, Sparkles, ArrowRight } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock, Star, Megaphone, ArrowRight } from 'lucide-react';
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useAuth } from '../../context/AuthContext';
@@ -535,7 +535,11 @@ const SponsoredFeedCard = ({ ad }: { ad: PlatformAd }) => {
               ? 'bg-amber-500 text-black border border-amber-300'
               : 'bg-rose-600 text-white border border-rose-400'
           }`}>
-            <Sparkles className="w-3 h-3 fill-current" />
+            {isCreatorAd ? (
+              <Star className="w-3 h-3 fill-current" />
+            ) : (
+              <Megaphone className="w-3 h-3 fill-current" />
+            )}
             {ad.badge || (isCreatorAd ? 'Sponsored Creator' : 'Featured Announcement')}
           </span>
         </div>
@@ -747,7 +751,7 @@ const UserDashboard = () => {
             {sponsoredAds.length > 0 && (
               <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-2 px-1">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400/20" />
                   <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Featured Creator Spotlight</span>
                 </div>
                 {sponsoredAds.slice(0, 2).map(ad => (

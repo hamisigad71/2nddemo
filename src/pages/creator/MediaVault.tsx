@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
-import { UploadCloud, PlayCircle, Image as ImageIcon, Lock, Eye, Trash2, X, Plus, Sparkles, ExternalLink } from 'lucide-react';
+import { UploadCloud, PlayCircle, Image as ImageIcon, Lock, Eye, Trash2, X, Plus, FolderArchive, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getPostsByCreator, deletePost } from '../../lib/db';
 
@@ -90,7 +90,7 @@ const MediaVault = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-black text-foreground tracking-tight mb-1 flex items-center gap-2">
-              Media Vault <Sparkles className="w-6 h-6 text-red-500" />
+              Media Vault <FolderArchive className="w-6 h-6 text-red-500" />
             </h1>
             <p className="text-muted-foreground text-sm">
               Manage all photos, videos, free teasers, and pay-per-view content visible to your subscribers.

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, X, Share, PlusSquare, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Download, X, Share, PlusSquare, CheckCircle2 } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -110,7 +110,7 @@ export const InstallAppPrompt: React.FC = () => {
               className="w-12 h-12 rounded-xl object-cover ring-2 ring-white/10 shadow-md"
             />
             <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-rose-600 flex items-center justify-center text-white ring-1 ring-[#111218]">
-              <Sparkles className="w-2.5 h-2.5" />
+              <Download className="w-2.5 h-2.5" />
             </span>
           </div>
 

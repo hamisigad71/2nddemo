@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
-import { Tag, Copy, Activity, Flame, Check, ExternalLink, Sparkles, Settings } from 'lucide-react';
+import { Tag, Copy, Activity, Flame, Check, ExternalLink, TrendingUp, Zap, Settings } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from '../../context/ToastContext';
 
@@ -29,7 +29,7 @@ const Promotions = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-black text-white tracking-tight mb-1 flex items-center gap-2">
-              Promotions & Marketing <Sparkles className="w-6 h-6 text-red-500" />
+              Promotions & Marketing <TrendingUp className="w-6 h-6 text-red-500" />
             </h1>
             <p className="text-zinc-400 text-sm">
               Generate tracked promo links and manage subscriber discounts for your profile.
@@ -160,7 +160,7 @@ const Promotions = () => {
           <div className="bg-[#0D0E12] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between">
             <div>
               <h2 className="text-lg font-black text-white mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-red-500" /> Growth Playbook
+                <Zap className="w-4 h-4 text-red-500" /> Growth Playbook
               </h2>
               <div className="space-y-4 text-xs text-zinc-300 leading-relaxed">
                 <div className="p-3 rounded-xl bg-black/40 border border-white/5">

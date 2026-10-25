@@ -15,6 +15,7 @@ import {
   GENERIC_CREATOR_NAMES,
   shouldIncludeCreatorInDiscover,
   isSelectedVerifiedCreator,
+  isUnverifiedDiscoverUser,
 } from "./creatorDirectory";
 import {
   hasPrivateKycEvidence,

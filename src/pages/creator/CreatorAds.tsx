@@ -8,7 +8,6 @@ import {
   X,
   Check,
   ArrowRight,
-  Sparkles,
   TrendingUp,
   Eye,
   MousePointer,
@@ -298,7 +297,7 @@ const CreatorAds: React.FC = () => {
             <div className="space-y-3 max-w-2xl">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                  <Sparkles className="w-3 h-3 text-red-500" /> Official Platform Advertising
+                  <Megaphone className="w-3 h-3 text-red-500" /> Official Platform Advertising
                 </span>
                 <span className="text-[10px] font-bold text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
                   Subscribers Feed Placement

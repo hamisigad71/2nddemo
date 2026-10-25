@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { 
-  Radio, Video, Sparkles, Bell, ArrowLeft, Plus, 
+  Radio, Video, Bell, ArrowLeft, Plus, 
   Coins, MessageCircle, Lock, CheckCircle2,
   Clock, Zap, LayoutDashboard, Wifi, Activity, X
 } from 'lucide-react';
@@ -217,7 +217,7 @@ export default function LiveStudio() {
         {/* Feature Preview Grid */}
         <div className="mb-10">
           <h2 className="text-sm font-black uppercase tracking-wider text-zinc-400 mb-4 px-1 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" /> What's Coming in Live Studio
+            <Zap className="w-4 h-4 text-amber-400" /> What's Coming in Live Studio
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

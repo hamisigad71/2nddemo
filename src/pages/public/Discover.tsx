@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon, Sparkles, ExternalLink } from 'lucide-react';
+import { Search, CheckCircle2, MapPin, Lock, Flame, Loader2, Sun, Moon, Star, ExternalLink } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { supabase } from '../../lib/supabase';
@@ -243,7 +243,7 @@ const Discover = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="p-1 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                  <Sparkles className="w-4 h-4" />
+                  <Star className="w-4 h-4 fill-amber-500/20" />
                 </span>
                 <h2 className="text-sm sm:text-base font-black text-foreground tracking-tight">
                   Featured & Sponsored Creators

@@ -5,7 +5,7 @@ import {
   PlayCircle,
   Image as ImageIcon,
   FolderHeart,
-  Sparkles,
+  ShoppingBag,
   ExternalLink,
   X,
 } from "lucide-react";
@@ -148,7 +148,7 @@ const UserVault = () => {
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-1 flex items-center gap-2">
-            Your Purchases <Sparkles className="w-5 h-5 text-red-500" />
+            Your Purchases <ShoppingBag className="w-5 h-5 text-red-500" />
           </h1>
           <p className="text-sm text-zinc-400">
             All Pay-Per-View videos and photo sets you have unlocked across all
