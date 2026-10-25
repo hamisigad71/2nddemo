@@ -17,8 +17,6 @@ import {
   Plus,
   Megaphone,
   ShieldCheck,
-  Flame,
-  ExternalLink
 } from 'lucide-react';
 import {
   getPlatformAds,
@@ -36,7 +34,6 @@ import {
 } from '../../lib/db';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from '../../context/ToastContext';
-import { Link } from 'react-router-dom';
 
 const CREATOR_CATEGORIES = [
   { id: 'all', label: 'All Opportunities' },

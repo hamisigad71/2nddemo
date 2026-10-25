@@ -7,15 +7,11 @@ import {
   Search,
   Eye,
   MousePointerClick,
-  TrendingUp,
   Trash2,
-  ExternalLink,
   Power,
   X,
   CheckCircle2,
   Users,
-  UserCheck,
-  Globe,
   Copy,
   Check,
   Sparkles,
@@ -83,7 +79,6 @@ const AdminAds: React.FC = () => {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [audienceFilter, setAudienceFilter] = useState<'all' | 'users' | 'creators'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'creator' | 'company'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
 
@@ -152,18 +147,15 @@ const AdminAds: React.FC = () => {
         ad.description.toLowerCase().includes(q) ||
         (ad.creator_name && ad.creator_name.toLowerCase().includes(q));
 
-      const matchesAudience =
-        audienceFilter === 'all' ? true : ad.target_audience === audienceFilter || ad.target_audience === 'all';
-
       const matchesType =
         typeFilter === 'all' ? true : (ad.ad_type || (ad.category === 'creator_spotlight' ? 'creator' : 'company')) === typeFilter;
 
       const matchesStatus =
         statusFilter === 'all' ? true : ad.status === statusFilter;
 
-      return matchesSearch && matchesAudience && matchesType && matchesStatus;
+      return matchesSearch && matchesType && matchesStatus;
     });
-  }, [ads, searchQuery, audienceFilter, typeFilter, statusFilter]);
+  }, [ads, searchQuery, typeFilter, statusFilter]);
 
   // Overall analytics
   const stats = useMemo(() => {

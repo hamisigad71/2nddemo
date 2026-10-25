@@ -13,12 +13,12 @@ import {
   trackAdClick,
   type PlatformAd
 } from '../../lib/db';
-import { getDefaultAvatar, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../../lib/avatar';
+import { getDefaultAvatar } from '../../lib/avatar';
 import LiveNowTray from '../../components/LiveNowTray';
 import SubscribeModal from '../../components/SubscribeModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { filterAndSortCreators, shouldIncludeCreatorInDiscover, type CreatorDirectoryFilter, type CreatorGenderFilter } from '../../lib/creatorDirectory';
+import { filterAndSortCreators, type CreatorDirectoryFilter, type CreatorGenderFilter } from '../../lib/creatorDirectory';
 import './Discover.css';
 
 const Discover = () => {
@@ -261,8 +261,8 @@ const Discover = () => {
                     trackAdClick(ad.id);
                     if (ad.creator_id) {
                       navigate(`/creator/${ad.creator_id}`);
-                    } else if (ad.link_url) {
-                      window.open(ad.link_url, '_blank');
+                    } else if (ad.cta_url) {
+                      window.open(ad.cta_url, '_blank');
                     }
                   }}
                   className="group relative bg-gradient-to-r from-card to-card/60 border border-amber-500/30 hover:border-amber-500/60 rounded-2xl p-3.5 flex items-center gap-3.5 transition-all shadow-sm hover:shadow-md cursor-pointer overflow-hidden"

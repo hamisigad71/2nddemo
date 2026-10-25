@@ -6087,6 +6087,7 @@ export const notifyAdmins = async (notification: {
   badge?: string;
   action_label?: string;
   action_url?: string;
+  payment_details?: NotificationItem["payment_details"];
 }) => {
   const adminIds = new Set<string>(["admin"]);
 
@@ -6123,6 +6124,7 @@ export const notifyAdmins = async (notification: {
     badge: notification.badge,
     action_label: notification.action_label,
     action_url: notification.action_url || notification.link,
+    payment_details: notification.payment_details,
     is_read: false,
     created_at: new Date().toISOString(),
   };
@@ -7847,16 +7849,19 @@ export const createCreatorAdOrder = async (
       );
 
       // Also create an admin notification alert
-      createAdminNotification({
+      notifyAdmins({
         title: `Paid Ad Promotion: ${order.creator_name} 🚀`,
         message: `${order.creator_name} paid KES ${order.amount.toLocaleString()} for ${order.package_name}. Review and publish this ad for all subscribers to see!`,
-        type: "payment",
-        badge: "Ad Order",
+        type: "system",
+        badge: "Ad Order Payment",
         action_url: "/admin/ads",
         payment_details: {
-          amount: order.amount,
-          currency: "KES",
+          gross_amount: order.amount,
+          platform_fee: 0,
+          net_amount: order.amount,
           payer_name: order.creator_name,
+          recipient_name: "Platform Ad Promotion",
+          currency: "KES",
           creator_name: "Platform Ad Promotion",
           type: "ad_promotion",
           status: "completed",

@@ -15,7 +15,6 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Clock,
-  ExternalLink,
   AlertTriangle,
   RefreshCw
 } from 'lucide-react';
@@ -185,11 +184,11 @@ const AdminContent = () => {
         {/* Overview Metric Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { label: 'Flagged Queue', value: items.filter(i => i.status === 'pending').length, color: 'text-amber-500', icon: AlertTriangle, border: 'border-amber-500/30' },
-            { label: 'Under Review', value: items.filter(i => i.status === 'reviewing').length, color: 'text-sky-500', icon: Clock, border: 'border-sky-500/30' },
-            { label: 'Cleared Posts', value: items.filter(i => i.status === 'cleared').length, color: 'text-emerald-500', icon: CheckCircle2, border: 'border-emerald-500/30' },
-            { label: 'Removed Content', value: items.filter(i => i.status === 'removed').length, color: 'text-rose-500', icon: Trash2, border: 'border-rose-500/30' },
-          ].map(({ label, value, color, icon: Icon, border }, i) => (
+            { label: 'Flagged Queue', value: items.filter(i => i.status === 'pending').length, color: 'text-amber-500', icon: AlertTriangle },
+            { label: 'Under Review', value: items.filter(i => i.status === 'reviewing').length, color: 'text-sky-500', icon: Clock },
+            { label: 'Cleared Posts', value: items.filter(i => i.status === 'cleared').length, color: 'text-emerald-500', icon: CheckCircle2 },
+            { label: 'Removed Content', value: items.filter(i => i.status === 'removed').length, color: 'text-rose-500', icon: Trash2 },
+          ].map(({ label, value, color, icon: Icon }, i) => (
             <div key={i} className="bg-card border border-border rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm space-y-2 hover:border-border/80 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-muted-foreground">{label}</span>
