@@ -131,7 +131,7 @@ export const createUserProfile = async (uid: string, data: any) => {
             location: "Nairobi, Kenya",
             cover_image:
               data.cover_image ||
-              "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80",
+              "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
             tags: ["VIP Content", "Direct Chat", "Exclusive Photos"],
           },
           { onConflict: "user_id" },
@@ -269,7 +269,7 @@ export const createUserProfile = async (uid: string, data: any) => {
           location: "Nairobi, Kenya",
           cover_image:
             data.cover_image ||
-            "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80",
+            "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
           tags: ["VIP Content", "Direct Chat", "Exclusive Photos"],
         },
         { onConflict: "user_id" },
@@ -1032,7 +1032,8 @@ const resolvePrivatePostMedia = async (
       // Clean up deprecated or blocked Pinterest CDN links
       if (
         mediaUrl &&
-        (mediaUrl.includes("i.pinimg.com") || mediaUrl.includes("pinterest.com"))
+        (mediaUrl.includes("i.pinimg.com") ||
+          mediaUrl.includes("pinterest.com"))
       ) {
         mediaUrl =
           "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80";
@@ -1048,7 +1049,9 @@ const resolvePrivatePostMedia = async (
         if (!/^https?:\/\//i.test(mediaUrl)) {
           storagePath = mediaUrl;
         } else if (mediaUrl.includes("/storage/v1/object/public/")) {
-          const split = mediaUrl.split(/\/storage\/v1\/object\/public\/[^/]+\//);
+          const split = mediaUrl.split(
+            /\/storage\/v1\/object\/public\/[^/]+\//,
+          );
           if (split[1]) storagePath = decodeURIComponent(split[1]);
         }
 
@@ -2902,7 +2905,7 @@ export const getCreatorProfile = async (id: string) => {
 
     const resolvedCover =
       rawCover ||
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
+      "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
 
     const resolvedBio =
       localCreator?.bio ||
@@ -2998,7 +3001,7 @@ export const getCreatorProfile = async (id: string) => {
         !localCreator.cover_image.includes("photo-1549490349-8643362247b5")
           ? localCreator.cover_image
           : null) ||
-        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80",
+        "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
       bio: localCreator.bio || "Welcome to my official creator page!",
       location: localCreator.location || "Nairobi, Kenya",
       rating: 4.9,
@@ -3036,7 +3039,7 @@ export const getCreatorProfile = async (id: string) => {
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&q=80",
       cover_image:
         fallbackPost.media_url ||
-        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80",
+        "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
       bio:
         fallbackPost.content ||
         "Welcome to my official creator page! Exclusive posts, videos, and private chats.",
@@ -3603,7 +3606,7 @@ export const getDiscoverCreators = async () => {
           pCover || uCover || localCover || storageCover || postCover;
         const cover =
           rawCover ||
-          "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
+          "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
         const isTargetUnverified = isUnverifiedDiscoverUser(
           creatorName,
           (u as any).email,
@@ -3611,13 +3614,11 @@ export const getDiscoverCreators = async () => {
         );
         const isSelectedCreator =
           !isTargetUnverified &&
-          isSelectedVerifiedCreator(
-            creatorName,
-            (u as any).email,
-            u.uid,
-          );
+          isSelectedVerifiedCreator(creatorName, (u as any).email, u.uid);
         const isDiscoverFeatured =
-          isSelectedCreator || isTargetUnverified || Boolean(u.payout_kyc_required);
+          isSelectedCreator ||
+          isTargetUnverified ||
+          Boolean(u.payout_kyc_required);
 
         // Self-heal: persist resolved cover back to DB in background if not yet set
         if (rawCover && hasUploadedCoverPhoto(rawCover)) {
@@ -6964,7 +6965,10 @@ export const deleteNotification = async (
     const filtered = stored.filter((item) => item.id !== notificationId);
     localStorage.setItem(key, JSON.stringify(filtered));
   } catch (err) {
-    console.warn("Could not update the notification cache after deletion:", err);
+    console.warn(
+      "Could not update the notification cache after deletion:",
+      err,
+    );
   }
 
   if (typeof window !== "undefined") {
@@ -7387,7 +7391,7 @@ export const getUserChatConversations = async (
               `@${(profile?.name || "creator").toLowerCase().replace(/\s+/g, "")}`,
             role: "creator",
             isOnline: true,
-            last_seen: (pAny?.last_seen) || getUserLastSeen(s.creator_id) || null,
+            last_seen: pAny?.last_seen || getUserLastSeen(s.creator_id) || null,
             isSubscribed: true,
             subscriptionExpiresAt: s.expires_at,
             subscriptionTier: s.tier_name || "VIP Tier",

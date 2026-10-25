@@ -90,12 +90,16 @@ export default function CreatorProfile() {
     try {
       const globalStored = localStorage.getItem("tgd_ppv_unlocked_global");
       if (globalStored) {
-        (JSON.parse(globalStored) as string[]).forEach((id) => combined.add(id));
+        (JSON.parse(globalStored) as string[]).forEach((id) =>
+          combined.add(id),
+        );
       }
       if (user?.id) {
         const userStored = localStorage.getItem(`tgd_ppv_unlocked_${user.id}`);
         if (userStored) {
-          (JSON.parse(userStored) as string[]).forEach((id) => combined.add(id));
+          (JSON.parse(userStored) as string[]).forEach((id) =>
+            combined.add(id),
+          );
         }
       }
     } catch {}
@@ -145,7 +149,9 @@ export default function CreatorProfile() {
         // Fetch creator posts
         const creatorPosts = await getPostsByCreator(id, user?.id);
         if (isMounted) {
-          setPosts((creatorPosts || []).filter((post: any) => post.status !== "draft"));
+          setPosts(
+            (creatorPosts || []).filter((post: any) => post.status !== "draft"),
+          );
         }
 
         // Check current user profile & role
@@ -185,7 +191,12 @@ export default function CreatorProfile() {
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   const handleDeletePost = async (postId: string) => {
-    if (!window.confirm("Delete this post? It will be permanently removed from all feeds.")) return;
+    if (
+      !window.confirm(
+        "Delete this post? It will be permanently removed from all feeds.",
+      )
+    )
+      return;
     setDeletingPostId(postId);
     try {
       await deletePost(postId);
@@ -290,28 +301,36 @@ export default function CreatorProfile() {
   };
 
   // Check if this is a hardcoded demo/escort profile vs a real registered creator
-  const isEscortDemo = Boolean(creator?.isEscort || String(creator?.id || '').startsWith('escort-'));
+  const isEscortDemo = Boolean(
+    creator?.isEscort || String(creator?.id || "").startsWith("escort-"),
+  );
   const isDemoAccount = Boolean(
     creator?.isDemo ||
-    String(creator?.id || '').startsWith('creator-') ||
-    String(id || '').startsWith('creator-')
+    String(creator?.id || "").startsWith("creator-") ||
+    String(id || "").startsWith("creator-"),
   );
 
   // Check if current user is signed up/logged in as a subscriber (role 'user' or 'subscriber')
-  const userRole = currentUserProfile?.role || user?.user_metadata?.role || (typeof window !== 'undefined' ? localStorage.getItem('pendingAuthRole') : null);
-  const isSubscriberUser = userRole === 'user' || userRole === 'subscriber';
+  const userRole =
+    currentUserProfile?.role ||
+    user?.user_metadata?.role ||
+    (typeof window !== "undefined"
+      ? localStorage.getItem("pendingAuthRole")
+      : null);
+  const isSubscriberUser = userRole === "user" || userRole === "subscriber";
 
   // Check if current logged-in user is the owner of this creator profile (or pseudo creator account)
   // A subscriber must NEVER be treated as a creator owner!
   const isOwner = Boolean(
     !isSubscriberUser &&
-    user?.id && (
-      user.id === id ||
+    user?.id &&
+    (user.id === id ||
       user.id === creator?.id ||
       user.id === creator?.user_id ||
       user.id === creator?.uid ||
-      (user.email && creator?.email && user.email.toLowerCase() === creator.email.toLowerCase())
-    )
+      (user.email &&
+        creator?.email &&
+        user.email.toLowerCase() === creator.email.toLowerCase())),
   );
 
   // When owner has previewAsFan turned on, view the page as a public subscriber
@@ -320,7 +339,9 @@ export default function CreatorProfile() {
   const realPostMedia: PPVMediaItem[] = posts
     .filter((p) => p.media_url)
     .map((p) => {
-      const visibility = p.visibility || (p.is_locked ? (p.price > 0 ? "ppv" : "subscribers") : "public");
+      const visibility =
+        p.visibility ||
+        (p.is_locked ? (p.price > 0 ? "ppv" : "subscribers") : "public");
       return {
         id: p.id,
         type: (p.media_type === "video" || p.media_url?.includes(".mp4")
@@ -329,87 +350,112 @@ export default function CreatorProfile() {
         url: p.media_url || creator.avatar,
         duration: p.media_type === "video" ? "0:30" : undefined,
         photoCount: p.media_type !== "video" ? 1 : undefined,
-        title: visibility === "public" && p.content
-          ? p.content.slice(0, 40) + "..."
-          : "Exclusive content",
+        title:
+          visibility === "public" && p.content
+            ? p.content.slice(0, 40) + "..."
+            : "Exclusive content",
         price: p.price || 200,
         visibility,
-        isLocked: !isOwnerActive && !p.media_access_granted && !isSubscribed && (
-          visibility === "subscribers" ||
-          (visibility === "ppv" && !unlockedMediaIds.has(p.id))
-        ),
+        isLocked:
+          !isOwnerActive &&
+          !p.media_access_granted &&
+          !isSubscribed &&
+          (visibility === "subscribers" ||
+            (visibility === "ppv" && !unlockedMediaIds.has(p.id))),
       };
     });
 
-  const realGalleryMedia: PPVMediaItem[] = (creator.gallery && Array.isArray(creator.gallery) ? creator.gallery : [])
-    .map((url: string, idx: number) => ({
-      id: `${creator.id}-g-${idx}`,
-      type: (url.includes('.mp4') ? 'video' : 'image') as 'video' | 'image',
-      url,
-      photoCount: 1,
-      title: `${creator.name} Gallery Item #${idx + 1}`,
-      price: 150,
-      isLocked: !isOwnerActive && !isSubscribed && !unlockedMediaIds.has(`${creator.id}-g-${idx}`),
-    }));
+  const realGalleryMedia: PPVMediaItem[] = (
+    creator.gallery && Array.isArray(creator.gallery) ? creator.gallery : []
+  ).map((url: string, idx: number) => ({
+    id: `${creator.id}-g-${idx}`,
+    type: (url.includes(".mp4") ? "video" : "image") as "video" | "image",
+    url,
+    photoCount: 1,
+    title: `${creator.name} Gallery Item #${idx + 1}`,
+    price: 150,
+    isLocked:
+      !isOwnerActive &&
+      !isSubscribed &&
+      !unlockedMediaIds.has(`${creator.id}-g-${idx}`),
+  }));
 
-  const demoMedia: PPVMediaItem[] = isEscortDemo ? [
-    {
-      id: `${creator.id}-m-1`,
-      type: "video",
-      url: creator.gallery?.[0] || "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-      duration: "9:28",
-      title: "Midnight Poolside Shoot & Q&A",
-      price: 250,
-      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-1`),
-    },
-    {
-      id: `${creator.id}-m-2`,
-      type: "image",
-      url: creator.gallery?.[1] || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
-      photoCount: 1,
-      title: "Golden Hour Silhouette Photoset",
-      price: 150,
-      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-2`),
-    },
-    {
-      id: `${creator.id}-m-3`,
-      type: "image",
-      url: creator.gallery?.[2] || "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
-      photoCount: 4,
-      title: "VIP Velvet Lounge Exclusive (4 Photos)",
-      price: 200,
-      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-3`),
-    },
-    {
-      id: `${creator.id}-m-4`,
-      type: "video",
-      url: creator.gallery?.[3] || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
-      duration: "4:15",
-      title: "Private Workout & Stretch Routine",
-      price: 300,
-      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-4`),
-    },
-    {
-      id: `${creator.id}-m-5`,
-      type: "video",
-      url: creator.gallery?.[4] || "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
-      duration: "12:40",
-      title: "Exclusive Weekend Vlog & Behind The Scenes",
-      price: 350,
-      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-5`),
-    },
-    {
-      id: `${creator.id}-m-6`,
-      type: "image",
-      url: creator.gallery?.[5] || "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-      photoCount: 6,
-      title: "Lingerie Studio Series (Full Set)",
-      price: 250,
-      isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-6`),
-    },
-  ] : [];
+  const demoMedia: PPVMediaItem[] = isEscortDemo
+    ? [
+        {
+          id: `${creator.id}-m-1`,
+          type: "video",
+          url:
+            creator.gallery?.[0] ||
+            "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+          duration: "9:28",
+          title: "Midnight Poolside Shoot & Q&A",
+          price: 250,
+          isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-1`),
+        },
+        {
+          id: `${creator.id}-m-2`,
+          type: "image",
+          url:
+            creator.gallery?.[1] ||
+            "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+          photoCount: 1,
+          title: "Golden Hour Silhouette Photoset",
+          price: 150,
+          isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-2`),
+        },
+        {
+          id: `${creator.id}-m-3`,
+          type: "image",
+          url:
+            creator.gallery?.[2] ||
+            "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+          photoCount: 4,
+          title: "VIP Velvet Lounge Exclusive (4 Photos)",
+          price: 200,
+          isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-3`),
+        },
+        {
+          id: `${creator.id}-m-4`,
+          type: "video",
+          url:
+            creator.gallery?.[3] ||
+            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+          duration: "4:15",
+          title: "Private Workout & Stretch Routine",
+          price: 300,
+          isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-4`),
+        },
+        {
+          id: `${creator.id}-m-5`,
+          type: "video",
+          url:
+            creator.gallery?.[4] ||
+            "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=800&q=80",
+          duration: "12:40",
+          title: "Exclusive Weekend Vlog & Behind The Scenes",
+          price: 350,
+          isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-5`),
+        },
+        {
+          id: `${creator.id}-m-6`,
+          type: "image",
+          url:
+            creator.gallery?.[5] ||
+            "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+          photoCount: 6,
+          title: "Lingerie Studio Series (Full Set)",
+          price: 250,
+          isLocked: !isSubscribed && !unlockedMediaIds.has(`${creator.id}-m-6`),
+        },
+      ]
+    : [];
 
-  const mediaItems: PPVMediaItem[] = [...realPostMedia, ...realGalleryMedia, ...demoMedia];
+  const mediaItems: PPVMediaItem[] = [
+    ...realPostMedia,
+    ...realGalleryMedia,
+    ...demoMedia,
+  ];
 
   const photosCount = mediaItems.filter((m) => m.type === "image").length;
   const videosCount = mediaItems.filter((m) => m.type === "video").length;
@@ -460,12 +506,12 @@ export default function CreatorProfile() {
       return next;
     });
 
-    const refreshedPosts = id
-      ? await getPostsByCreator(id, user?.id)
-      : [];
+    const refreshedPosts = id ? await getPostsByCreator(id, user?.id) : [];
     setPosts(refreshedPosts.filter((post: any) => post.status !== "draft"));
     const targetItem = mediaItems.find((m) => m.id === mediaId);
-    const refreshedPost = refreshedPosts.find((post: any) => post.id === mediaId);
+    const refreshedPost = refreshedPosts.find(
+      (post: any) => post.id === mediaId,
+    );
     if (targetItem) {
       setActiveLightbox({
         url: refreshedPost?.media_url || targetItem.url,
@@ -484,9 +530,13 @@ export default function CreatorProfile() {
             <Crown className="w-4 h-4 text-red-500 shrink-0" />
             <span className="text-zinc-200 text-xs">
               {previewAsFan ? (
-                <span className="text-emerald-400 font-bold">Subscriber Preview Mode (Viewing as a Fan)</span>
+                <span className="text-emerald-400 font-bold">
+                  Subscriber Preview Mode (Viewing as a Fan)
+                </span>
               ) : (
-                <span className="text-red-400 font-bold">Creator Mode (Owner of @{creator.username || creator.name})</span>
+                <span className="text-red-400 font-bold">
+                  Creator Mode (Owner of @{creator.username || creator.name})
+                </span>
               )}
             </span>
           </div>
@@ -500,19 +550,25 @@ export default function CreatorProfile() {
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>{previewAsFan ? "Exit Fan Preview" : "👁️ View as Subscriber"}</span>
+            <span>
+              {previewAsFan ? "Exit Fan Preview" : "👁️ View as Subscriber"}
+            </span>
           </button>
         </div>
       )}
 
       {/* Demo Account Top Warning Banner */}
       {isDemoAccount && (
-        <aside aria-label="Demo Account Notice" className="bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 border-b border-amber-500/40 px-4 py-2.5 text-center text-xs sm:text-sm font-bold text-amber-200 flex items-center justify-center gap-2.5 z-40 sticky top-0 backdrop-blur-xl shadow-lg">
+        <aside
+          aria-label="Demo Account Notice"
+          className="bg-gradient-to-r from-amber-500/20 via-amber-500/30 to-amber-500/20 border-b border-amber-500/40 px-4 py-2.5 text-center text-xs sm:text-sm font-bold text-amber-200 flex items-center justify-center gap-2.5 z-40 sticky top-0 backdrop-blur-xl shadow-lg"
+        >
           <span className="bg-amber-500 text-black px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 shadow-sm">
             DEMO ACCOUNT
           </span>
           <span className="truncate sm:overflow-visible">
-            This is a sample creator profile for preview purposes only. Subscriptions and payments are for demonstration.
+            This is a sample creator profile for preview purposes only.
+            Subscriptions and payments are for demonstration.
           </span>
         </aside>
       )}
@@ -521,13 +577,17 @@ export default function CreatorProfile() {
       <div className="creator-profile-hero h-52 md:h-72 lg:h-80 w-full relative bg-zinc-900 overflow-hidden">
         <img
           src={
-            (creator.cover_image && !/\.(mp4|webm|mov|m4v)/i.test(creator.cover_image) && !creator.cover_image.startsWith("blob:") && !creator.cover_image.includes("photo-1549490349-8643362247b5"))
+            creator.cover_image &&
+            !/\.(mp4|webm|mov|m4v)/i.test(creator.cover_image) &&
+            !creator.cover_image.startsWith("blob:") &&
+            !creator.cover_image.includes("photo-1549490349-8643362247b5")
               ? creator.cover_image
-              : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80"
+              : "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg"
           }
           alt="Cover"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
+            (e.target as HTMLImageElement).src =
+              "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
           }}
           className="w-full h-full object-cover"
         />
@@ -582,7 +642,9 @@ export default function CreatorProfile() {
                 src={creator.avatar}
                 alt={creator.name}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = getDefaultAvatar(creator.name);
+                  (e.target as HTMLImageElement).src = getDefaultAvatar(
+                    creator.name,
+                  );
                 }}
                 className="creator-profile-avatar w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-[#0A0A0C] object-cover bg-zinc-900 shadow-2xl ring-2 ring-red-500/40"
               />
@@ -633,12 +695,12 @@ export default function CreatorProfile() {
                   </>
                 )}
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-red-500" />{" "}
-                  {creator.location}
+                  <MapPin className="w-3 h-3 text-red-500" /> {creator.location}
                 </span>
                 <span>•</span>
                 <span className="text-zinc-300 font-semibold">
-                  {subscriberCount.toLocaleString()} {subscriberCount === 1 ? "subscriber" : "subscribers"}
+                  {subscriberCount.toLocaleString()}{" "}
+                  {subscriberCount === 1 ? "subscriber" : "subscribers"}
                 </span>
               </div>
             </div>
@@ -724,7 +786,8 @@ export default function CreatorProfile() {
                 onClick={() => setPreviewAsFan(true)}
                 className="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 font-bold bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-xl border border-white/15 transition-colors cursor-pointer"
               >
-                <Eye className="w-3.5 h-3.5 text-emerald-400" /> View as Subscriber
+                <Eye className="w-3.5 h-3.5 text-emerald-400" /> View as
+                Subscriber
               </button>
             </div>
 
@@ -780,18 +843,32 @@ export default function CreatorProfile() {
             {/* Secondary Toolbar: Edit Profile, Vault, Go Live */}
             <div className="flex items-center justify-between pt-3 border-t border-white/10 flex-wrap gap-2 text-xs">
               <div className="flex items-center gap-2 text-zinc-400 text-[11px] flex-wrap">
-                <span>Fan Price: <strong className="text-white font-bold">KES {creatorPrice.toLocaleString()}/mo</strong></span>
+                <span>
+                  Fan Price:{" "}
+                  <strong className="text-white font-bold">
+                    KES {creatorPrice.toLocaleString()}/mo
+                  </strong>
+                </span>
                 <span>•</span>
-                <span>{posts.length} {posts.length === 1 ? "Post" : "Posts"} published</span>
+                <span>
+                  {posts.length} {posts.length === 1 ? "Post" : "Posts"}{" "}
+                  published
+                </span>
                 <span>•</span>
-                <span><strong className="text-white font-bold">{subscriberCount.toLocaleString()}</strong> {subscriberCount === 1 ? "Subscriber" : "Subscribers"}</span>
+                <span>
+                  <strong className="text-white font-bold">
+                    {subscriberCount.toLocaleString()}
+                  </strong>{" "}
+                  {subscriberCount === 1 ? "Subscriber" : "Subscribers"}
+                </span>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
                   to="/edit-profile"
                   className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
                 >
-                  <Edit3 className="w-3.5 h-3.5 text-red-500" /> Edit Profile & Pricing
+                  <Edit3 className="w-3.5 h-3.5 text-red-500" /> Edit Profile &
+                  Pricing
                 </Link>
                 <Link
                   to="/vault"
@@ -803,7 +880,10 @@ export default function CreatorProfile() {
                   to="/creator/live"
                   className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
                 >
-                  <Radio className="w-3.5 h-3.5 text-red-500" /> Go Live <span className="text-[9px] text-amber-400 font-black uppercase tracking-wider bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">Soon</span>
+                  <Radio className="w-3.5 h-3.5 text-red-500" /> Go Live{" "}
+                  <span className="text-[9px] text-amber-400 font-black uppercase tracking-wider bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
+                    Soon
+                  </span>
                 </Link>
               </div>
             </div>
@@ -811,11 +891,13 @@ export default function CreatorProfile() {
             {/* Fan preview explanation */}
             <div className="mt-3 pt-2 text-center border-t border-white/5">
               <p className="text-[11px] text-zinc-500">
-                Notice: Visitors and fans see your subscription offer (KES {creatorPrice.toLocaleString()} / 30 days) and tip options in this space.
+                Notice: Visitors and fans see your subscription offer (KES{" "}
+                {creatorPrice.toLocaleString()} / 30 days) and tip options in
+                this space.
               </p>
             </div>
           </div>
-        ) : (creator.status === 'suspended' || creator.isSuspended) ? (
+        ) : creator.status === "suspended" || creator.isSuspended ? (
           <div className="bg-red-950/30 border border-red-500/40 rounded-3xl p-6 mb-8 shadow-2xl flex items-start gap-4 text-red-300">
             <div className="w-10 h-10 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
               <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -825,7 +907,9 @@ export default function CreatorProfile() {
                 Account Suspended
               </h3>
               <p className="text-xs sm:text-sm text-red-300/80 mt-1 leading-relaxed">
-                This creator account has been suspended by the platform administrator. New subscriptions, tips, Pay-Per-View unlocks, and direct messaging are disabled.
+                This creator account has been suspended by the platform
+                administrator. New subscriptions, tips, Pay-Per-View unlocks,
+                and direct messaging are disabled.
               </p>
             </div>
           </div>
@@ -1042,7 +1126,9 @@ export default function CreatorProfile() {
                 <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-4 shadow-lg shadow-red-500/10">
                   <PlayCircle className="w-7 h-7" />
                 </div>
-                <h3 className="text-xl font-black text-white mb-2">No Media Available</h3>
+                <h3 className="text-xl font-black text-white mb-2">
+                  No Media Available
+                </h3>
                 <p className="text-zinc-400 text-sm max-w-sm mb-4 leading-relaxed">
                   {creator.name} hasn't uploaded any photo or video content yet.
                 </p>
@@ -1076,7 +1162,8 @@ export default function CreatorProfile() {
                       )}
 
                       {/* Thumbnail / Teaser Background */}
-                      {item.type === "video" || item.url?.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
+                      {item.type === "video" ||
+                      item.url?.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
                         <video
                           src={item.url}
                           muted
@@ -1109,7 +1196,9 @@ export default function CreatorProfile() {
                           </div>
 
                           <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-red-600/90 text-white font-black text-[10px] shadow">
-                            {item.visibility === "subscribers" ? "SUBSCRIBERS" : `KES ${item.price}`}
+                            {item.visibility === "subscribers"
+                              ? "SUBSCRIBERS"
+                              : `KES ${item.price}`}
                           </div>
 
                           {/* Bottom Metadata Badges */}
@@ -1145,7 +1234,9 @@ export default function CreatorProfile() {
                               )}
                             </span>
                             <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                              {isSubscribed ? "VIP ALL UNLOCKED" : `PAID (KES ${item.price})`}
+                              {isSubscribed
+                                ? "VIP ALL UNLOCKED"
+                                : `PAID (KES ${item.price})`}
                             </span>
                           </div>
                         </div>
@@ -1166,8 +1257,13 @@ export default function CreatorProfile() {
               posts.map((post: any) => {
                 const isPostLocked =
                   !isOwnerActive &&
-                  ((post.visibility === "subscribers" && !isSubscribed && !post.media_access_granted) ||
-                  (post.is_locked && !post.media_access_granted && !isSubscribed && !unlockedMediaIds.has(post.id)));
+                  ((post.visibility === "subscribers" &&
+                    !isSubscribed &&
+                    !post.media_access_granted) ||
+                    (post.is_locked &&
+                      !post.media_access_granted &&
+                      !isSubscribed &&
+                      !unlockedMediaIds.has(post.id)));
                 return (
                   <div
                     key={post.id}
@@ -1212,7 +1308,9 @@ export default function CreatorProfile() {
 
                     <div className="px-4 pb-3">
                       <p className="text-sm text-zinc-200 leading-relaxed">
-                        {isPostLocked ? "Exclusive content — unlock to view this post." : post.content}
+                        {isPostLocked
+                          ? "Exclusive content — unlock to view this post."
+                          : post.content}
                       </p>
                     </div>
 
@@ -1221,7 +1319,10 @@ export default function CreatorProfile() {
                         {isPostLocked ? (
                           <>
                             {/* Blurred ambient backdrop for locked video/image */}
-                            {post.media_type === "video" || post.media_url.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
+                            {post.media_type === "video" ||
+                            post.media_url.match(
+                              /\.(mp4|webm|mov|m4v)(\?.*)?$/i,
+                            ) ? (
                               <video
                                 src={post.media_url}
                                 muted
@@ -1234,7 +1335,9 @@ export default function CreatorProfile() {
                             ) : (
                               <div
                                 className="absolute inset-0 bg-cover bg-center filter blur-2xl scale-125 opacity-70 pointer-events-none"
-                                style={{ backgroundImage: `url(${post.media_url})` }}
+                                style={{
+                                  backgroundImage: `url(${post.media_url})`,
+                                }}
                               />
                             )}
                             <div className="absolute inset-0 bg-black/40 backdrop-blur-md pointer-events-none" />
@@ -1244,7 +1347,9 @@ export default function CreatorProfile() {
                                 <Lock className="w-6 h-6" />
                               </div>
                               <h4 className="text-lg font-black text-white mb-1">
-                                {post.visibility === "subscribers" ? "Subscriber-Only Content" : "Pay-Per-View Content"}
+                                {post.visibility === "subscribers"
+                                  ? "Subscriber-Only Content"
+                                  : "Pay-Per-View Content"}
                               </h4>
                               <p className="text-xs text-zinc-300 mb-4 max-w-xs leading-relaxed">
                                 {post.visibility === "subscribers"
@@ -1258,9 +1363,13 @@ export default function CreatorProfile() {
                                   } else {
                                     setSelectedPPVItem({
                                       id: post.id,
-                                      type: post.media_type === "video" ? "video" : "image",
+                                      type:
+                                        post.media_type === "video"
+                                          ? "video"
+                                          : "image",
                                       url: post.media_url,
-                                      title: post.content || "Exclusive content",
+                                      title:
+                                        post.content || "Exclusive content",
                                       price: post.price,
                                       isLocked: true,
                                       visibility: "ppv",
@@ -1269,7 +1378,9 @@ export default function CreatorProfile() {
                                 }}
                                 className="w-full px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-red-600/30 hover:scale-105 cursor-pointer"
                               >
-                                {post.visibility === "subscribers" ? "Subscribe to Unlock" : "Unlock for KES " + post.price}
+                                {post.visibility === "subscribers"
+                                  ? "Subscribe to Unlock"
+                                  : "Unlock for KES " + post.price}
                               </button>
                             </div>
                           </>
@@ -1298,7 +1409,9 @@ export default function CreatorProfile() {
                 <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-4 shadow-lg shadow-red-500/10">
                   <Camera className="w-7 h-7" />
                 </div>
-                <h3 className="text-xl font-black text-white mb-2">No Posts Yet</h3>
+                <h3 className="text-xl font-black text-white mb-2">
+                  No Posts Yet
+                </h3>
                 <p className="text-zinc-400 text-sm max-w-sm mb-6 leading-relaxed">
                   {isOwnerActive
                     ? "You haven't uploaded any posts yet. Start sharing exclusive content with your fans now!"
@@ -1309,7 +1422,8 @@ export default function CreatorProfile() {
                     to="/create-post"
                     className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-extrabold rounded-xl transition-all shadow-lg shadow-red-600/30 text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4 stroke-[3]" /> Upload Your First Post
+                    <Plus className="w-4 h-4 stroke-[3]" /> Upload Your First
+                    Post
                   </Link>
                 ) : (
                   <button
@@ -1355,8 +1469,8 @@ export default function CreatorProfile() {
 
                   <div className="px-4 pb-3">
                     <p className="text-sm text-zinc-200 leading-relaxed">
-                      Welcome to my official page! Here's a free preview. Subscribe
-                      to unlock all full videos and private DMs!
+                      Welcome to my official page! Here's a free preview.
+                      Subscribe to unlock all full videos and private DMs!
                     </p>
                   </div>
 
@@ -1370,7 +1484,8 @@ export default function CreatorProfile() {
 
                   <div className="p-4 flex items-center justify-between bg-black/60 text-zinc-400 text-xs font-bold">
                     <div className="flex items-center gap-1 text-red-500">
-                      <Heart className="w-4 h-4 fill-red-500" /> Free Public Preview
+                      <Heart className="w-4 h-4 fill-red-500" /> Free Public
+                      Preview
                     </div>
                     <button
                       onClick={handleShare}
@@ -1406,8 +1521,8 @@ export default function CreatorProfile() {
 
                   <div className="px-4 pb-3">
                     <p className="text-sm text-zinc-200 leading-relaxed">
-                      Exclusive behind-the-scenes content & private high-resolution
-                      gallery just for my subscribers!
+                      Exclusive behind-the-scenes content & private
+                      high-resolution gallery just for my subscribers!
                     </p>
                   </div>
 
@@ -1436,9 +1551,9 @@ export default function CreatorProfile() {
                             Subscribe to Unlock
                           </h4>
                           <p className="text-xs md:text-sm text-zinc-300 mb-6 max-w-xs mx-auto leading-relaxed">
-                            Join for KES {creatorPrice.toLocaleString()}/month to
-                            unlock all exclusive posts and media from {creator.name}
-                            .
+                            Join for KES {creatorPrice.toLocaleString()}/month
+                            to unlock all exclusive posts and media from{" "}
+                            {creator.name}.
                           </p>
                           <button
                             onClick={() => setIsSubscribeOpen(true)}
@@ -1504,7 +1619,9 @@ export default function CreatorProfile() {
             <div className="creator-profile-about-meta flex items-center gap-8 pt-4 border-t border-white/10 text-sm">
               {creator.gender && (
                 <div className="flex items-center gap-2 text-zinc-300">
-                  <span className="font-semibold text-white">{creator.gender}</span>
+                  <span className="font-semibold text-white">
+                    {creator.gender}
+                  </span>
                 </div>
               )}
               <div className="flex items-center gap-2 text-zinc-300">
@@ -1557,7 +1674,9 @@ export default function CreatorProfile() {
             setSubscriberCount((prev) => prev + 1);
             if (id) {
               getPostsByCreator(id, user?.id).then((updatedPosts) =>
-                setPosts(updatedPosts.filter((post: any) => post.status !== "draft")),
+                setPosts(
+                  updatedPosts.filter((post: any) => post.status !== "draft"),
+                ),
               );
             }
             toast.success(
