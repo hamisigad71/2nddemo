@@ -170,8 +170,10 @@ const Notifications = () => {
     try {
       await deleteNotification(notificationId, user.id);
       setNotifications(prev => prev.filter(item => item.id !== notificationId));
+      toast.success('Notification deleted.');
     } catch (err) {
       console.error('Error deleting notification:', err);
+      toast.error('Could not delete notification.');
     }
   };
 

@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } from '../../lib/db';
 import { parseNotificationDate, formatTimeAgo as formatNotificationTime } from '../../lib/dateUtils';
+import { toast } from '../../context/ToastContext';
 
 export interface NotificationItem {
   id: string;
@@ -125,8 +126,14 @@ const UserNotifications = () => {
 
   const handleDeleteNotification = async (id: string) => {
     if (!user?.id) return;
-    await deleteNotification(id, user.id);
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      await deleteNotification(id, user.id);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      toast.success('Notification deleted.');
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+      toast.error('Could not delete notification.');
+    }
   };
 
   const filteredNotifications = useMemo(() => {

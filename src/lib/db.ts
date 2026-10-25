@@ -6947,29 +6947,40 @@ export const markAllNotificationsAsRead = async (userId: string) => {
 
 export const deleteNotification = async (
   notificationId: string,
-  userId?: string,
+  userId: string,
 ) => {
-  try {
-    await supabase.from("notifications").delete().eq("id", notificationId);
-  } catch (err) {
-    console.warn("Error deleting notification in Supabase:", err);
+  if (!notificationId.trim()) {
+    throw new Error("Notification id is required.");
+  }
+  if (!userId?.trim()) {
+    throw new Error("User id is required to delete a notification.");
   }
 
-  if (userId) {
-    try {
-      const key = `tgd_notifications_${userId}`;
-      const stored: NotificationItem[] = JSON.parse(
-        localStorage.getItem(key) || "[]",
-      );
-      const filtered = stored.filter((item) => item.id !== notificationId);
-      localStorage.setItem(key, JSON.stringify(filtered));
-    } catch {}
+  const ownerId = userId.trim();
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("id", notificationId)
+    .eq("user_id", ownerId);
+  if (error) {
+    throw new Error(`Could not delete notification: ${error.message}`);
+  }
+
+  try {
+    const key = `tgd_notifications_${ownerId}`;
+    const stored: NotificationItem[] = JSON.parse(
+      localStorage.getItem(key) || "[]",
+    );
+    const filtered = stored.filter((item) => item.id !== notificationId);
+    localStorage.setItem(key, JSON.stringify(filtered));
+  } catch (err) {
+    console.warn("Could not update the notification cache after deletion:", err);
   }
 
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent("notifications_updated", {
-        detail: { notificationId, userId },
+        detail: { notificationId, userId: ownerId },
       }),
     );
   }
