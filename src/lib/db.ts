@@ -3681,7 +3681,6 @@ export const getDiscoverCreators = async () => {
             (local as any)?.last_seen ||
             getUserLastSeen(u.uid) ||
             null,
-          last_seen: (u as any).last_seen || (local as any)?.last_seen || getUserLastSeen(u.uid) || null,
           isVerified:
             isSelectedCreator ||
             isCreatorVerified(
@@ -7332,7 +7331,6 @@ export const getUserChatConversations = async (
               `@${(profile?.name || "creator").toLowerCase().replace(/\s+/g, "")}`,
             role: "creator",
             isOnline: true,
-            last_seen: pAny?.last_seen || getUserLastSeen(s.creator_id) || null,
             last_seen: (pAny?.last_seen) || getUserLastSeen(s.creator_id) || null,
             isSubscribed: true,
             subscriptionExpiresAt: s.expires_at,
@@ -7371,7 +7369,6 @@ export const getUserChatConversations = async (
                 isOnline: true,
                 last_seen:
                   pAny?.last_seen || getUserLastSeen(creatorId) || null,
-                last_seen: (pAny?.last_seen) || getUserLastSeen(creatorId) || null,
                 isSubscribed: true,
                 subscriptionExpiresAt: parsed.expires_at,
                 subscriptionTier: parsed.tier_name || "VIP Tier",
@@ -7399,7 +7396,6 @@ export const getUserChatConversations = async (
                 isOnline: true,
                 last_seen:
                   pAny?.last_seen || getUserLastSeen(creatorId) || null,
-                last_seen: (pAny?.last_seen) || getUserLastSeen(creatorId) || null,
                 isSubscribed: !!sub,
                 subscriptionExpiresAt: sub?.expires_at,
                 subscriptionTier: sub?.tier_name,
@@ -7498,7 +7494,6 @@ export const getCreatorChatConversations = async (
               (userProfile as any)?.last_seen ||
               getUserLastSeen(s.fan_id) ||
               null,
-            last_seen: (userProfile as any)?.last_seen || getUserLastSeen(s.fan_id) || null,
             isSubscribed: true,
             subscriptionExpiresAt: s.expires_at,
             subscriptionTier: s.tier_name || "VIP Tier",
@@ -7548,7 +7543,6 @@ export const getCreatorChatConversations = async (
                 (userProfile as any)?.last_seen ||
                 getUserLastSeen(fanId) ||
                 null,
-              last_seen: (userProfile as any)?.last_seen || getUserLastSeen(fanId) || null,
               isSubscribed: !!sub,
               subscriptionTier: sub?.tier_name || "Active Subscriber",
             });
