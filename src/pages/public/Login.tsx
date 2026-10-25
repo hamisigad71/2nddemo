@@ -16,8 +16,7 @@ import {
   ShieldCheck, 
   AlertCircle, 
   Loader2,
-  User as UserIcon,
-  Camera
+  User as UserIcon
 } from 'lucide-react';
 
 const Login = () => {

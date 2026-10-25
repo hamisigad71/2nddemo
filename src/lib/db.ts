@@ -2947,16 +2947,17 @@ export const getCreatorProfile = async (id: string) => {
           localCreator?.location || creatorMeta?.location || "Nairobi, Kenya",
         rating: 4.9,
         isVerified:
-          isSelectedVerifiedCreator(resolvedName, userRow?.email, id) ||
-          isCreatorVerified(
-            id,
-            userRow?.is_verified ??
-              creatorMeta?.is_verified ??
-              localCreator?.is_verified,
-            userRow?.kyc_status ||
-              creatorMeta?.kyc_status ||
-              localCreator?.kyc_status,
-          ),
+          !isUnverifiedDiscoverUser(resolvedName, userRow?.email, id) &&
+          (isSelectedVerifiedCreator(resolvedName, userRow?.email, id) ||
+            isCreatorVerified(
+              id,
+              userRow?.is_verified ??
+                creatorMeta?.is_verified ??
+                localCreator?.is_verified,
+              userRow?.kyc_status ||
+                creatorMeta?.kyc_status ||
+                localCreator?.kyc_status,
+            )),
         isOnline: isSuspended ? false : true,
         price_hr:
           localCreator?.monthly_price || creatorMeta?.monthly_price || 1000,
@@ -3604,13 +3605,20 @@ export const getDiscoverCreators = async () => {
         const cover =
           rawCover ||
           "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&q=80";
-        const isSelectedCreator = isSelectedVerifiedCreator(
+        const isTargetUnverified = isUnverifiedDiscoverUser(
           creatorName,
           (u as any).email,
           u.uid,
         );
+        const isSelectedCreator =
+          !isTargetUnverified &&
+          isSelectedVerifiedCreator(
+            creatorName,
+            (u as any).email,
+            u.uid,
+          );
         const isDiscoverFeatured =
-          isSelectedCreator || Boolean(u.payout_kyc_required);
+          isSelectedCreator || isTargetUnverified || Boolean(u.payout_kyc_required);
 
         // Self-heal: persist resolved cover back to DB in background if not yet set
         if (rawCover && hasUploadedCoverPhoto(rawCover)) {
@@ -3651,8 +3659,17 @@ export const getDiscoverCreators = async () => {
             local?.gender_description,
         );
 
-        // All current creators on the platform are females
+        // Handle gender mapping and preserve proper category for discover filters
         if (
+          creatorName.toLowerCase().includes("sir collo") ||
+          creatorName.toLowerCase().includes("david kimani") ||
+          (u as any)?.email === "sircollo51@gmail.com" ||
+          (u as any)?.email === "executivehideawaybarberandspa@gmail.com" ||
+          publicGender?.toLowerCase() === "man" ||
+          publicGender?.toLowerCase() === "male"
+        ) {
+          publicGender = "Man";
+        } else if (
           !publicGender ||
           (publicGender.toLowerCase() !== "man" &&
             publicGender.toLowerCase() !== "male")
@@ -3683,16 +3700,17 @@ export const getDiscoverCreators = async () => {
             getUserLastSeen(u.uid) ||
             null,
           isVerified:
-            isSelectedCreator ||
-            isCreatorVerified(
-              u.uid,
-              (u as any).is_verified ??
-                p?.is_verified ??
-                (local as any)?.is_verified,
-              (u as any).kyc_status ||
-                p?.kyc_status ||
-                (local as any)?.kyc_status,
-            ),
+            !isTargetUnverified &&
+            (isSelectedCreator ||
+              isCreatorVerified(
+                u.uid,
+                (u as any).is_verified ??
+                  p?.is_verified ??
+                  (local as any)?.is_verified,
+                (u as any).kyc_status ||
+                  p?.kyc_status ||
+                  (local as any)?.kyc_status,
+              )),
           isDiscoverFeatured,
           postsCount: postStats?.count || 0,
           createdAt:
@@ -4099,15 +4117,21 @@ export const getAdminCreators = async () => {
         p?.kyc_status ||
         (local as any)?.kyc_status ||
         (hasId ? "pending" : "unverified");
+      const isTargetUnverified = isUnverifiedDiscoverUser(
+        name,
+        (u as any).email,
+        u.uid,
+      );
       const isVerified =
-        isSelectedVerifiedCreator(name, (u as any).email, u.uid) ||
-        isCreatorVerified(
-          u.uid,
-          (u as any).is_verified ??
-            p?.is_verified ??
-            (local as any)?.is_verified,
-          kycStatus,
-        );
+        !isTargetUnverified &&
+        (isSelectedVerifiedCreator(name, (u as any).email, u.uid) ||
+          isCreatorVerified(
+            u.uid,
+            (u as any).is_verified ??
+              p?.is_verified ??
+              (local as any)?.is_verified,
+            kycStatus,
+          ));
 
       // Auto-sync locally stored KYC details to public.users if DB row was missing them
       if (
