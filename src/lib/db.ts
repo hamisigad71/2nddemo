@@ -13,6 +13,7 @@ import {
   addLocalCreatorCandidates,
   resolveCreatorDisplayName,
   GENERIC_CREATOR_NAMES,
+  hasCreatorDirectoryCandidate,
   isSelectedVerifiedCreator,
   isUnverifiedDiscoverUser,
 } from "./creatorDirectory";
@@ -3278,6 +3279,31 @@ export const getDiscoverCreators = async () => {
         });
       }
     } catch {}
+
+    const fatmaLoki = {
+      uid: "347f9665-49b7-4458-9ef2-457e19d60a80",
+      name: "Fatma Loki",
+      email: "hadq@gmail.com",
+    };
+    if (
+      !hasCreatorDirectoryCandidate(
+        creatorUsers,
+        fatmaLoki.name,
+        fatmaLoki.email,
+        fatmaLoki.uid,
+      )
+    ) {
+      const local = getStoredCreatorProfile(fatmaLoki.uid);
+      creatorUsers.push({
+        ...fatmaLoki,
+        avatar: local?.avatar || null,
+        cover_image: local?.cover_image || null,
+        role: "creator",
+        created_at: local?.created_at || null,
+      });
+      creatorUserIds.add(fatmaLoki.uid);
+    }
+
     const postingUidsToFetch = Array.from(postsByCreator.keys()).filter(
       (id) =>
         !creatorUserIds.has(id) &&
