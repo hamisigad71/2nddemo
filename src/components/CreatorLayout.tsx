@@ -4,8 +4,7 @@ import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Setting
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
-import { resolveUserAvatar, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../lib/avatar';
-import { isCreatorProfileComplete } from '../lib/verification';
+import { resolveUserAvatar } from '../lib/avatar';
 import { isSelectedVerifiedCreator } from '../lib/creatorDirectory';
 import { supabase } from '../lib/supabase';
 

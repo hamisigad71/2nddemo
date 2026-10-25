@@ -4,8 +4,8 @@ import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
-import { resolveUserAvatar, hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../lib/avatar';
+import { getUserNotifications, getUserProfile } from '../lib/db';
+import { resolveUserAvatar } from '../lib/avatar';
 import { isSelectedVerifiedCreator } from '../lib/creatorDirectory';
 import { supabase } from '../lib/supabase';
 import VerifiedCreatorNoticeModal from './VerifiedCreatorNoticeModal';
