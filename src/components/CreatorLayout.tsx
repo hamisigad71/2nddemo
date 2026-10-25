@@ -76,30 +76,8 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         return;
       }
 
-      // Check if creator has uploaded required photos and submitted KYC
-      const { data: creatorProfile } = await supabase
-        .from('creator_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      const storedLocal = getStoredCreatorProfile(user.id);
-
-      const existingAvatar = profile?.avatar || creatorProfile?.avatar || creatorProfile?.avatar_url || storedLocal?.avatar;
-      const existingCover = creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image;
-      const hasPhoto = hasUploadedProfilePhoto(existingAvatar);
-      const hasCover = hasUploadedCoverPhoto(existingCover);
-
-      const isComplete = isTarget ? (hasPhoto && hasCover) : isCreatorProfileComplete(profile, creatorProfile, storedLocal);
-
-      if (!isComplete) {
-        // If creator is already logged in, do not bounce them to /login (which causes a login-dashboard redirect loop).
-        // Instead, route them directly to edit-profile so they can upload their photos and identity documents.
-        if (location.pathname !== '/edit-profile') {
-          navigate('/edit-profile?tab=profile&upload_photos=required', { replace: true });
-          return;
-        }
-      }
-
+      // In CreatorLayout, we do not forcefully hijack creator navigation and trap them on edit-profile.
+      // Unverified or incomplete creators are shown status banners directly on the dashboard and wallet pages.
       if (profile?.avatar) setCreatorAvatar(profile.avatar);
       if (profile?.name) setCreatorName(profile.name);
     }).catch(() => {});

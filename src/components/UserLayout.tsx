@@ -62,19 +62,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
     getUserProfile(user.id).then(async (profile) => {
       const isTarget = isSelectedVerifiedCreator(profile?.name || user.user_metadata?.name, user.email, user.id);
       if (isTarget) {
-        const { data: creatorProfile } = await supabase
-          .from('creator_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const storedLocal = getStoredCreatorProfile(user.id);
-        const hasPhoto = hasUploadedProfilePhoto(profile?.avatar || creatorProfile?.avatar || storedLocal?.avatar);
-        const hasCover = hasUploadedCoverPhoto(creatorProfile?.cover_image || profile?.cover_image || storedLocal?.cover_image);
-        if (!hasPhoto || !hasCover) {
-          navigate('/edit-profile?tab=profile&upload_photos=required', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
+        navigate('/dashboard', { replace: true });
         return;
       }
 
