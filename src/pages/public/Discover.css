@@ -2,6 +2,19 @@
   min-width: 0;
 }
 
+.discover-filters {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.discover-filters::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .discover-header {
   border-color: var(--border);
   background-color: color-mix(in srgb, var(--bg) 94%, transparent);

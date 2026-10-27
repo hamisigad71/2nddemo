@@ -56,7 +56,7 @@ SET role = 'creator',
     kyc_status = 'verified',
     is_verified = true,
     payout_kyc_required = true,
-    cover_image = COALESCE(cover_image, 'https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg')
+    cover_image = COALESCE(cover_image, 'public/default-cover.jpg')
 WHERE uid::text IN (SELECT user_id FROM selected_creator_verification_targets);
 
 -- 2. Ensure each creator has a verified creator profile
@@ -85,7 +85,7 @@ SELECT
   'Welcome to my official creator page! Exclusive posts, videos, and private chats.',
   'Nairobi, Kenya',
   1000,
-  COALESCE(u.cover_image, 'https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg'),
+  COALESCE(u.cover_image, 'public/default-cover.jpg'),
   u.avatar,
   u.avatar,
   true,

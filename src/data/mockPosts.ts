@@ -21,7 +21,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     content:
       "Unedited BTS from today’s golden hour poolside shoot 👙✨ Unlock the full 25+ HD photo gallery & exclusive video clip below!",
     media_url:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80",
+      "https://i.pinimg.com/736x/21/4c/1b/214c1b53137efff7f8e4e995d7fe8b11.jpg?auto=format&fit=crop&w=1200&q=80",
     is_locked: false,
     price: 0,
     likes_count: 342,
@@ -30,7 +30,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     users: {
       name: "Wairimu K. ✨",
       avatar:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+        "https://i.pinimg.com/736x/21/4c/1b/214c1b53137efff7f8e4e995d7fe8b11.jpg?auto=format&fit=crop&w=200&q=80",
     },
   },
   {
@@ -66,7 +66,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     users: {
       name: "Chloe Vibe 💋",
       avatar:
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80",
+        "https://i.pinimg.com/736x/a3/b1/fa/a3b1fa0152a62036db543b4b08c750ca.jpg",
     },
   },
   {
@@ -192,7 +192,7 @@ export const FALLBACK_POSTS: FallbackPost[] = [
     users: {
       name: "Njeri Goddess ✨",
       avatar:
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80",
+        "https://i.pinimg.com/736x/a3/b1/fa/a3b1fa0152a62036db543b4b08c750ca.jpg",
     },
   },
   {

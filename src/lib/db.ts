@@ -130,9 +130,7 @@ export const createUserProfile = async (uid: string, data: any) => {
             bio: "Welcome to my official creator page! Exclusive posts, videos, and private chats.",
             monthly_price: 1000,
             location: "Nairobi, Kenya",
-            cover_image:
-              data.cover_image ||
-              "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
+            cover_image: data.cover_image || "/default-cover.jpg",
             tags: ["VIP Content", "Direct Chat", "Exclusive Photos"],
           },
           { onConflict: "user_id" },
@@ -268,9 +266,7 @@ export const createUserProfile = async (uid: string, data: any) => {
           bio: "Welcome to my official creator page! Exclusive posts, videos, and private chats.",
           monthly_price: 1000,
           location: "Nairobi, Kenya",
-          cover_image:
-            data.cover_image ||
-            "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
+          cover_image: data.cover_image || "/default-cover.jpg",
           tags: ["VIP Content", "Direct Chat", "Exclusive Photos"],
         },
         { onConflict: "user_id" },
@@ -2904,9 +2900,7 @@ export const getCreatorProfile = async (id: string) => {
         ? creatorMeta.cover_image
         : null);
 
-    const resolvedCover =
-      rawCover ||
-      "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
+    const resolvedCover = rawCover || "/default-cover.jpg";
 
     const resolvedBio =
       localCreator?.bio ||
@@ -3001,8 +2995,7 @@ export const getCreatorProfile = async (id: string) => {
         !isVideoMediaUrl(localCreator.cover_image) &&
         !localCreator.cover_image.includes("photo-1549490349-8643362247b5")
           ? localCreator.cover_image
-          : null) ||
-        "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
+          : null) || "/default-cover.jpg",
       bio: localCreator.bio || "Welcome to my official creator page!",
       location: localCreator.location || "Nairobi, Kenya",
       rating: 4.9,
@@ -3037,10 +3030,8 @@ export const getCreatorProfile = async (id: string) => {
       name: fallbackPost.users?.name || "VIP Creator",
       avatar:
         fallbackPost.users?.avatar ||
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&q=80",
-      cover_image:
-        fallbackPost.media_url ||
-        "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
+        "https://i.pinimg.com/736x/21/4c/1b/214c1b53137efff7f8e4e995d7fe8b11.jpg?w=500&q=80",
+      cover_image: fallbackPost.media_url || "/default-cover.jpg",
       bio:
         fallbackPost.content ||
         "Welcome to my official creator page! Exclusive posts, videos, and private chats.",
@@ -3623,9 +3614,7 @@ export const getDiscoverCreators = async () => {
 
         const rawCover =
           pCover || uCover || localCover || storageCover || postCover;
-        const cover =
-          rawCover ||
-          "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
+        const cover = rawCover || "/default-cover.jpg";
         const isTargetUnverified = isUnverifiedDiscoverUser(
           creatorName,
           (u as any).email,
@@ -6081,17 +6070,19 @@ export const createNotification = async (
   }
 
   // 2. Always persist to localStorage for instant real-time sync / fallback
-  try {
-    const key = `tgd_notifications_${userId}`;
-    const stored: NotificationItem[] = JSON.parse(
-      localStorage.getItem(key) || "[]",
-    );
-    localStorage.setItem(
-      key,
-      JSON.stringify([newNotif, ...stored].slice(0, 100)),
-    );
-  } catch (err) {
-    console.error("Local notifications error:", err);
+  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+    try {
+      const key = `tgd_notifications_${userId}`;
+      const stored: NotificationItem[] = JSON.parse(
+        localStorage.getItem(key) || "[]",
+      );
+      localStorage.setItem(
+        key,
+        JSON.stringify([newNotif, ...stored].slice(0, 100)),
+      );
+    } catch (err) {
+      console.error("Local notifications error:", err);
+    }
   }
 
   // 3. Dispatch real-time event
@@ -7233,6 +7224,186 @@ export const sendChatMessage = async (params: {
   }
 
   return newMsg;
+};
+
+export interface MassPPVMessageParams {
+  creator_id: string;
+  content: string;
+  media_url: string;
+  media_type?: "image" | "video";
+  ppv_price: number;
+  target_audience?: "all" | "recent_tippers" | "active_subscribers";
+  custom_recipient_ids?: string[];
+  preview_teaser_url?: string;
+}
+
+export interface MassPPVMessageResult {
+  success: boolean;
+  campaign_id: string;
+  totalRecipients: number;
+  sentCount: number;
+  potentialRevenue: number;
+  recipients: Array<{ id: string; name: string; avatar?: string }>;
+}
+
+/**
+ * Retrieves audience segments for a creator's mass PPV broadcast.
+ */
+export const getCreatorBroadcastAudience = async (creatorId: string) => {
+  const fans = await getCreatorChatConversations(creatorId);
+
+  // Group into segments
+  const activeSubscribers = fans.filter(
+    (f) => f.role === "subscriber" || Boolean((f as any).isSubscribed),
+  );
+
+  const tippers = fans.filter((f) => {
+    try {
+      const local =
+        typeof window !== "undefined"
+          ? localStorage.getItem(`tgd_fan_tipped_${f.id}_${creatorId}`)
+          : null;
+      return Boolean(local);
+    } catch {
+      return false;
+    }
+  });
+
+  return {
+    all: fans,
+    activeSubscribers: activeSubscribers.length > 0 ? activeSubscribers : fans,
+    topTippers:
+      tippers.length > 0
+        ? tippers
+        : fans.slice(0, Math.max(1, Math.ceil(fans.length / 2))),
+    recentChats: fans.filter((f) => Boolean(f.lastMessage)),
+  };
+};
+
+/**
+ * Dispatches a Pay-Per-View message simultaneously to multiple fans (Mass PPV Blast)
+ * following the OnlyFans fan-out architecture pattern.
+ */
+export const sendMassPPVMessage = async (
+  params: MassPPVMessageParams,
+): Promise<MassPPVMessageResult> => {
+  if (!params.creator_id) {
+    throw new Error("Creator ID is required for mass PPV dispatch.");
+  }
+  if (!params.media_url) {
+    throw new Error(
+      "A media photo or video is required for a Pay-Per-View drop.",
+    );
+  }
+
+  const cleanPrice = Math.max(100, Math.round(Number(params.ppv_price) || 500));
+  const rawCaption = (params.content || "Exclusive private PPV drop 💋").trim();
+  const sanitizedContent =
+    rawCaption.replace(/[0-9]/g, "").trim() || "Exclusive private PPV drop 💋";
+  const campaignId = `camp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+  // 1. Resolve recipients
+  const audience = await getCreatorBroadcastAudience(params.creator_id);
+  let targetFans = audience.all;
+
+  if (params.custom_recipient_ids && params.custom_recipient_ids.length > 0) {
+    const idSet = new Set(params.custom_recipient_ids);
+    const matched = audience.all.filter((f) => idSet.has(f.id));
+    const matchedIds = new Set(matched.map((f) => f.id));
+    const extra: ChatParticipant[] = params.custom_recipient_ids
+      .filter((id) => !matchedIds.has(id))
+      .map((id) => ({
+        id,
+        name: `Subscriber`,
+        avatar: "",
+        role: "subscriber",
+      }));
+    targetFans = [...matched, ...extra];
+  } else if (params.target_audience === "active_subscribers") {
+    targetFans = audience.activeSubscribers;
+  } else if (params.target_audience === "recent_tippers") {
+    targetFans = audience.topTippers;
+  }
+
+  // Ensure unique fans
+  const uniqueFansMap = new Map<string, (typeof targetFans)[0]>();
+  targetFans.forEach((f) => {
+    if (f.id && f.id !== params.creator_id) {
+      uniqueFansMap.set(f.id, f);
+    }
+  });
+  const recipients = Array.from(uniqueFansMap.values());
+
+  // 2. Dispatch to each recipient fan concurrently (OnlyFans parallel fan-out architecture)
+  const results = await Promise.all(
+    recipients.map(async (fan) => {
+      try {
+        return await sendChatMessage({
+          sender_id: params.creator_id,
+          receiver_id: fan.id,
+          creator_id: params.creator_id,
+          sender_role: "creator",
+          content: sanitizedContent,
+          media_url: params.media_url,
+          is_ppv: true,
+          ppv_price: cleanPrice,
+          ppv_unlocked: false,
+        });
+      } catch (sendErr) {
+        console.warn(`Failed sending mass PPV to fan ${fan.id}:`, sendErr);
+        return null;
+      }
+    }),
+  );
+  const sentMessages: ChatMessage[] = results.filter((m): m is ChatMessage =>
+    Boolean(m),
+  );
+
+  // 3. Record campaign log in creator's history
+  if (typeof window !== "undefined") {
+    try {
+      const historyKey = `tgd_creator_mass_campaigns_${params.creator_id}`;
+      const raw = localStorage.getItem(historyKey);
+      const existing = raw ? JSON.parse(raw) : [];
+      existing.unshift({
+        id: campaignId,
+        created_at: new Date().toISOString(),
+        caption: sanitizedContent,
+        media_url: params.media_url,
+        media_type: params.media_type || "image",
+        ppv_price: cleanPrice,
+        recipients_count: recipients.length,
+        potential_revenue: recipients.length * cleanPrice,
+        status: "delivered",
+      });
+      localStorage.setItem(historyKey, JSON.stringify(existing.slice(0, 50)));
+
+      // Dispatch global event for live broadcast counter
+      window.dispatchEvent(
+        new CustomEvent("tgd_mass_broadcast_sent", {
+          detail: {
+            campaign_id: campaignId,
+            recipients_count: recipients.length,
+            price: cleanPrice,
+            caption: sanitizedContent,
+          },
+        }),
+      );
+    } catch {}
+  }
+
+  return {
+    success: true,
+    campaign_id: campaignId,
+    totalRecipients: recipients.length,
+    sentCount: sentMessages.length,
+    potentialRevenue: recipients.length * cleanPrice,
+    recipients: recipients.map((r) => ({
+      id: r.id,
+      name: r.name,
+      avatar: r.avatar,
+    })),
+  };
 };
 
 /**

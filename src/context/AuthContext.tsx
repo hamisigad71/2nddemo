@@ -14,6 +14,7 @@ interface AuthContextType {
   verifyOtp: (email: string, token: string) => Promise<User | null>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -417,8 +418,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshUser = async (): Promise<User | null> => {
+    try {
+      const { data: { user: freshUser } } = await supabase.auth.getUser();
+      if (freshUser) {
+        setUser(freshUser);
+        return freshUser;
+      }
+    } catch (err) {
+      console.warn("Notice refreshing auth user:", err);
+    }
+    return null;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, verifyOtp, resetPassword, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithFacebook, signUpWithEmail, signInWithEmail, verifyOtp, resetPassword, logout, refreshUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -12,7 +12,7 @@ import { hasCompleteKycSubmission } from '../../lib/verification';
 import { GENDER_OPTIONS, validateProfileDemographics } from '../../lib/profileDemographics';
 
 const UserSettings = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
@@ -227,7 +227,7 @@ const UserSettings = () => {
 
       // 3. Update Supabase Auth user metadata
       try {
-        await supabase.auth.updateUser({
+        const { data: updatedAuth } = await supabase.auth.updateUser({
           data: {
             avatar_url: finalAvatarUrl,
             picture: finalAvatarUrl,
@@ -236,6 +236,9 @@ const UserSettings = () => {
             full_name: displayName,
           }
         });
+        if (updatedAuth?.user) {
+          await refreshUser().catch(() => {});
+        }
       } catch (authErr) {
         console.warn('Auth user metadata update note:', authErr);
       }

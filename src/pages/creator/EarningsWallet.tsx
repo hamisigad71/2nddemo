@@ -5,7 +5,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
-  Building,
   Loader2,
   CheckCircle,
   Wallet,
@@ -14,6 +13,8 @@ import {
   Smartphone,
   ShieldCheck,
   XCircle,
+  Receipt,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -37,6 +38,7 @@ const EarningsWallet = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [withdrawStatus, setWithdrawStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle');
+  const [txFilter, setTxFilter] = useState<'all' | 'earnings' | 'payouts'>('all');
 
   // Payout Phone & Modal State
   const [payoutPhone, setPayoutPhone] = useState('');
@@ -293,80 +295,130 @@ const EarningsWallet = () => {
     URL.revokeObjectURL(url);
   };
 
+  const filteredTransactions = transactions.filter((t) => {
+    if (txFilter === 'all') return true;
+    const isPayout = t.type === 'payout' || t.type === 'withdrawal';
+    if (txFilter === 'earnings') return !isPayout;
+    if (txFilter === 'payouts') return isPayout;
+    return true;
+  });
+
   return (
     <CreatorLayout>
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold tracking-wide uppercase mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Financial Suite & Live Settlement
+          </div>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
             Wallet & Payouts
           </h1>
-          <p className="text-zinc-400 font-medium text-sm">
-            Track your net earnings (70% after 30% platform fee) and request M-Pesa payouts from Admin.
+          <p className="text-zinc-400 font-normal text-sm mt-1 max-w-2xl leading-relaxed">
+            Real-time automated 70/30 ledger. Track net earnings from subscriptions, tips and PPVs, and request direct Safaricom M-Pesa payouts.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={handleDownloadCSV}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 hover:border-zinc-700 transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Export accounting statement"
+          >
+            <Download className="w-4 h-4 text-zinc-400" />
+            <span>Export Statement (CSV)</span>
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
         {/* Main Balance Card */}
-        <div className="lg:col-span-2 rounded-[2rem] p-8 md:p-10 bg-[#0d0e12] border border-zinc-900 flex flex-col justify-between shadow-md relative overflow-hidden">
-          <div className="relative z-10 flex flex-col h-full justify-between gap-8">
-            {/* Header Row */}
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 bg-emerald-950/40 border border-emerald-500/30 rounded-full px-3.5 py-1.5 mb-4">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-black tracking-widest uppercase text-emerald-400">
-                    Live Wallet Ledger · 70% Creator Share
-                  </span>
-                </div>
-                <div className="text-xs font-black text-red-500 tracking-widest uppercase mb-1">
-                  Available to Withdraw (Net after 30% Fee)
-                </div>
-                <h2 className="text-5xl md:text-7xl font-black tracking-tight text-white leading-none">
-                  <span className="text-red-500 text-2xl md:text-3xl font-extrabold align-top mt-2 mr-1.5 inline-block">
-                    KES
-                  </span>
+        <div className="lg:col-span-2 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#0d0e12] border border-zinc-800 shadow-xl relative flex flex-col justify-between gap-6 sm:gap-8">
+          <div className="relative z-10 flex flex-col gap-6">
+            {/* Card Header Status */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[11px] font-bold tracking-wider uppercase text-emerald-300">
+                  Live Ledger · 70% Creator Net Share
+                </span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-zinc-400 text-xs font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Safaricom M-Pesa Settlement</span>
+              </div>
+            </div>
+
+            {/* Prominent Balance Display */}
+            <div>
+              <div className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+                Available to Withdraw <span className="text-zinc-500 normal-case font-normal">(Net after 30% platform fee)</span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-1.5">
+                <span className="text-zinc-500 font-bold text-2xl sm:text-3xl">KES</span>
+                <h2 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white tabular-nums">
                   {availableBalance.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
                 </h2>
               </div>
+            </div>
 
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl shrink-0 bg-red-950/50 border border-zinc-800">
-                <Wallet className="w-6 h-6 text-red-500" />
+            {/* 4-Metric Accounting Matrix */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+              {/* Gross Activity */}
+              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-2xl p-3.5 sm:p-4 transition-colors">
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Gross Activity</div>
+                <div className="text-base sm:text-lg font-extrabold text-white mt-1 tabular-nums">
+                  KES {totalGrossEarned.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">Total fan volume</div>
+              </div>
+
+              {/* 30% Platform Fee */}
+              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-2xl p-3.5 sm:p-4 transition-colors">
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Platform Fee</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-semibold border border-rose-500/20">30%</span>
+                </div>
+                <div className="text-base sm:text-lg font-extrabold text-zinc-300 mt-1 tabular-nums">
+                  - KES {totalPlatformFees.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">Infra & hosting fee</div>
+              </div>
+
+              {/* Net 70% */}
+              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-emerald-500/15 rounded-2xl p-3.5 sm:p-4 transition-colors">
+                <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Net Earned</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">70%</span>
+                </div>
+                <div className="text-base sm:text-lg font-extrabold text-emerald-400 mt-1 tabular-nums">
+                  KES {totalNetEarned.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">Your earnings to date</div>
+              </div>
+
+              {/* Total Paid Out */}
+              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-2xl p-3.5 sm:p-4 transition-colors">
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Total Paid Out</div>
+                <div className="text-base sm:text-lg font-extrabold text-white mt-1 tabular-nums">
+                  KES {totalWithdrawn.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">Completed M-Pesa</div>
               </div>
             </div>
 
-            {/* Stats Breakdown Chips */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl px-4 py-3">
-                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Gross Activity</div>
-                <div className="text-sm font-black text-white mt-0.5">KES {totalGrossEarned.toLocaleString()}</div>
-              </div>
-
-              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl px-4 py-3">
-                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">30% Platform Fee</div>
-                <div className="text-sm font-black text-red-400 mt-0.5">- KES {totalPlatformFees.toLocaleString()}</div>
-              </div>
-
-              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl px-4 py-3">
-                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Net Earned (70%)</div>
-                <div className="text-sm font-black text-emerald-400 mt-0.5">KES {totalNetEarned.toLocaleString()}</div>
-              </div>
-
-              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl px-4 py-3">
-                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Total Paid Out</div>
-                <div className="text-sm font-black text-sky-400 mt-0.5">KES {totalWithdrawn.toLocaleString()}</div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {/* Primary Actions - Fully Responsive Stacking */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
               <button
                 onClick={openWithdrawModal}
                 disabled={withdrawStatus === 'pending' || availableBalance < MINIMUM_CREATOR_PAYOUT_KES}
-                className="flex items-center justify-center gap-1.5 py-3 sm:py-4 rounded-2xl font-black text-[11px] sm:text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-white bg-red-600 hover:bg-red-700 border border-red-500 shadow-[0_4px_20px_rgba(239,68,68,0.35)] cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed border border-red-500 shadow-md transition-all active:scale-[0.98] cursor-pointer"
               >
                 {withdrawStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
-                {withdrawStatus === 'success' && <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />}
+                {withdrawStatus === 'success' && <CheckCircle className="w-4 h-4 text-emerald-300 shrink-0" />}
                 {withdrawStatus === 'idle' && <ArrowUpRight className="w-4 h-4 shrink-0" />}
                 <span>{withdrawStatus === 'success' ? 'Request Sent!' : 'Withdraw to M-Pesa'}</span>
               </button>
@@ -374,32 +426,33 @@ const EarningsWallet = () => {
               <button
                 type="button"
                 onClick={() => setIsPhoneModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 py-3 sm:py-4 rounded-2xl font-bold text-[11px] sm:text-sm text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all active:scale-95 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl font-semibold text-sm text-zinc-200 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 transition-all active:scale-[0.98] cursor-pointer"
               >
-                <Building className="w-4 h-4 text-zinc-400 shrink-0" />
-                <span>Payout Number</span>
+                <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="truncate">{payoutPhone ? `M-Pesa: ${payoutPhone}` : 'Set M-Pesa Number'}</span>
               </button>
             </div>
+
             {availableBalance < MINIMUM_CREATOR_PAYOUT_KES && (
-              <p className="mt-3 text-center text-xs text-zinc-500">
+              <p className="text-center sm:text-left text-xs text-zinc-500 -mt-2">
                 Withdrawals are available once your balance reaches KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
               </p>
             )}
 
             {/* Live Support Concierge Banner */}
-            <div className="pt-4 mt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="relative shrink-0">
                   <img
                     src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80"
                     alt="Amina"
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-rose-500/40"
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-rose-500/30"
                   />
-                  <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#0d0e12]" />
+                  <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#0E0F15]" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-white">Questions about payout hours or clearance?</div>
-                  <div className="text-[11px] text-zinc-400">Admin processes M-Pesa withdrawal requests directly to your registered number.</div>
+                  <div className="text-xs font-semibold text-white">Questions about withdrawal schedule?</div>
+                  <div className="text-[11px] text-zinc-400">Admin reviews and disburses to M-Pesa daily.</div>
                 </div>
               </div>
 
@@ -412,7 +465,7 @@ const EarningsWallet = () => {
                     })
                   );
                 }}
-                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 px-3 py-2 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-3.5 py-2 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
                 <span>Ask Live Support</span>
@@ -421,74 +474,119 @@ const EarningsWallet = () => {
           </div>
         </div>
 
-        {/* Sidebar Status & Method Cards */}
+        {/* Sidebar Status & Destination Cards */}
         <div className="flex flex-col gap-6">
-          <div className="bg-[#0d0e12] border border-zinc-800 rounded-[2rem] p-6 shadow-xl">
-            <div className="flex items-center gap-2.5 text-zinc-400 font-bold text-xs uppercase tracking-wider mb-3">
-              <Clock className="w-4 h-4 text-amber-400" /> Pending Admin Approval
+          {/* Pending Admin Approval Card */}
+          <div className={`rounded-3xl p-6 border transition-all ${
+            pendingBalance > 0
+              ? 'bg-amber-950/20 border-amber-500/30 shadow-[0_8px_30px_rgba(245,158,11,0.1)]'
+              : 'bg-[#0E0F15] border-white/[0.08]'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                <Clock className={`w-4 h-4 ${pendingBalance > 0 ? 'text-amber-400 animate-pulse' : 'text-zinc-500'}`} />
+                <span>Pending Clearance</span>
+              </div>
+              {pendingBalance > 0 && (
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  In Review
+                </span>
+              )}
             </div>
-            <div className="text-3xl font-black text-amber-400">KES {pendingBalance.toLocaleString()}</div>
-            <p className="text-xs text-zinc-400 mt-1 font-medium">
+            <div className="flex items-baseline gap-1.5 my-1">
+              <span className="text-zinc-500 font-semibold text-sm">KES</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 tabular-nums">
+                {pendingBalance.toLocaleString()}
+              </div>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed mt-2">
               {pendingBalance > 0
-                ? 'Withdrawal requested — Admin has been notified to disburse your funds.'
-                : 'No pending withdrawal requests right now.'}
+                ? 'Withdrawal requested. Admin has been notified to send your funds via Safaricom M-Pesa B2C.'
+                : 'No pending requests. Payouts move here immediately after submission.'}
             </p>
           </div>
 
-          <div className="bg-[#0d0e12] border border-zinc-800 rounded-[2rem] p-6 shadow-xl flex-1 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-zinc-400 font-bold text-xs uppercase tracking-wider">
-                <Smartphone className="w-4 h-4 text-red-500" /> Default Payout Method
+          {/* Default Payout Destination Card */}
+          <div className="rounded-3xl p-6 bg-[#0E0F15] border border-white/[0.08] flex-1 flex flex-col justify-between gap-4">
+            <div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  <Smartphone className="w-4 h-4 text-emerald-400" />
+                  <span>Payout Destination</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPhoneModalOpen(true)}
+                  className="text-xs font-semibold text-rose-400 hover:text-rose-300 underline underline-offset-4 cursor-pointer"
+                >
+                  {payoutPhone ? 'Change' : 'Set Number'}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsPhoneModalOpen(true)}
-                className="text-[11px] font-bold text-red-400 hover:text-red-300 underline cursor-pointer"
-              >
-                Edit
-              </button>
-            </div>
-            <div className="flex items-center gap-3.5 mt-4 bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800">
-              <div className="w-11 h-11 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-400 font-black text-xs shrink-0">
-                MP
-              </div>
-              <div className="min-w-0">
-                <div className="font-black text-sm text-white">M-Pesa Direct</div>
-                <div className="text-xs text-zinc-400 font-mono truncate">
-                  {payoutPhone || 'No number set — click Edit'}
+
+              <div className="flex items-center gap-3.5 mt-4 bg-white/[0.03] p-3.5 rounded-2xl border border-white/[0.06]">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-xs shrink-0">
+                  M
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>Safaricom M-Pesa</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  </div>
+                  <div className="text-xs text-zinc-400 font-mono mt-0.5 truncate">
+                    {payoutPhone || 'No phone set yet'}
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div className="text-[11px] text-zinc-500 leading-relaxed border-t border-white/[0.06] pt-3">
+              Disbursements are sent in Kenyan Shillings (KES) directly to this registered line.
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Transactions Section */}
-      <div className="bg-[#0d0e12] border border-zinc-800 rounded-[2rem] shadow-xl overflow-hidden">
-        <div className="px-6 py-5 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-10 h-10 rounded-xl bg-red-950/40 border border-red-500/30 flex items-center justify-center shrink-0">
-              <ArrowUpRight className="w-5 h-5 text-red-500" />
+      {/* Wallet Activity & Ledger Section */}
+      <div className="bg-[#0E0F15] border border-white/[0.08] rounded-3xl shadow-xl overflow-hidden">
+        {/* Ledger Header & Filter Controls */}
+        <div className="p-5 sm:p-6 border-b border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center shrink-0">
+              <Receipt className="w-5 h-5 text-red-400" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white leading-none mb-1">Wallet Activity & Ledger</h3>
-              <p className="text-xs text-zinc-400 font-medium">
-                30% platform fee is automatically deducted from every tip, subscription & PPV unlock
+              <h3 className="text-base sm:text-lg font-extrabold text-white leading-none">
+                Wallet Activity & Ledger
+              </h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                Detailed record of all subscriptions, tips, PPVs and M-Pesa payouts.
               </p>
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
-              70% Creator Net · 30% Fee
-            </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleDownloadCSV}
-            className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 border border-red-500/30 hover:border-red-500/60 px-4 py-2.5 rounded-xl transition-colors active:scale-95 self-start sm:self-auto bg-zinc-900/60 cursor-pointer"
-          >
-            <ArrowDownRight className="w-3.5 h-3.5" />
-            Download CSV
-          </button>
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-white/[0.03] border border-white/[0.06] rounded-xl self-start sm:self-auto">
+            {(
+              [
+                ['all', 'All Activity'],
+                ['earnings', 'Earnings (70%)'],
+                ['payouts', 'Withdrawals'],
+              ] as const
+            ).map(([f, label]) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setTxFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  txFilter === f
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
@@ -496,21 +594,23 @@ const EarningsWallet = () => {
             <Loader2 className="w-6 h-6 animate-spin text-red-500" />
             <p className="text-sm font-medium">Loading wallet activity…</p>
           </div>
-        ) : transactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-              <Wallet className="w-7 h-7 text-red-500" />
+        ) : filteredTransactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
+              <Wallet className="w-6 h-6 text-zinc-500" />
             </div>
-            <div className="text-center">
-              <p className="font-black text-white text-base mb-1">No transactions yet</p>
-              <p className="text-sm text-zinc-400 max-w-xs font-medium">
-                Earnings from tips, VIP subscriptions and PPV unlocks will appear here automatically.
-              </p>
-            </div>
+            <p className="font-bold text-white text-base">No transactions found</p>
+            <p className="text-xs text-zinc-400 max-w-sm mt-1">
+              {txFilter === 'all'
+                ? 'Earnings from tips, VIP subscriptions and PPV content unlocks will appear here automatically.'
+                : txFilter === 'earnings'
+                  ? 'No earnings records match this filter yet.'
+                  : 'No withdrawal requests recorded yet.'}
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-zinc-800/60">
-            {transactions.map((t) => {
+          <div className="divide-y divide-white/[0.04]">
+            {filteredTransactions.map((t) => {
               const isPayout = t.type === 'payout' || t.type === 'withdrawal';
               const gross = Number(t.gross_amount || 0);
               const fee = isPayout
@@ -532,46 +632,46 @@ const EarningsWallet = () => {
               return (
                 <div
                   key={t.id}
-                  className="px-6 py-4 flex items-center justify-between hover:bg-zinc-900/60 transition-colors group"
+                  className="p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3.5">
                     <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
                         isPayout
                           ? isRejectedPayout
                             ? 'bg-zinc-800 border-zinc-700 text-zinc-400'
                             : isPendingPayout
-                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                              : 'bg-red-500/10 border-red-500/30 text-red-400'
-                          : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              ? 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                              : 'bg-rose-500/10 border-rose-500/25 text-rose-400'
+                          : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
                       }`}
                     >
                       {isPendingPayout ? (
-                        <Clock className="w-5 h-5 text-amber-400" />
+                        <Clock className="w-4 h-4 text-amber-400" />
                       ) : isRejectedPayout ? (
-                        <XCircle className="w-5 h-5 text-zinc-400" />
+                        <XCircle className="w-4 h-4 text-zinc-400" />
                       ) : isPayout ? (
-                        <ArrowDownRight className="w-5 h-5" />
+                        <ArrowDownRight className="w-4 h-4" />
                       ) : (
-                        <ArrowUpRight className="w-5 h-5" />
+                        <ArrowUpRight className="w-4 h-4" />
                       )}
                     </div>
                     <div>
                       <div className="font-bold text-sm text-white flex items-center gap-2 flex-wrap">
                         <span>{formatLabel(t.type)}</span>
                         {isPendingPayout && (
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
                             Pending Admin Approval
                           </span>
                         )}
                         {isApprovedPayout && (
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Paid Out
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            Disbursed
                           </span>
                         )}
                         {isRejectedPayout && (
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
-                            Declined · Restored to Wallet
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
+                            Declined · Restored
                           </span>
                         )}
                       </div>
@@ -588,19 +688,19 @@ const EarningsWallet = () => {
                             : 'Recent'}
                         </span>
                         {isPayout && t.reference_id && (
-                          <span className="text-zinc-500 font-mono text-[11px]">· {t.reference_id}</span>
+                          <span className="text-zinc-500 font-mono text-[11px]">· Ref: {t.reference_id}</span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-0 border-white/[0.04] pt-2 sm:pt-0">
                     <div
-                      className={`font-black text-sm tracking-tight ${
+                      className={`font-black text-sm sm:text-base tracking-tight tabular-nums ${
                         isRejectedPayout
                           ? 'text-zinc-500 line-through'
                           : isPayout
-                            ? 'text-red-400'
+                            ? 'text-rose-400'
                             : 'text-emerald-400'
                       }`}
                     >
@@ -621,12 +721,12 @@ const EarningsWallet = () => {
 
       {/* Withdrawal Request Modal */}
       {isWithdrawModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#0d0e12] border border-zinc-800 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#0E0F15] border border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative">
             <button
               type="button"
               onClick={() => setIsWithdrawModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-zinc-500 hover:text-white rounded-full hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="absolute top-5 right-5 p-2 text-zinc-500 hover:text-white rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -635,28 +735,28 @@ const EarningsWallet = () => {
               <Wallet className="w-6 h-6" />
             </div>
 
-            <h3 className="text-xl font-black text-white mb-1">Request M-Pesa Withdrawal</h3>
+            <h3 className="text-xl font-extrabold text-white mb-1">Request M-Pesa Withdrawal</h3>
             <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
-              Admin will receive an instant notification with your M-Pesa number and requested amount to disburse your funds.
+              Disbursed directly to your Safaricom M-Pesa line upon Admin approval. Zero processing fees.
             </p>
 
             <form onSubmit={handleConfirmWithdraw} className="space-y-5">
-              <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400">Available Wallet Balance</span>
-                <span className="text-lg font-black text-emerald-400">
+              <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-400">Available to Withdraw</span>
+                <span className="text-lg font-extrabold text-white tabular-nums">
                   KES {availableBalance.toLocaleString()}
                 </span>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-black uppercase tracking-wider text-zinc-400">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                     Amount to Withdraw (KES)
                   </label>
                   <button
                     type="button"
                     onClick={() => setWithdrawAmount(String(availableBalance))}
-                    className="text-[11px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+                    className="text-xs font-bold text-rose-400 hover:text-rose-300 cursor-pointer"
                   >
                     Withdraw Max
                   </button>
@@ -666,17 +766,42 @@ const EarningsWallet = () => {
                   min={MINIMUM_CREATOR_PAYOUT_KES}
                   max={availableBalance}
                   required
+                  placeholder="1000"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white font-black text-lg focus:outline-none focus:border-red-500"
+                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3 text-white font-extrabold text-lg focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
                 />
-                <p className="mt-1.5 text-[11px] text-zinc-500">
-                  Minimum withdrawal: KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
+
+                {/* Quick Presets */}
+                <div className="flex items-center gap-2 mt-2">
+                  {[1000, 2500, 5000].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      disabled={availableBalance < preset}
+                      onClick={() => setWithdrawAmount(String(preset))}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-30 border border-white/[0.06] text-zinc-300 transition-all cursor-pointer"
+                    >
+                      KES {preset.toLocaleString()}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={availableBalance < MINIMUM_CREATOR_PAYOUT_KES}
+                    onClick={() => setWithdrawAmount(String(availableBalance))}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-red-600/10 hover:bg-red-600/20 disabled:opacity-30 border border-red-500/20 text-rose-400 transition-all cursor-pointer"
+                  >
+                    Max
+                  </button>
+                </div>
+
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  Minimum withdrawal threshold: KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
                   M-Pesa Phone Number
                 </label>
                 <input
@@ -685,14 +810,14 @@ const EarningsWallet = () => {
                   placeholder="e.g. 0712 345 678 or +254712345678"
                   value={payoutPhone}
                   onChange={(e) => setPayoutPhone(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-red-500"
+                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
                 />
               </div>
 
-              <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-xl p-3 flex items-start gap-2.5 text-[11px] text-zinc-400">
+              <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-3 flex items-start gap-2.5 text-xs text-zinc-300">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>
-                  Once submitted, this amount moves to <strong>Pending Admin Approval</strong> and will be sent directly to your M-Pesa.
+                  Once submitted, the amount moves to <strong>Pending Clearance</strong> and will be disbursed directly to your M-Pesa account.
                 </span>
               </div>
 
@@ -700,19 +825,19 @@ const EarningsWallet = () => {
                 <button
                   type="button"
                   onClick={() => setIsWithdrawModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl font-bold text-xs text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition-colors cursor-pointer"
+                  className="flex-1 py-3.5 rounded-xl font-bold text-xs text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={withdrawStatus === 'pending'}
-                  className="flex-1 py-3 rounded-xl font-black text-xs text-white bg-red-600 hover:bg-red-500 shadow-lg shadow-red-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-3.5 rounded-xl font-extrabold text-xs text-white bg-red-600 hover:bg-red-700 shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {withdrawStatus === 'pending' ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <>Submit Request</>
+                    <span>Submit Request</span>
                   )}
                 </button>
               </div>
@@ -722,17 +847,17 @@ const EarningsWallet = () => {
       )}
 
       {isKycPromptOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="withdraw-identity-title"
-            className="w-full max-w-md rounded-3xl border border-zinc-700 bg-[#0d0e12] p-6 shadow-2xl sm:p-8"
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0E0F15] p-6 shadow-2xl sm:p-8"
           >
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-500/30 bg-sky-500/10 text-sky-400">
               <ShieldCheck className="h-6 w-6" />
             </div>
-            <h3 id="withdraw-identity-title" className="mb-2 text-xl font-black text-white">
+            <h3 id="withdraw-identity-title" className="mb-2 text-xl font-extrabold text-white">
               Identity documents required
             </h3>
             <p className="mb-5 text-sm leading-relaxed text-zinc-300">
@@ -746,7 +871,7 @@ const EarningsWallet = () => {
               <button
                 type="button"
                 onClick={() => setIsKycPromptOpen(false)}
-                className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-300 hover:bg-zinc-800"
+                className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-zinc-300 hover:bg-white/[0.08] transition-colors"
               >
                 Not now
               </button>
@@ -756,7 +881,7 @@ const EarningsWallet = () => {
                   setIsKycPromptOpen(false);
                   navigate('/edit-profile?tab=kyc');
                 }}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white hover:bg-red-500"
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-extrabold text-white hover:bg-red-700 shadow-md transition-all"
               >
                 Upload documents
               </button>
@@ -767,24 +892,28 @@ const EarningsWallet = () => {
 
       {/* Edit Payout Phone Modal */}
       {isPhoneModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#0d0e12] border border-zinc-800 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#0E0F15] border border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative">
             <button
               type="button"
               onClick={() => setIsPhoneModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-zinc-500 hover:text-white rounded-full hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="absolute top-5 right-5 p-2 text-zinc-500 hover:text-white rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-xl font-black text-white mb-1">Default M-Pesa Payout Number</h3>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-sm mb-4">
+              M
+            </div>
+
+            <h3 className="text-xl font-extrabold text-white mb-1">Default M-Pesa Payout Number</h3>
             <p className="text-xs text-zinc-400 mb-6">
-              Set the M-Pesa phone number where Admin will send your approved withdrawals.
+              Set the Safaricom M-Pesa phone number where Admin will send your approved payouts.
             </p>
 
             <form onSubmit={handleSavePhoneOnly} className="space-y-4">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
                   Safaricom M-Pesa Number
                 </label>
                 <input
@@ -793,7 +922,7 @@ const EarningsWallet = () => {
                   placeholder="e.g. +254712345678 or 0712345678"
                   value={payoutPhone}
                   onChange={(e) => setPayoutPhone(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-red-500"
+                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
                 />
               </div>
 
@@ -801,14 +930,14 @@ const EarningsWallet = () => {
                 <button
                   type="button"
                   onClick={() => setIsPhoneModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl font-bold text-xs text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 cursor-pointer"
+                  className="flex-1 py-3.5 rounded-xl font-bold text-xs text-zinc-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingPhone}
-                  className="flex-1 py-3 rounded-xl font-black text-xs text-white bg-red-600 hover:bg-red-500 cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-3.5 rounded-xl font-extrabold text-xs text-white bg-red-600 hover:bg-red-700 cursor-pointer disabled:opacity-50 transition-all shadow-md"
                 >
                   {savingPhone ? 'Saving...' : 'Save Number'}
                 </button>

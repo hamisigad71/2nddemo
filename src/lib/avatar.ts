@@ -67,6 +67,7 @@ export const hasUploadedCoverPhoto = (coverUrl?: string | null): boolean => {
   if (!coverUrl || typeof coverUrl !== 'string') return false;
   const clean = coverUrl.trim();
   if (!clean) return false;
+  if (clean.includes('default-cover.jpg')) return false; // Universal default cover placeholder
   if (clean.includes('a0719f34c43c00d7f2879a86fa3db798')) return false; // Legacy fallback cover
   if (clean.includes('photo-1618005182384-a83a8bd57fbe')) return false; // Default placeholder wave
   if (clean.includes('photo-1549490349-8643362247b5')) return false; // Old placeholder

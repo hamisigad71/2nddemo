@@ -582,12 +582,11 @@ export default function CreatorProfile() {
             !creator.cover_image.startsWith("blob:") &&
             !creator.cover_image.includes("photo-1549490349-8643362247b5")
               ? creator.cover_image
-              : "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg"
+              : "/default-cover.jpg"
           }
           alt="Cover"
           onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
+            (e.target as HTMLImageElement).src = "/default-cover.jpg";
           }}
           className="w-full h-full object-cover"
         />
@@ -1085,7 +1084,7 @@ export default function CreatorProfile() {
         {activeTab === "media" && (
           <div className="space-y-5">
             {/* Sub-Filters (All 279, Photo 41, Video 238) */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide no-scrollbar">
               <button
                 onClick={() => setMediaFilter("all")}
                 className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${

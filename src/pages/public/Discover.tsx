@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search,
   CheckCircle2,
@@ -10,6 +10,8 @@ import {
   Moon,
   Star,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import BottomNav from "../../components/BottomNav";
@@ -55,6 +57,31 @@ const Discover = () => {
   const [subscribeModalCreator, setSubscribeModalCreator] = useState<
     any | null
   >(null);
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    if (filterScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = filterScrollRef.current;
+      setCanScrollLeft(scrollLeft > 6);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6);
+    }
+  }, []);
+
+  const scrollFilters = (direction: "left" | "right") => {
+    if (filterScrollRef.current) {
+      const delta = direction === "left" ? -220 : 220;
+      filterScrollRef.current.scrollBy({ left: delta, behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const handleResize = () => checkScroll();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [checkScroll]);
 
   const fetchUserSubscriptions = useCallback(async () => {
     if (!user?.id) {
@@ -235,69 +262,102 @@ const Discover = () => {
                 />
               </div>
             </div>
-            <div
-              className="discover-filters flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar"
-              role="group"
-              aria-label="Filter creators"
-            >
-              {(
-                [
-                  ["all", "All Creators"],
-                  ["verified", "Verified"],
-                  ["trending", "Trending"],
-                  ["popular", "Popular"],
-                  ["new", "New"],
-                ] as const
-              ).map(([filter, label]) => (
+            <div className="relative flex items-center w-full md:w-auto min-w-0 group/filters">
+              {canScrollLeft && (
                 <button
-                  key={filter}
                   type="button"
-                  onClick={() => setActiveTab(filter)}
-                  aria-pressed={activeTab === filter}
-                  className={`discover-filter-button px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === filter ? "bg-primary text-primary-foreground" : "bg-input/30 hover:bg-input text-muted-foreground border border-transparent hover:border-border"}`}
+                  onClick={() => scrollFilters("left")}
+                  className="hidden md:flex absolute left-0 z-10 w-7 h-7 -ml-2 items-center justify-center rounded-full bg-zinc-900/90 hover:bg-zinc-800 text-white border border-white/10 shadow-lg backdrop-blur-md transition-all cursor-pointer"
+                  title="Scroll left"
+                  aria-label="Scroll left"
                 >
-                  {label}
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-              ))}
+              )}
+
               <div
-                className="flex items-center gap-2 border-l border-border pl-2"
+                ref={filterScrollRef}
+                onScroll={checkScroll}
+                onWheel={(e) => {
+                  if (e.deltaY !== 0) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
+                }}
+                className="discover-filters flex items-center gap-2 w-full md:w-auto overflow-x-auto py-1 scrollbar-hide no-scrollbar hide-scrollbar scroll-smooth select-none"
                 role="group"
-                aria-label="Filter creators by gender"
+                aria-label="Filter creators"
               >
                 {(
                   [
-                    ["all", "All genders"],
-                    ["male", "Male"],
-                    ["female", "Female"],
+                    ["all", "All Creators"],
+                    ["verified", "Verified"],
+                    ["trending", "Trending"],
+                    ["popular", "Popular"],
+                    ["new", "New"],
                   ] as const
                 ).map(([filter, label]) => (
                   <button
                     key={filter}
                     type="button"
-                    onClick={() => setGenderFilter(filter)}
-                    aria-pressed={genderFilter === filter}
-                    className={`discover-filter-button px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${genderFilter === filter ? "bg-primary text-primary-foreground" : "bg-input/30 hover:bg-input text-muted-foreground border border-transparent hover:border-border"}`}
+                    onClick={() => setActiveTab(filter)}
+                    aria-pressed={activeTab === filter}
+                    className={`discover-filter-button px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === filter ? "bg-primary text-primary-foreground" : "bg-input/30 hover:bg-input text-muted-foreground border border-transparent hover:border-border"}`}
                   >
                     {label}
                   </button>
                 ))}
+                <div
+                  className="flex items-center gap-2 border-l border-border pl-2"
+                  role="group"
+                  aria-label="Filter creators by gender"
+                >
+                  {(
+                    [
+                      ["all", "All genders"],
+                      ["male", "Male"],
+                      ["female", "Female"],
+                    ] as const
+                  ).map(([filter, label]) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setGenderFilter(filter)}
+                      aria-pressed={genderFilter === filter}
+                      className={`discover-filter-button px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${genderFilter === filter ? "bg-primary text-primary-foreground" : "bg-input/30 hover:bg-input text-muted-foreground border border-transparent hover:border-border"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  className="p-2.5 rounded-full bg-input/30 hover:bg-input text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border shrink-0 cursor-pointer"
+                  title={
+                    theme === "dark"
+                      ? "Switch to Light Mode"
+                      : "Switch to Dark Mode"
+                  }
+                  aria-label="Toggle theme appearance"
+                >
+                  {theme === "dark" ? (
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-indigo-400" />
+                  )}
+                </button>
               </div>
-              <button
-                onClick={toggleTheme}
-                className="p-2.5 rounded-full bg-input/30 hover:bg-input text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border shrink-0"
-                title={
-                  theme === "dark"
-                    ? "Switch to Light Mode"
-                    : "Switch to Dark Mode"
-                }
-                aria-label="Toggle theme appearance"
-              >
-                {theme === "dark" ? (
-                  <Sun className="w-4 h-4 text-amber-400" />
-                ) : (
-                  <Moon className="w-4 h-4 text-indigo-400" />
-                )}
-              </button>
+
+              {canScrollRight && (
+                <button
+                  type="button"
+                  onClick={() => scrollFilters("right")}
+                  className="hidden md:flex absolute right-0 z-10 w-7 h-7 -mr-2 items-center justify-center rounded-full bg-zinc-900/90 hover:bg-zinc-800 text-white border border-white/10 shadow-lg backdrop-blur-md transition-all cursor-pointer"
+                  title="Scroll right"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -438,12 +498,12 @@ const Discover = () => {
                             creator.cover &&
                             !/\.(mp4|webm|mov|m4v)/i.test(creator.cover)
                               ? creator.cover
-                              : "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg"
+                              : "/default-cover.jpg"
                           }
                           alt={creator.name}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
-                              "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
+                              "/default-cover.jpg";
                           }}
                           className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500 ease-out"
                           loading="lazy"

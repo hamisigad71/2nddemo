@@ -69,6 +69,13 @@ export const isSelectedVerifiedCreator = (
   return false;
 };
 
+export const shouldIncludeCreatorInDiscover = (
+  isExplicitlyFeatured: boolean,
+  hasUploadedAvatar: boolean,
+  hasUploadedCover: boolean,
+  isVerified?: boolean,
+): boolean => isExplicitlyFeatured || Boolean(isVerified) || (hasUploadedAvatar && hasUploadedCover);
+
 type FilterableCreator = {
   gender?: string | null;
   isVerified?: boolean;

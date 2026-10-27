@@ -82,9 +82,7 @@ describe("Avatar Resolution & Fallback (avatar)", () => {
     assert.strictEqual(hasUploadedCoverPhoto(null), false);
     assert.strictEqual(hasUploadedCoverPhoto(""), false);
     assert.strictEqual(
-      hasUploadedCoverPhoto(
-        "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
-      ),
+      hasUploadedCoverPhoto("public/default-cover.jpg"),
       false,
     );
     assert.strictEqual(

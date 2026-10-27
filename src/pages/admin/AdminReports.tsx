@@ -117,7 +117,7 @@ const AdminReports = () => {
               className="w-full bg-[#0d0e12] border border-zinc-800 pl-11 pr-4 py-3.5 rounded-2xl text-white text-sm font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-zinc-600"
             />
           </div>
-          <div className="flex bg-[#0d0e12] border border-zinc-800 p-1.5 rounded-2xl overflow-x-auto">
+          <div className="flex bg-[#0d0e12] border border-zinc-800 p-1.5 rounded-2xl overflow-x-auto scrollbar-hide no-scrollbar">
             {['all', 'open', 'escalated', 'resolved', 'dismissed'].map(s => (
               <button
                 key={s}

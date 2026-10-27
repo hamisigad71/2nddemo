@@ -50,7 +50,7 @@ const EditProfile = () => {
     searchParams.get("tab") === "kyc" ? "kyc" : "profile",
   );
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
 
   // Account Deletion States
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -713,9 +713,7 @@ const EditProfile = () => {
         }
       }
       if (finalCoverUrl && finalCoverUrl.startsWith("blob:")) {
-        finalCoverUrl =
-          profileData.coverImage ||
-          "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg";
+        finalCoverUrl = profileData.coverImage || "/default-cover.jpg";
       }
 
       // 3. Update users table in Supabase
@@ -775,7 +773,7 @@ const EditProfile = () => {
 
       // 5. Update Supabase Auth user metadata
       try {
-        await supabase.auth.updateUser({
+        const { data: updatedAuth } = await supabase.auth.updateUser({
           data: {
             avatar_url: finalAvatarUrl,
             picture: finalAvatarUrl,
@@ -790,6 +788,9 @@ const EditProfile = () => {
             dob: kycData.dob,
           },
         });
+        if (updatedAuth?.user) {
+          await refreshUser().catch(() => {});
+        }
       } catch (e) {
         console.warn("auth metadata update notice:", e);
       }

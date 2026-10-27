@@ -40,7 +40,10 @@ describe("creator verification eligibility and admin approval flow", () => {
       true,
     );
     assert.equal(isSelectedVerifiedCreator("nimo"), true);
-    assert.equal(isSelectedVerifiedCreator(undefined, "nimoblip@gmail.com"), true);
+    assert.equal(
+      isSelectedVerifiedCreator(undefined, "nimoblip@gmail.com"),
+      true,
+    );
     // Explicitly unverified users on discover
     assert.equal(isSelectedVerifiedCreator("fatma loki"), false);
     assert.equal(isSelectedVerifiedCreator(undefined, "hadq@gmail.com"), false);
@@ -343,8 +346,7 @@ describe("creator verification eligibility and admin approval flow", () => {
         kyc_selfie_url: "https://cdn/selfie.jpg",
       },
       {
-        cover_image:
-          "https://i.pinimg.com/1200x/a0/71/9f/a0719f34c43c00d7f2879a86fa3db798.jpg",
+        cover_image: "public/default-cover.jpg",
       },
     );
     assert.equal(
