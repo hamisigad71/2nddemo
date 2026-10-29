@@ -4,6 +4,7 @@ import UserLayout from '../../components/UserLayout';
 import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock, Star, Megaphone, ArrowRight } from 'lucide-react';
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
+import PPVUnlockModal from '../../components/PPVUnlockModal';
 import { useAuth } from '../../context/AuthContext';
 import { getFanFeed, getPostLikes, toggleLike, getComments, addComment, getStoredCreatorProfile, getCreatorProfile, getPlatformAds, trackAdImpression, trackAdClick, type PlatformAd } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
@@ -26,12 +27,14 @@ interface Comment {
 
 const feedProfileResolutionCache = new Map<string, { name: string; avatar: string | null }>();
 
-const FeedPost = ({ post, currentUserId, priority = false }: { post: any; currentUserId: string; priority?: boolean }) => {
+const FeedPost = ({ post, currentUserId, priority = false, onPostUnlocked }: { post: any; currentUserId: string; priority?: boolean; onPostUnlocked?: (postId: string) => void }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [isTipOpen, setIsTipOpen] = useState(false);
   const [isSubscribeOpen, setIsSubscribeOpen] = useState(false);
+  const [isPPVUnlockOpen, setIsPPVUnlockOpen] = useState(false);
+  const [unlockedDirectly, setUnlockedDirectly] = useState(false);
 
   // Comments
   const [showComments, setShowComments] = useState(false);
@@ -123,7 +126,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
 
   const profileRoute = `/creator/${post.creator_id || escort?.id || 'escort-1'}`;
   const isPpvPost = post.visibility === 'ppv' || post.is_locked;
-  const shouldLockMedia = !post.media_access_granted && (isPpvPost || post.visibility === 'subscribers');
+  const shouldLockMedia = !unlockedDirectly && !post.media_access_granted && (isPpvPost || post.visibility === 'subscribers');
   const formatPostTime = (dateStr?: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -303,7 +306,7 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
                     </p>
 
                     <button 
-                      onClick={() => isPpvPost ? navigate(profileRoute) : setIsSubscribeOpen(true)}
+                      onClick={() => isPpvPost ? setIsPPVUnlockOpen(true) : setIsSubscribeOpen(true)}
                       className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs tracking-wider uppercase py-2.5 px-6 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-600/30 cursor-pointer"
                     >
                       {isPpvPost ? `Unlock for KES ${post.price || 0}` : 'Subscribe to Unlock'}
@@ -483,6 +486,54 @@ const FeedPost = ({ post, currentUserId, priority = false }: { post: any; curren
         creatorName={creatorName}
         creatorId={post.creator_id}
         price={post.price || 1000}
+      />
+      <PPVUnlockModal
+        isOpen={isPPVUnlockOpen}
+        onClose={() => setIsPPVUnlockOpen(false)}
+        mediaItem={{
+          id: post.id,
+          type: post.media_type === 'video' || post.media_url?.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? 'video' : 'image',
+          url: post.media_url || '',
+          title: post.content || 'Pay-Per-View Content',
+          price: post.price || 500,
+          isLocked: true,
+          visibility: 'ppv'
+        }}
+        creatorName={creatorName}
+        creatorId={post.creator_id}
+        monthlyPrice={localProfile?.price_hr || 1000}
+        onUnlocked={(mediaId) => {
+          setUnlockedDirectly(true);
+          try {
+            const globalStored = localStorage.getItem("tgd_ppv_unlocked_global");
+            const globalSet = new Set(globalStored ? JSON.parse(globalStored) : []);
+            globalSet.add(mediaId);
+            localStorage.setItem("tgd_ppv_unlocked_global", JSON.stringify(Array.from(globalSet)));
+
+            if (currentUserId) {
+              const userKey = `tgd_ppv_unlocked_${currentUserId}`;
+              const userStored = localStorage.getItem(userKey);
+              const userSet = new Set(userStored ? JSON.parse(userStored) : []);
+              userSet.add(mediaId);
+              localStorage.setItem(userKey, JSON.stringify(Array.from(userSet)));
+
+              const vaultKey = `unlocked_ppv_${currentUserId}`;
+              const vaultStored = localStorage.getItem(vaultKey);
+              const vaultSet = new Set(vaultStored ? JSON.parse(vaultStored) : []);
+              vaultSet.add(mediaId);
+              localStorage.setItem(vaultKey, JSON.stringify(Array.from(vaultSet)));
+            }
+          } catch (err) {
+            console.error("Error saving unlocked PPV items:", err);
+          }
+          if (onPostUnlocked) {
+            onPostUnlocked(mediaId);
+          }
+        }}
+        onSubscribeClick={() => {
+          setIsPPVUnlockOpen(false);
+          setIsSubscribeOpen(true);
+        }}
       />
     </>
   );
@@ -769,7 +820,14 @@ const UserDashboard = () => {
 
           return (
             <div key={post.id} className="contents">
-              <FeedPost post={post} currentUserId={user?.id || ''} priority={index < 2} />
+              <FeedPost 
+                post={post} 
+                currentUserId={user?.id || ''} 
+                priority={index < 2} 
+                onPostUnlocked={(unlockedId) => {
+                  setPosts(prev => prev.map(p => p.id === unlockedId ? { ...p, media_access_granted: true, is_locked: false } : p));
+                }}
+              />
               {adToInject && (
                 <SponsoredFeedCard ad={adToInject} />
               )}

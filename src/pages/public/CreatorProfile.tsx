@@ -585,6 +585,7 @@ export default function CreatorProfile() {
               : "/default-cover.jpg"
           }
           alt="Cover"
+          referrerPolicy="no-referrer"
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/default-cover.jpg";
           }}
@@ -640,6 +641,7 @@ export default function CreatorProfile() {
               <img
                 src={creator.avatar}
                 alt={creator.name}
+                referrerPolicy="no-referrer"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = getDefaultAvatar(
                     creator.name,

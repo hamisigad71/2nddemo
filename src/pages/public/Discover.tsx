@@ -501,6 +501,7 @@ const Discover = () => {
                               : "/default-cover.jpg"
                           }
                           alt={creator.name}
+                          referrerPolicy="no-referrer"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               "/default-cover.jpg";
@@ -557,6 +558,7 @@ const Discover = () => {
                             <img
                               src={creator.avatar}
                               alt={creator.name}
+                              referrerPolicy="no-referrer"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src =
                                   getDefaultAvatar(creator.name);

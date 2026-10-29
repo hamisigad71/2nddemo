@@ -1018,10 +1018,28 @@ const resolvePrivatePostMedia = async (
         (post.visibility === "public" || !post.visibility) && !post.is_locked,
       );
 
-      // 4. Access is granted if owner, or if public free, or if subscribed and post is not a separate PPV unlock
+      // Check if user has unlocked this specific PPV post
+      let isPpvUnlocked = false;
+      if (typeof window !== "undefined") {
+        try {
+          const globalStored = localStorage.getItem("tgd_ppv_unlocked_global");
+          if (globalStored && JSON.parse(globalStored).includes(post.id)) {
+            isPpvUnlocked = true;
+          }
+          if (!isPpvUnlocked && viewerId) {
+            const userStored = localStorage.getItem(`tgd_ppv_unlocked_${viewerId}`);
+            if (userStored && JSON.parse(userStored).includes(post.id)) {
+              isPpvUnlocked = true;
+            }
+          }
+        } catch {}
+      }
+
+      // 4. Access is granted if owner, or if public free, or if unlocked via PPV, or if subscribed and post is not a separate PPV unlock
       const accessGranted =
         isOwner ||
         isPublicFree ||
+        isPpvUnlocked ||
         (isSubscribed && post.visibility !== "ppv" && !post.is_locked);
 
       let mediaUrl = post.media_url;
@@ -3517,6 +3535,28 @@ export const getDiscoverCreators = async () => {
           )
         : new Set();
 
+    // Batch fetch from escort_applications to recover verification photos / avatars for creators missing avatars
+    const missingAvatarUserIds = creatorUsers
+      .filter((u) => !hasUploadedProfilePhoto(u.avatar) && !hasUploadedProfilePhoto(profileMap.get(u.uid)?.avatar_url) && !hasUploadedProfilePhoto(profileMap.get(u.uid)?.avatar))
+      .map((u) => u.uid);
+
+    const escortAppsMap = new Map<string, any>();
+    if (missingAvatarUserIds.length > 0) {
+      try {
+        const { data: apps } = await supabase
+          .from("escort_applications")
+          .select("creator_id, name, verification_photos")
+          .in("creator_id", missingAvatarUserIds);
+        if (apps) {
+          apps.forEach((app: any) => {
+            if (app.creator_id && app.verification_photos && app.verification_photos.length > 0) {
+              escortAppsMap.set(app.creator_id, app.verification_photos[0]);
+            }
+          });
+        }
+      } catch {}
+    }
+
     // Filter out any suspended, banned, or deleted creators from public discovery
     const activeCreatorUsers = creatorUsers.filter((u) => {
       if (deletedCreatorIds.has(u.uid) || deletedCreatorIds.has((u as any).id))
@@ -3569,13 +3609,15 @@ export const getDiscoverCreators = async () => {
             ? "Joy Mwangi"
             : null,
         );
+        const appPhoto = escortAppsMap.get(u.uid);
         const rawAvatar =
+          local?.avatar ||
+          local?.avatar_url ||
           u.avatar ||
           p?.avatar_url ||
           p?.avatar ||
-          local?.avatar ||
-          local?.avatar_url ||
-          storageAssets.avatar;
+          storageAssets.avatar ||
+          appPhoto;
         const avatar = resolveUserAvatar(
           rawAvatar && !rawAvatar.startsWith("blob:") ? rawAvatar : null,
           creatorName,
