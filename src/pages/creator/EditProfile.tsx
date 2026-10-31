@@ -33,6 +33,7 @@ import {
   deleteUserAccount,
   notifyAdmins,
   invalidateCreatorStorageAssets,
+  clearDiscoverCreatorsCache,
 } from "../../lib/db";
 import { supabase } from "../../lib/supabase";
 import { toast } from "../../context/ToastContext";
@@ -42,6 +43,7 @@ import { buildAdminKycSubmissionNotification } from "../../lib/verification";
 import {
   GENDER_OPTIONS,
   validateProfileDemographics,
+  calculateAge,
 } from "../../lib/profileDemographics";
 
 const EditProfile = () => {
@@ -859,7 +861,8 @@ const EditProfile = () => {
         }
       } catch {}
 
-      // 8. Broadcast profile and posts update events across windows/tabs
+      // 8. Invalidate discovery cache and broadcast profile and posts update events across windows/tabs
+      clearDiscoverCreatorsCache();
       window.dispatchEvent(
         new CustomEvent("profile_updated", { detail: profilePayload }),
       );
@@ -1086,69 +1089,113 @@ const EditProfile = () => {
                 </div>
 
                 <div className="space-y-6 max-w-3xl">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">
-                        Display Name
-                      </label>
-                      <input
-                        type="text"
-                        value={profileData.displayName}
-                        onChange={(e) =>
-                          setProfileData((p) => ({
-                            ...p,
-                            displayName: e.target.value,
-                          }))
-                        }
-                        placeholder={currentName}
-                        className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors"
-                      />
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={profileData.displayName}
+                      onChange={(e) =>
+                        setProfileData((p) => ({
+                          ...p,
+                          displayName: e.target.value,
+                        }))
+                      }
+                      placeholder={currentName}
+                      className="w-full bg-[#0d0e12] border border-zinc-800 px-4 py-3.5 rounded-2xl text-white font-medium focus:border-red-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  {/* Demographics & Identity (Age & Gender) */}
+                  <div className="rounded-2xl border border-zinc-800/80 bg-[#0c0d11]/80 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                          Identity & Demographics
+                        </h4>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                          Configure your gender and age for discovery filtering.
+                        </p>
+                      </div>
+                      {kycData.dob && calculateAge(kycData.dob) !== null && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold">
+                          Age: {calculateAge(kycData.dob)} yrs
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <label
-                        htmlFor="creator-gender"
-                        className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-400"
-                      >
-                        Gender
-                      </label>
-                      <select
-                        id="creator-gender"
-                        value={profileData.gender}
-                        onChange={(e) =>
-                          setProfileData((p) => ({
-                            ...p,
-                            gender: e.target.value,
-                          }))
-                        }
-                        className="w-full rounded-2xl border border-zinc-800 bg-[#0d0e12] px-4 py-3.5 text-sm text-white focus:border-red-500 focus:outline-none"
-                      >
-                        <option value="">Choose an option</option>
-                        {GENDER_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {profileData.gender === "self_describe" && (
-                        <input
-                          type="text"
-                          value={profileData.genderDescription}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label
+                          htmlFor="creator-gender"
+                          className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-400"
+                        >
+                          Gender
+                        </label>
+                        <select
+                          id="creator-gender"
+                          value={profileData.gender}
                           onChange={(e) =>
                             setProfileData((p) => ({
                               ...p,
-                              genderDescription: e.target.value.slice(0, 80),
+                              gender: e.target.value,
                             }))
                           }
-                          maxLength={80}
-                          aria-label="Describe your gender"
-                          placeholder="Describe your gender"
-                          className="mt-2 w-full rounded-xl border border-zinc-800 bg-[#0d0e12] px-3 py-2 text-sm text-white focus:border-red-500 focus:outline-none"
+                          className="w-full rounded-2xl border border-zinc-800 bg-[#0d0e12] px-4 py-3.5 text-sm text-white focus:border-red-500 focus:outline-none"
+                        >
+                          <option value="">Choose an option</option>
+                          {GENDER_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {profileData.gender === "self_describe" && (
+                          <input
+                            type="text"
+                            value={profileData.genderDescription}
+                            onChange={(e) =>
+                              setProfileData((p) => ({
+                                ...p,
+                                genderDescription: e.target.value.slice(0, 80),
+                              }))
+                            }
+                            maxLength={80}
+                            aria-label="Describe your gender"
+                            placeholder="Describe your gender"
+                            className="mt-2 w-full rounded-xl border border-zinc-800 bg-[#0d0e12] px-3 py-2 text-sm text-white focus:border-red-500 focus:outline-none"
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label
+                            htmlFor="creator-dob"
+                            className="block text-xs font-black uppercase tracking-wider text-zinc-400"
+                          >
+                            Age / Date of Birth
+                          </label>
+                          {kycData.dob && calculateAge(kycData.dob) !== null && (
+                            <span className="text-[11px] font-semibold text-emerald-400">
+                              Verified Age: {calculateAge(kycData.dob)}
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          id="creator-dob"
+                          type="date"
+                          name="dob"
+                          value={kycData.dob}
+                          onChange={handleKycChange}
+                          max={new Date().toISOString().split("T")[0]}
+                          className="w-full rounded-2xl border border-zinc-800 bg-[#0d0e12] px-4 py-3.5 text-sm text-white focus:border-red-500 focus:outline-none"
                         />
-                      )}
-                      <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">
-                        Public profiles show your calculated age, not your full
-                        date of birth.
-                      </p>
+                        <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">
+                          Public profiles show your calculated age, not your full date of birth. Must be 18+.
+                        </p>
+                      </div>
                     </div>
                   </div>
 

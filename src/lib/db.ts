@@ -8113,18 +8113,18 @@ export interface AdApplication {
 export const DEFAULT_PLATFORM_ADS: PlatformAd[] = [
   {
     id: "ad-user-1",
-    title: "VIP Nairobi Hideaway Restore Club",
+    title: "VIP Executive Penthouse Suite & Lounge",
     description:
       "Exclusive weekend tasting access and 20% privilege dining discount for The Gents DollHouse VIP members. Present your digital badge upon arrival.",
     image_url:
       "https://i.pinimg.com/736x/41/6d/31/416d318e49d9ea17342082b9f0a6b0f7.jpg",
     target_audience: "users",
     category: "nightlife",
-    sponsor_name: "The Onyx Club & Lounge",
+    sponsor_name: "The Executive Hideaway Resort",
     badge: "VIP Exclusive",
     perk_value: "20% Privilege Discount",
     cta_text: "Claim Reservation Code",
-    cta_url: "https://example.com/onyx-lounge",
+    cta_url: "https://example.com/executive-hideaway",
     status: "active",
     impressions: 485,
     clicks: 74,
@@ -8133,18 +8133,18 @@ export const DEFAULT_PLATFORM_ADS: PlatformAd[] = [
   },
   {
     id: "ad-user-2",
-    title: "Private Luxury  Spa and Happy ending Retreat",
+    title: "Executive Hideaway Luxury Spa, Wellness & Happy Ending",
     description:
-      "Book 3 nights and receive complimentary helicopter transfer plus personal chef service. Exclusive platform partnership for registered patrons.",
+      "Indulge in premium full-body rejuvenation, sensual wellness massage, and exclusive happy ending therapy. Discreet private suite sessions reserved for members.",
     image_url:
       "https://i.pinimg.com/1200x/98/07/ce/9807ce9073de2f3e431ddb98be26eb3b.jpg",
     target_audience: "users",
     category: "luxury",
-    sponsor_name: "Sultan Palace Escapes",
+    sponsor_name: "The Executive Hideaway Resort",
     badge: "Limited Privilege",
-    perk_value: "Free Heli Transfer",
-    cta_text: "Explore Private Villa",
-    cta_url: "https://example.com/diani-villa",
+    perk_value: "Discreet VIP Session",
+    cta_text: "Book Spa & Wellness",
+    cta_url: "https://example.com/executive-hideaway-spa",
     status: "active",
     impressions: 612,
     clicks: 118,
@@ -8446,9 +8446,40 @@ export const getStoredAds = (): PlatformAd[] => {
       return DEFAULT_PLATFORM_ADS;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0
-      ? parsed
-      : DEFAULT_PLATFORM_ADS;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Auto-migrate legacy ads to The Executive Hideaway Resort
+      let migrated = false;
+      const updated = parsed.map((a: PlatformAd) => {
+        if (a.id === "ad-user-1" || (a.sponsor_name && a.sponsor_name.includes("Onyx"))) {
+          migrated = true;
+          return {
+            ...a,
+            sponsor_name: "The Executive Hideaway Resort",
+            title: a.title && a.title.includes("Onyx") ? "VIP Executive Penthouse Suite & Lounge" : (a.title || "VIP Executive Penthouse Suite & Lounge"),
+            cta_url: a.cta_url && a.cta_url.includes("onyx") ? "https://example.com/executive-hideaway" : a.cta_url,
+          };
+        }
+        if (a.id === "ad-user-2" || (a.sponsor_name && a.sponsor_name.includes("Sultan Palace"))) {
+          migrated = true;
+          return {
+            ...a,
+            sponsor_name: "The Executive Hideaway Resort",
+            title: "Executive Hideaway Luxury Spa, Wellness & Happy Ending",
+            description: "Indulge in premium full-body rejuvenation, sensual wellness massage, and exclusive happy ending therapy. Discreet private suite sessions reserved for members.",
+            cta_text: "Book Spa & Wellness",
+            perk_value: "Discreet VIP Session",
+            cta_url: "https://example.com/executive-hideaway-spa",
+          };
+        }
+        return a;
+      });
+      if (migrated) {
+        localStorage.setItem(ADS_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      }
+      return parsed;
+    }
+    return DEFAULT_PLATFORM_ADS;
   } catch {
     return DEFAULT_PLATFORM_ADS;
   }

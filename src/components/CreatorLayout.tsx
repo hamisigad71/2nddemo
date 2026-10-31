@@ -3,10 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake, Download, Radio, Headphones } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getUserNotifications, getUserProfile, getStoredCreatorProfile } from '../lib/db';
-import { resolveUserAvatar } from '../lib/avatar';
+import { getUserNotifications, getUserProfile, getStoredCreatorProfile, getCreatorProfile } from '../lib/db';
+import { resolveUserAvatar, hasUploadedProfilePhoto } from '../lib/avatar';
 import { isSelectedVerifiedCreator } from '../lib/creatorDirectory';
 import { supabase } from '../lib/supabase';
+import CreatorAvatarPromptModal from './CreatorAvatarPromptModal';
 
 interface CreatorLayoutProps {
   children: React.ReactNode;
@@ -40,6 +41,7 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [creatorAvatar, setCreatorAvatar] = useState<string | null>(null);
   const [creatorName, setCreatorName] = useState<string>('Creator');
+  const [showAvatarPrompt, setShowAvatarPrompt] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -77,13 +79,42 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
 
       // In CreatorLayout, we do not forcefully hijack creator navigation and trap them on edit-profile.
       // Unverified or incomplete creators are shown status banners directly on the dashboard and wallet pages.
-      if (profile?.avatar) setCreatorAvatar(profile.avatar);
+      const cp = await getCreatorProfile(user.id);
+      const resolvedAvatar =
+        (hasUploadedProfilePhoto(profile?.avatar) ? profile?.avatar : null) ||
+        (hasUploadedProfilePhoto(cp?.avatar) ? cp?.avatar : null) ||
+        (hasUploadedProfilePhoto(local?.avatar) ? local?.avatar : null) ||
+        (hasUploadedProfilePhoto(local?.avatar_url) ? local?.avatar_url : null) ||
+        (hasUploadedProfilePhoto(meta?.avatar_url) ? meta?.avatar_url : null) ||
+        (hasUploadedProfilePhoto(meta?.picture) ? meta?.picture : null);
+
+      if (resolvedAvatar) setCreatorAvatar(resolvedAvatar);
+      else if (profile?.avatar) setCreatorAvatar(profile.avatar);
       if (profile?.name) setCreatorName(profile.name);
+
+      // STRICT CHECK: Only prompt creators who have NOT uploaded their own custom profile photo
+      const hasUploaded = hasUploadedProfilePhoto(resolvedAvatar);
+      if (!hasUploaded) {
+        const hasPrompted = sessionStorage.getItem(`tgd_avatar_prompt_shown_${user.id}`);
+        if (!hasPrompted && location.pathname !== '/edit-profile') {
+          setTimeout(() => {
+            setShowAvatarPrompt(true);
+            sessionStorage.setItem(`tgd_avatar_prompt_shown_${user.id}`, 'true');
+          }, 1200);
+        }
+      } else {
+        setShowAvatarPrompt(false);
+      }
     }).catch(() => {});
 
     // 3. Listen to profile_updated events
     const handleProfileUpdate = (e: any) => {
-      if (e.detail?.avatar) setCreatorAvatar(e.detail.avatar);
+      if (e.detail?.avatar) {
+        setCreatorAvatar(e.detail.avatar);
+        if (hasUploadedProfilePhoto(e.detail.avatar)) {
+          setShowAvatarPrompt(false);
+        }
+      }
       if (e.detail?.name) setCreatorName(e.detail.name);
     };
     window.addEventListener('profile_updated', handleProfileUpdate);
@@ -351,6 +382,13 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
             );
           })}
       </nav>
+
+      {/* Creator Profile Image Prompt Modal */}
+      <CreatorAvatarPromptModal
+        isOpen={showAvatarPrompt}
+        onClose={() => setShowAvatarPrompt(false)}
+        creatorName={creatorName}
+      />
 
     </div>
   );
