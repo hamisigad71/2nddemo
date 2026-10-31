@@ -167,12 +167,12 @@ const Landing = () => {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-row items-center justify-center gap-3 w-full px-2 sm:px-0 max-w-sm sm:max-w-none">
-              <Link to="/signup" className="group flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-red-600 text-white px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-black hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] hover:scale-[1.02] border border-red-500">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full max-w-md sm:max-w-none sm:flex sm:flex-row sm:items-center sm:justify-center">
+              <Link to="/signup" className="group flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white py-3.5 px-3 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-bold transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] border border-red-500/80 text-center">
                 Start Earning
-                <ArrowRight className="hidden sm:block w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="hidden sm:inline-block w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link to="/discover" className="flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-[#0a0b0e] backdrop-blur-md text-white hover:bg-white/5 border border-zinc-700 hover:border-white/40 px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-[11px] sm:text-base font-bold transition-all uppercase tracking-wider">
+              <Link to="/discover" className="flex items-center justify-center gap-1.5 bg-black/50 hover:bg-white/10 active:scale-[0.98] backdrop-blur-md text-white border border-white/20 hover:border-white/40 py-3.5 px-3 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-semibold transition-all text-center tracking-wide">
                 Explore Creators
               </Link>
             </div>

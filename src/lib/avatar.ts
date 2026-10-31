@@ -3,21 +3,15 @@
  * Provides a sleek, neutral luxury default profile silhouette icon for all new accounts.
  */
 
-// Neutral dark luxury SVG avatar placeholder (128x128 SVG Data URI)
-export const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' fill='%2318181b'/%3E%3Ccircle cx='64' cy='46' r='24' fill='%2352525b'/%3E%3Cpath d='M24 108c0-22.091 17.909-40 40-40s40 17.909 40 40' fill='%2352525b'/%3E%3C/svg%3E";
+// Universal luxury default profile silhouette image for creators and users
+export const DEFAULT_AVATAR = "/default-avatar.jpg";
 
 /**
- * Returns a high-resolution, dark-themed avatar for users.
- * If a name is provided and not generic, generates a matching styled initials badge;
- * otherwise returns the clean default profile silhouette.
+ * Returns the default profile avatar image.
+ * Uses the universal default red neon glass silhouette image across the platform instead of letter/initial badges,
+ * ensuring clean, premium, consistent imagery unless the creator/user explicitly uploads their own photo.
  */
-export const getDefaultAvatar = (name?: string | null): string => {
-  if (name && typeof name === 'string') {
-    const clean = name.trim();
-    if (clean && !/^(user|fan|fan user|creator|unknown|someone)$/i.test(clean)) {
-      return `https://ui-avatars.com/api/?name=${encodeURIComponent(clean)}&background=18181b&color=e4e4e7&bold=true&size=200&format=svg`;
-    }
-  }
+export const getDefaultAvatar = (_name?: string | null): string => {
   return DEFAULT_AVATAR;
 };
 
@@ -30,13 +24,24 @@ const SUPABASE_STORAGE_URL = 'https://gitkzykasegtygoybjhq.supabase.co/storage/v
 export const resolveUserAvatar = (avatarUrl?: string | null, name?: string | null): string => {
   if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim()) {
     const cleanUrl = avatarUrl.trim();
-    // If it's an expired blob URL or old hardcoded placeholder, replace with clean default
-    if (cleanUrl.startsWith('blob:') || cleanUrl.includes('photo-1534528741775-53994a69daeb') || cleanUrl.includes('pravatar.cc')) {
+    // If it's an expired blob URL or old hardcoded placeholder or letter initials avatar, replace with clean default
+    if (
+      cleanUrl.startsWith('blob:') ||
+      cleanUrl.includes('photo-1534528741775-53994a69daeb') ||
+      cleanUrl.includes('pravatar.cc') ||
+      cleanUrl.includes('ui-avatars.com')
+    ) {
       return getDefaultAvatar(name);
     }
+    // Convert temporary signed Supabase storage URLs to permanent public URLs so tokens never expire
+    if (cleanUrl.includes('/storage/v1/object/sign/')) {
+      const publicEquivalent = cleanUrl.replace('/storage/v1/object/sign/', '/storage/v1/object/public/').split('?')[0];
+      return publicEquivalent;
+    }
     // If it's a relative storage path (e.g. avatars/... or covers/...), convert to full public URL
-    if (cleanUrl.startsWith('avatars/') || cleanUrl.startsWith('covers/') || cleanUrl.startsWith('escort-verification/') || cleanUrl.startsWith('posts/')) {
-      return `${SUPABASE_STORAGE_URL}/${cleanUrl}`;
+    const stripped = cleanUrl.replace(/^\/+/, '');
+    if (stripped.startsWith('avatars/') || stripped.startsWith('covers/') || stripped.startsWith('escort-verification/') || stripped.startsWith('posts/')) {
+      return `${SUPABASE_STORAGE_URL}/${stripped}`;
     }
     return cleanUrl;
   }
@@ -51,6 +56,8 @@ export const hasUploadedProfilePhoto = (avatarUrl?: string | null): boolean => {
   if (!avatarUrl || typeof avatarUrl !== 'string') return false;
   const clean = avatarUrl.trim();
   if (!clean) return false;
+  if (clean === '/default-avatar.jpg' || clean.includes('default-avatar.jpg')) return false; // Default avatar
+  if (clean.includes('b1e459cf78031a698ed00cc8ef944319')) return false; // Default avatar Pinterest link
   if (clean.startsWith('data:image/svg+xml')) return false; // Default SVG silhouette
   if (clean.includes('ui-avatars.com')) return false; // Auto-generated initials badge
   if (clean.includes('pravatar.cc')) return false; // Placeholder

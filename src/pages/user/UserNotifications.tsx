@@ -39,20 +39,6 @@ export interface NotificationItem {
   badge?: string;
 }
 
-function extractInitials(title?: string, message?: string): string {
-  const combined = `${title || ''} ${message || ''}`;
-  const match = combined.match(/New Creator Joined:?\s*([A-Za-z0-9_]+(?:\s+[A-Za-z0-9_]+)?)/i)
-    || combined.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+))/);
-  if (match && match[1]) {
-    const parts = match[1].trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return 'VIP';
-}
-
-
-
 const formatFullDate = (dateStr: string) => {
   try {
     const d = parseNotificationDate(dateStr);
@@ -353,9 +339,11 @@ const UserNotifications = () => {
                       </div>
                     ) : isNewCreator ? (
                       <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/25 via-amber-600/15 to-zinc-900 border border-amber-500/30 flex items-center justify-center text-amber-200 font-serif font-bold text-sm tracking-wider shadow-inner">
-                          {extractInitials(item.title, item.message)}
-                        </div>
+                        <img
+                          src="/default-avatar.jpg"
+                          alt="Creator"
+                          className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
+                        />
                         <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-amber-500/30 flex items-center justify-center">
                           <Star className="w-3 h-3 text-amber-400 fill-amber-400/20" />
                         </div>

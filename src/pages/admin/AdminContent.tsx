@@ -314,7 +314,7 @@ const AdminContent = () => {
                           alt={item.creator}
                           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-border shrink-0"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.creator || 'Creator')}&background=18181b&color=ffffff&bold=true`;
+                            (e.target as HTMLImageElement).src = '/default-avatar.jpg';
                           }}
                         />
                         <div className="min-w-0">
@@ -421,7 +421,7 @@ const AdminContent = () => {
                   alt={selectedPost.creator}
                   className="w-10 h-10 rounded-full object-cover border border-border"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedPost.creator || 'Creator')}&background=18181b&color=ffffff&bold=true`;
+                    (e.target as HTMLImageElement).src = '/default-avatar.jpg';
                   }}
                 />
                 <div>

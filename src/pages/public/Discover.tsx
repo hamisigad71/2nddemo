@@ -18,6 +18,7 @@ import BottomNav from "../../components/BottomNav";
 import { supabase } from "../../lib/supabase";
 import {
   getDiscoverCreators,
+  getCachedDiscoverCreators,
   getFanSubscriptions,
   checkUserSubscription,
   getUserProfile,
@@ -47,9 +48,10 @@ const Discover = () => {
     useState<CreatorDirectoryFilter>("trending");
   const [genderFilter, setGenderFilter] = useState<CreatorGenderFilter>("all");
   const [search, setSearch] = useState("");
-  const [creators, setCreators] = useState<any[]>([]);
+  const initialCached = getCachedDiscoverCreators();
+  const [creators, setCreators] = useState<any[]>(initialCached || []);
   const [sponsoredAds, setSponsoredAds] = useState<PlatformAd[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialCached || initialCached.length === 0);
   const [activeSubscribedIds, setActiveSubscribedIds] = useState<Set<string>>(
     new Set(),
   );
@@ -560,8 +562,11 @@ const Discover = () => {
                               alt={creator.name}
                               referrerPolicy="no-referrer"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  getDefaultAvatar(creator.name);
+                                const target = e.currentTarget as HTMLImageElement;
+                                const fallback = getDefaultAvatar(creator.name);
+                                if (target.src !== fallback) {
+                                  target.src = fallback;
+                                }
                               }}
                               className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-card shadow-md object-cover bg-muted"
                               loading="lazy"

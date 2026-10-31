@@ -482,16 +482,27 @@ export const getCreatorStorageAssets = async (
 export const updateUserProfile = async (uid: string, data: any) => {
   if (!uid) return;
   const cleanUid = uid.replace(/[^a-zA-Z0-9_-]/g, "");
-  const synchronizedData = {
-    ...data,
-    ...(data.avatar && !data.avatar_url ? { avatar_url: data.avatar } : {}),
-    ...(data.avatar_url && !data.avatar ? { avatar: data.avatar_url } : {}),
-  };
+  const rawAvatar = data.avatar || data.avatar_url;
+
+  // Cache immediately in local storage so that UI views immediately reflect user's updated photo
+  if (rawAvatar && typeof window !== "undefined") {
+    try {
+      localStorage.setItem(`tgd_user_avatar_${cleanUid}`, rawAvatar);
+    } catch {}
+  }
+
+  // Ensure public.users table payload is safe (public.users uses 'avatar', not 'avatar_url')
+  const usersPayload: any = { ...data };
+  if (rawAvatar) {
+    usersPayload.avatar = rawAvatar;
+  }
+  delete usersPayload.avatar_url;
+
   try {
     // 1. Try update on users table
     const { data: updatedRows, error } = await supabase
       .from("users")
-      .update(synchronizedData)
+      .update(usersPayload)
       .eq("uid", cleanUid)
       .select("uid");
 
@@ -499,32 +510,24 @@ export const updateUserProfile = async (uid: string, data: any) => {
     if (!error && (!updatedRows || updatedRows.length === 0)) {
       const { error: upsertErr } = await supabase
         .from("users")
-        .upsert({ uid: cleanUid, ...synchronizedData }, { onConflict: "uid" });
+        .upsert({ uid: cleanUid, ...usersPayload }, { onConflict: "uid" });
       if (upsertErr) {
-        console.warn("users upsert note:", upsertErr.message);
+        // Fallback to 'id' match if 'uid' column failed
+        await supabase
+          .from("users")
+          .update(usersPayload)
+          .eq("id", cleanUid);
       }
-      return;
-    }
-
-    if (!error) return;
-
-    // If some columns like 'bio' or 'cover_image' are not in 'users' table yet, retry with safe core columns
-    if (
-      error.message?.includes("column") ||
-      error.code === "42703" ||
-      error.code === "PGRST204"
-    ) {
+    } else if (error) {
+      // If some columns like 'bio' or 'cover_image' are not in 'users' table yet, retry with safe core columns
       const safeData: any = {};
       if (data.name !== undefined) safeData.name = data.name;
-      if (data.avatar !== undefined || data.avatar_url !== undefined) {
-        safeData.avatar = data.avatar || data.avatar_url;
-        safeData.avatar_url = data.avatar_url || data.avatar;
-      }
-      if (data.cover_image !== undefined)
-        safeData.cover_image = data.cover_image;
+      if (rawAvatar) safeData.avatar = rawAvatar;
+      if (data.cover_image !== undefined) safeData.cover_image = data.cover_image;
       if (data.phone !== undefined) safeData.phone = data.phone;
       if (data.role !== undefined) safeData.role = data.role;
       if (data.email !== undefined) safeData.email = data.email;
+      if (data.bio !== undefined) safeData.bio = data.bio;
 
       const { data: retryRows, error: retryError } = await supabase
         .from("users")
@@ -532,20 +535,37 @@ export const updateUserProfile = async (uid: string, data: any) => {
         .eq("uid", cleanUid)
         .select("uid");
 
-      if (!retryError && (!retryRows || retryRows.length === 0)) {
+      if (retryError || (!retryRows || retryRows.length === 0)) {
         await supabase
           .from("users")
-          .upsert({ uid: cleanUid, ...safeData }, { onConflict: "uid" });
+          .update(safeData)
+          .eq("id", cleanUid);
       }
-      if (retryError) {
-        console.warn("Retry updating user profile notice:", retryError.message);
-      }
-    } else {
-      console.warn("updateUserProfile notice:", error.message);
     }
   } catch (err: any) {
     console.warn("updateUserProfile exception:", err?.message || err);
   }
+
+  // 2. Also keep creator_profiles in sync if avatar, bio, or cover changed
+  if (rawAvatar || data.bio || data.cover_image || data.name) {
+    try {
+      const cpUpdates: any = {};
+      if (rawAvatar) {
+        cpUpdates.avatar = rawAvatar;
+        cpUpdates.avatar_url = rawAvatar;
+      }
+      if (data.bio) cpUpdates.bio = data.bio;
+      if (data.cover_image) cpUpdates.cover_image = data.cover_image;
+      if (data.name) cpUpdates.display_name = data.name;
+
+      await supabase
+        .from("creator_profiles")
+        .update(cpUpdates)
+        .eq("user_id", cleanUid);
+    } catch {}
+  }
+
+  invalidateCreatorStorageAssets(cleanUid);
 };
 
 export const updateProfileDemographics = async (
@@ -614,16 +634,35 @@ export const updateProfileDemographics = async (
 
 export const updateCreatorProfile = async (uid: string, data: any) => {
   try {
+    const rawAvatar = data.avatar || data.avatar_url;
+    if (rawAvatar && typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`tgd_user_avatar_${uid}`, rawAvatar);
+      } catch {}
+    }
+
     const { error } = await supabase.from("creator_profiles").upsert(
       {
         user_id: uid,
         ...data,
+        ...(rawAvatar ? { avatar: rawAvatar, avatar_url: rawAvatar } : {}),
       },
       { onConflict: "user_id" },
     );
     if (error) {
       console.warn("creator_profiles upsert notice:", error.message);
     }
+
+    // Also ensure users table has the avatar
+    if (rawAvatar) {
+      supabase
+        .from("users")
+        .update({ avatar: rawAvatar })
+        .eq("uid", uid)
+        .then(() => {}, () => {});
+    }
+
+    invalidateCreatorStorageAssets(uid);
   } catch (err) {
     console.error("Error updating creator profile:", err);
   }
@@ -3194,21 +3233,56 @@ export const HARDCODED_DISCOVER_CREATORS = [
   },
 ];
 
-export const getDiscoverCreators = async () => {
+// In-memory cache for fast explore page loading
+let cachedDiscoverCreators: any[] | null = null;
+let lastDiscoverFetchTime = 0;
+const DISCOVER_CACHE_TTL = 30000; // 30 seconds fresh cache
+
+export const clearDiscoverCreatorsCache = () => {
+  cachedDiscoverCreators = null;
+  lastDiscoverFetchTime = 0;
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem("tgd_discover_creators_cache");
+    } catch {}
+  }
+};
+
+export const getCachedDiscoverCreators = (): any[] | null => {
+  if (cachedDiscoverCreators && cachedDiscoverCreators.length > 0) {
+    return cachedDiscoverCreators;
+  }
+  if (typeof window !== "undefined") {
+    try {
+      const stored = sessionStorage.getItem("tgd_discover_creators_cache");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedDiscoverCreators = parsed;
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+  return null;
+};
+
+export const getDiscoverCreators = async (forceRefresh = false) => {
   try {
-    // 1. Fetch all posts to identify creators who have actually posted on the feeds
+    const now = Date.now();
+    if (!forceRefresh && cachedDiscoverCreators && (now - lastDiscoverFetchTime < DISCOVER_CACHE_TTL)) {
+      return cachedDiscoverCreators;
+    }
+
+    // 1. Fetch recent posts to identify creators who have actually posted on the feeds (limit to recent 200 instead of infinite full-table scan)
     let allPosts: any[] = [];
     try {
-      allPosts = await fetchAllPages(async (offset, pageSize) => {
-        const { data, error } = await supabase
-          .from("posts")
-          .select(
-            "id, creator_id, media_url, is_locked, price, created_at, status",
-          )
-          .order("created_at", { ascending: false })
-          .range(offset, offset + pageSize - 1);
-        return { data, error };
-      });
+      const { data: postsData } = await supabase
+        .from("posts")
+        .select("id, creator_id, media_url, is_locked, price, created_at, status")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (postsData) allPosts = postsData;
     } catch (err) {
       console.warn("Could not fetch posts for creator discovery:", err);
     }
@@ -3559,44 +3633,66 @@ export const getDiscoverCreators = async () => {
 
     // Filter out any suspended, banned, or deleted creators from public discovery
     const activeCreatorUsers = creatorUsers.filter((u) => {
-      if (deletedCreatorIds.has(u.uid) || deletedCreatorIds.has((u as any).id))
+      const creatorUid = u.uid || (u as any).id;
+      if (deletedCreatorIds.has(creatorUid) || deletedCreatorIds.has(u.uid) || deletedCreatorIds.has((u as any).id))
         return false;
-      const p = profileMap.get(u.uid);
+      const p = profileMap.get(creatorUid) || profileMap.get(u.uid);
       const isSuspended =
         u.status === "suspended" ||
         u.status === "banned" ||
         u.role === "suspended_creator" ||
         p?.status === "suspended" ||
         (typeof window !== "undefined" &&
-          localStorage.getItem(`tgd_user_status_${u.uid}`) === "suspended");
+          (localStorage.getItem(`tgd_user_status_${creatorUid}`) === "suspended" ||
+           localStorage.getItem(`tgd_user_status_${u.uid}`) === "suspended"));
       return !isSuspended;
     });
+
+    let currentAuthUser: any = null;
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      currentAuthUser = authData?.user || null;
+    } catch {}
 
     // Format all real creators with resilient storage assets
     const realCreators = await Promise.all(
       activeCreatorUsers.map(async (u) => {
-        const p = profileMap.get(u.uid);
-        const postStats = postsByCreator.get(u.uid);
+        const creatorUid = u.uid || (u as any).id;
+        const p = profileMap.get(creatorUid) || profileMap.get(u.uid);
+        const postStats = postsByCreator.get(creatorUid) || postsByCreator.get(u.uid);
         const hasPosts = (postStats?.count || 0) > 0;
-        const local = getStoredCreatorProfile(u.uid);
+        const local = getStoredCreatorProfile(creatorUid) || getStoredCreatorProfile(u.uid);
 
-        // Storage assets check for missing avatar or cover
-        const hasKnownCover =
-          hasUploadedCoverPhoto(p?.cover_image) ||
-          hasUploadedCoverPhoto(u.cover_image) ||
-          hasUploadedCoverPhoto(local?.cover_image);
-        const hasKnownAvatar =
-          hasUploadedProfilePhoto(u.avatar) ||
-          hasUploadedProfilePhoto(p?.avatar) ||
-          hasUploadedProfilePhoto(p?.avatar_url) ||
-          hasUploadedProfilePhoto(local?.avatar);
+        const userLocalAvatar =
+          typeof window !== "undefined"
+            ? localStorage.getItem(`tgd_user_avatar_${creatorUid}`) ||
+              localStorage.getItem(`tgd_user_avatar_${u.uid}`) ||
+              null
+            : null;
 
+        let authAvatar: string | null = null;
+        if (
+          currentAuthUser &&
+          (currentAuthUser.id === creatorUid ||
+            currentAuthUser.id === u.uid ||
+            currentAuthUser.email === (u as any).email)
+        ) {
+          authAvatar =
+            currentAuthUser.user_metadata?.avatar_url ||
+            currentAuthUser.user_metadata?.picture ||
+            currentAuthUser.user_metadata?.avatar ||
+            null;
+        }
+
+        // Quick local/cached assets check — do not block on slow multi-bucket storage API calls during discovery
         let storageAssets = {
           avatar: null as string | null,
           cover: null as string | null,
         };
-        if (!hasKnownAvatar || !hasKnownCover) {
-          storageAssets = await getCreatorStorageAssets(u.uid);
+        // Only use storage cache if already in memory, avoid synchronous network calls to storage buckets
+        const cachedStorage = creatorStorageAssetsCache.get(creatorUid);
+        if (cachedStorage) {
+          storageAssets = cachedStorage;
         }
 
         const creatorName = resolveCreatorDisplayName(
@@ -3605,19 +3701,28 @@ export const getDiscoverCreators = async () => {
           p?.name,
           local?.name,
           local?.display_name,
-          u.uid === "b3bdd443-103e-45cb-986b-1d3d32659b3a"
+          creatorUid === "b3bdd443-103e-45cb-986b-1d3d32659b3a"
             ? "Joy Mwangi"
             : null,
         );
-        const appPhoto = escortAppsMap.get(u.uid);
-        const rawAvatar =
-          local?.avatar ||
-          local?.avatar_url ||
-          u.avatar ||
-          p?.avatar_url ||
-          p?.avatar ||
-          storageAssets.avatar ||
-          appPhoto;
+        const appPhoto = escortAppsMap.get(creatorUid) || escortAppsMap.get(u.uid);
+        // Prefer actual uploaded photos over generic initials or legacy fallbacks
+        const candidateAvatars = [
+          userLocalAvatar,
+          authAvatar,
+          u.avatar,
+          (u as any).avatar_url,
+          p?.avatar_url,
+          p?.avatar,
+          local?.avatar,
+          local?.avatar_url,
+          storageAssets.avatar,
+          appPhoto,
+        ];
+        // Pick the first avatar that is genuinely an uploaded photo, otherwise first available
+        const uploadedAvatarCandidate = candidateAvatars.find((a) => hasUploadedProfilePhoto(a));
+        const rawAvatar = uploadedAvatarCandidate || candidateAvatars.find((a) => Boolean(a && typeof a === "string" && a.trim()));
+
         const avatar = resolveUserAvatar(
           rawAvatar && !rawAvatar.startsWith("blob:") ? rawAvatar : null,
           creatorName,
@@ -3660,11 +3765,11 @@ export const getDiscoverCreators = async () => {
         const isTargetUnverified = isUnverifiedDiscoverUser(
           creatorName,
           (u as any).email,
-          u.uid,
+          creatorUid,
         );
         const isSelectedCreator =
           !isTargetUnverified &&
-          isSelectedVerifiedCreator(creatorName, (u as any).email, u.uid);
+          isSelectedVerifiedCreator(creatorName, (u as any).email, creatorUid);
         const isDiscoverFeatured =
           isSelectedCreator ||
           isTargetUnverified ||
@@ -3676,7 +3781,7 @@ export const getDiscoverCreators = async () => {
             supabase
               .from("users")
               .update({ cover_image: rawCover })
-              .eq("uid", u.uid)
+              .eq("uid", creatorUid)
               .then(
                 () => {},
                 () => {},
@@ -3686,7 +3791,7 @@ export const getDiscoverCreators = async () => {
             supabase
               .from("creator_profiles")
               .update({ cover_image: rawCover })
-              .eq("user_id", u.uid)
+              .eq("user_id", creatorUid)
               .then(
                 () => {},
                 () => {},
@@ -3694,8 +3799,32 @@ export const getDiscoverCreators = async () => {
           }
         }
 
-        const realSubs = creatorSubCounts.has(u.uid)
-          ? creatorSubCounts.get(u.uid) || 0
+        // Self-heal: persist resolved avatar back to DB in background if not yet set
+        if (avatar && hasUploadedProfilePhoto(avatar)) {
+          if (!hasUploadedProfilePhoto(u.avatar)) {
+            supabase
+              .from("users")
+              .update({ avatar })
+              .eq("uid", creatorUid)
+              .then(
+                () => {},
+                () => {},
+              );
+          }
+          if (!hasUploadedProfilePhoto(p?.avatar) || !hasUploadedProfilePhoto(p?.avatar_url)) {
+            supabase
+              .from("creator_profiles")
+              .update({ avatar, avatar_url: avatar })
+              .eq("user_id", creatorUid)
+              .then(
+                () => {},
+                () => {},
+              );
+          }
+        }
+
+        const realSubs = creatorSubCounts.has(creatorUid)
+          ? creatorSubCounts.get(creatorUid) || 0
           : activeSubsQueriedSuccessfully
             ? 0
             : p?.total_subscribers || 0;
@@ -3728,7 +3857,7 @@ export const getDiscoverCreators = async () => {
         }
 
         return {
-          id: u.uid,
+          id: creatorUid,
           name: creatorName,
           handle: `@${creatorName.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
           category:
@@ -3747,13 +3876,14 @@ export const getDiscoverCreators = async () => {
           last_seen:
             (u as any).last_seen ||
             (local as any)?.last_seen ||
+            getUserLastSeen(creatorUid) ||
             getUserLastSeen(u.uid) ||
             null,
           isVerified:
             !isTargetUnverified &&
             (isSelectedCreator ||
               isCreatorVerified(
-                u.uid,
+                creatorUid,
                 (u as any).is_verified ??
                   p?.is_verified ??
                   (local as any)?.is_verified,
@@ -3798,10 +3928,21 @@ export const getDiscoverCreators = async () => {
       }
     });
 
+    cachedDiscoverCreators = combined;
+    lastDiscoverFetchTime = Date.now();
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          "tgd_discover_creators_cache",
+          JSON.stringify(combined),
+        );
+      } catch {}
+    }
+
     return combined;
   } catch (err) {
     console.error("getDiscoverCreators error:", err);
-    return [];
+    return cachedDiscoverCreators || [];
   }
 };
 

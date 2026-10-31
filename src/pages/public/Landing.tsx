@@ -172,58 +172,62 @@ const Landing = () => {
           </div>
 
           {/* Content */}
-          <div className="relative z-10 flex flex-col justify-start md:justify-center items-center px-6 pt-16 pb-10 md:py-40 w-full max-w-4xl mx-auto flex-1 gap-6">
+          <div className="relative z-10 flex flex-col justify-between md:justify-center items-center px-4 sm:px-6 pt-14 pb-8 md:py-36 w-full max-w-4xl mx-auto flex-1 min-h-[100svh] md:min-h-0">
 
-            {/* TOP GROUP: Badge + Headline */}
-            <div className="flex flex-col items-center text-center">
+            {/* TOP GROUP: Badge + Headline + Description */}
+            <div className="flex flex-col items-center text-center w-full max-w-xl md:max-w-3xl">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-red-500/30 text-white text-xs md:text-sm font-bold mb-6 md:mb-8 shadow-lg shadow-red-500/10 backdrop-blur-md transition-all cursor-default relative overflow-hidden">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 border border-red-500/30 text-white text-xs md:text-sm font-semibold mb-4 md:mb-8 shadow-lg shadow-red-500/10 backdrop-blur-md transition-all cursor-default relative overflow-hidden">
                 <span className="relative flex h-2 w-2 z-10">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-                <span className="z-10">Kenyan Creator Economy — Built Different 🇰🇪</span>
+                <span className="z-10 font-medium tracking-wide">Kenyan Creator Economy — Built Different 🇰🇪</span>
               </div>
 
               {/* Headline */}
-              <h1 className="text-xl sm:text-5xl md:text-7xl font-black tracking-tight mb-4 md:mb-6 leading-tight whitespace-nowrap md:whitespace-normal">
-                <span className="text-white drop-shadow-xl">Your Content.</span>{' '}
-                <span className="text-white drop-shadow-xl">Your Fans.</span>{' '}
-                <span className="text-red-500 drop-shadow-[0_4px_12px_rgba(239,68,68,0.5)]">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-3 md:mb-6 leading-[1.15]">
+                <span className="text-white drop-shadow-md">Your Content.</span>{' '}
+                <span className="text-white drop-shadow-md">Your Fans.</span>{' '}
+                <span className="text-red-500 drop-shadow-[0_2px_10px_rgba(239,68,68,0.4)]">
                   Your Money.
                 </span>
               </h1>
-            </div>
 
-            {/* BOTTOM GROUP: Description */}
-            <div className="flex flex-col items-center text-center w-full">
-              <p className="text-sm sm:text-base md:text-xl text-white/80 max-w-2xl mb-6 md:mb-10 leading-relaxed">
+              {/* Description */}
+              <p className="text-xs sm:text-base md:text-xl text-white/85 max-w-lg md:max-w-2xl leading-relaxed px-2">
                 The premium subscription platform for African creators. Monetize your audience directly through{' '}
-                <span className="text-primary font-semibold">M-Pesa</span>, cards &amp; more. No middleman. No hassle.
+                <span className="text-white font-semibold underline decoration-red-500 decoration-2 underline-offset-2">M-Pesa</span>, cards &amp; more. No middleman. No hassle.
               </p>
             </div>
 
-            {/* CTA + Social Proof — pushed to bottom on mobile */}
-            <div className="mt-auto md:mt-0 flex flex-col items-center text-center w-full pb-2 md:pb-0">
-              {/* CTA Buttons */}
-              <div className="flex flex-row items-center justify-center gap-3 w-full px-2 sm:px-0 max-w-sm sm:max-w-none">
-                <Link to="/signup" className="group flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-red-600 text-white px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-black hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] hover:scale-[1.02] border border-red-500">
-                  Start Earning
-                  <ArrowRight className="hidden sm:block w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            {/* BOTTOM GROUP: CTA + Social Proof — anchored cleanly above mobile edge */}
+            <div className="flex flex-col items-center text-center w-full mt-auto md:mt-10 pt-6">
+              {/* 2-Column Side-by-Side CTA Buttons on mobile */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full max-w-md sm:max-w-none sm:flex sm:flex-row sm:items-center sm:justify-center">
+                <Link
+                  to="/signup"
+                  className="group flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white py-3.5 px-3 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-bold transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] border border-red-500/80 text-center"
+                >
+                  <span>Start Earning</span>
+                  <ArrowRight className="hidden sm:inline-block w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link to="/discover" className="flex-1 sm:flex-none sm:w-auto flex items-center justify-center gap-1.5 bg-[#0a0b0e] backdrop-blur-md text-white hover:bg-white/5 border border-zinc-700 hover:border-white/40 px-2 py-4 sm:px-8 sm:py-4 rounded-xl text-[11px] sm:text-base font-bold transition-all uppercase tracking-wider">
-                  Explore Creators
+                <Link
+                  to="/discover"
+                  className="flex items-center justify-center gap-1.5 bg-black/50 hover:bg-white/10 active:scale-[0.98] backdrop-blur-md text-white border border-white/20 hover:border-white/40 py-3.5 px-3 sm:px-8 sm:py-4 rounded-xl text-xs sm:text-base font-semibold transition-all text-center tracking-wide"
+                >
+                  <span>Explore Creators</span>
                 </Link>
               </div>
 
               {/* Social Proof Mini */}
-              <div className="mt-4 flex items-center gap-2 text-sm text-white/70">
+              <div className="mt-3.5 md:mt-6 flex items-center justify-center gap-2 text-xs sm:text-sm text-white/75 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/5">
                 <div className="flex -space-x-2">
                   {creators.slice(0, 3).map((c, i) => (
-                    <img key={i} src={c.img} alt={c.name} className="w-7 h-7 rounded-full border-2 border-white/30 object-cover" />
+                    <img key={i} src={c.img} alt={c.name} className="w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white/40 object-cover" />
                   ))}
                 </div>
-                <span>Join <strong className="text-white">2,400+</strong> creators already earning</span>
+                <span>Join <strong className="text-white font-semibold">2,400+</strong> creators already earning</span>
               </div>
 
               {/* Carousel Dots */}
