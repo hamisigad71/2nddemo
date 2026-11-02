@@ -755,22 +755,26 @@ const EditProfile = () => {
       }
 
       if (profileData.gender || kycData.dob) {
-        await updateProfileDemographics(
-          user.id,
-          {
-            ...(kycData.dob ? { dob: kycData.dob } : {}),
-            ...(profileData.gender
-              ? {
-                  gender: profileData.gender,
-                  gender_description:
-                    profileData.gender === "self_describe"
-                      ? profileData.genderDescription.trim()
-                      : null,
-                }
-              : {}),
-          },
-          profileData.displayName || user.user_metadata?.name || "Creator",
-        );
+        try {
+          await updateProfileDemographics(
+            user.id,
+            {
+              ...(kycData.dob ? { dob: kycData.dob } : {}),
+              ...(profileData.gender
+                ? {
+                    gender: profileData.gender,
+                    gender_description:
+                      profileData.gender === "self_describe"
+                        ? profileData.genderDescription.trim()
+                        : null,
+                  }
+                : {}),
+            },
+            profileData.displayName || user.user_metadata?.name || "Creator",
+          );
+        } catch (demoErr: any) {
+          console.warn("Demographics update non-blocking notice:", demoErr?.message || demoErr);
+        }
       }
 
       // 5. Update Supabase Auth user metadata
