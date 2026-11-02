@@ -29,6 +29,52 @@ export const SELECTED_VERIFIED_CREATOR_UIDS = new Set([
   'cb31eb35-25ca-4dc7-983d-f9de8065001f', // Ella Rains
 ]);
 
+export const EXCLUDED_DISCOVER_NAMES = new Set([
+  'test',
+  'gad hamsi',
+  'daysman gad',
+  'john raymond',
+]);
+
+export const EXCLUDED_DISCOVER_HANDLES = new Set([
+  'test',
+  '@test',
+  'gadhamsi',
+  '@gadhamsi',
+  'daysmangad',
+  '@daysmangad',
+  'johnraymond',
+  '@johnraymond',
+]);
+
+export const isExcludedDiscoverCreator = (
+  name?: string | null,
+  handle?: string | null,
+  email?: string | null,
+  uid?: string | null,
+): boolean => {
+  if (name) {
+    const cleanName = name.trim().toLowerCase();
+    if (EXCLUDED_DISCOVER_NAMES.has(cleanName)) return true;
+    for (const excluded of EXCLUDED_DISCOVER_NAMES) {
+      if (cleanName === excluded) return true;
+    }
+  }
+  if (handle) {
+    const cleanHandle = handle.trim().toLowerCase().replace(/^@/, '');
+    if (EXCLUDED_DISCOVER_HANDLES.has(cleanHandle) || EXCLUDED_DISCOVER_HANDLES.has(`@${cleanHandle}`)) {
+      return true;
+    }
+  }
+  if (email) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.startsWith('test@') || cleanEmail.startsWith('daysman') || cleanEmail.startsWith('gadhamsi') || cleanEmail.startsWith('johnraymond')) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const UNVERIFIED_DISCOVER_EMAILS = new Set([
   'hadq@gmail.com',
   'executivehideawaybarberandspa@gmail.com',
@@ -100,9 +146,13 @@ export const filterAndSortCreators = <T extends FilterableCreator>(
   filter: CreatorDirectoryFilter,
   genderFilter: CreatorGenderFilter = 'all',
 ): T[] => {
+  const visibleCreators = creators.filter((c: any) =>
+    !isExcludedDiscoverCreator(c.name, c.handle, c.email, c.id || c.uid)
+  );
+
   const eligibleCreators = filter === 'verified'
-    ? creators.filter((creator) => creator.isVerified && !creator.isDemo)
-    : [...creators];
+    ? visibleCreators.filter((creator) => creator.isVerified && !creator.isDemo)
+    : [...visibleCreators];
   let sortedCreators = eligibleCreators;
 
   if (filter === 'new') {

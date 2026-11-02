@@ -15,6 +15,7 @@ import {
   GENERIC_CREATOR_NAMES,
   isSelectedVerifiedCreator,
   isUnverifiedDiscoverUser,
+  isExcludedDiscoverCreator,
 } from "./creatorDirectory";
 import {
   hasPrivateKycEvidence,
@@ -3631,7 +3632,7 @@ export const getDiscoverCreators = async (forceRefresh = false) => {
       } catch {}
     }
 
-    // Filter out any suspended, banned, or deleted creators from public discovery
+    // Filter out any suspended, banned, deleted, or excluded test creators from public discovery
     const activeCreatorUsers = creatorUsers.filter((u) => {
       const creatorUid = u.uid || (u as any).id;
       if (deletedCreatorIds.has(creatorUid) || deletedCreatorIds.has(u.uid) || deletedCreatorIds.has((u as any).id))
@@ -3645,7 +3646,17 @@ export const getDiscoverCreators = async (forceRefresh = false) => {
         (typeof window !== "undefined" &&
           (localStorage.getItem(`tgd_user_status_${creatorUid}`) === "suspended" ||
            localStorage.getItem(`tgd_user_status_${u.uid}`) === "suspended"));
-      return !isSuspended;
+      if (isSuspended) return false;
+
+      const creatorName = resolveCreatorDisplayName(
+        u.name,
+        p?.display_name,
+        p?.name,
+      );
+      if (isExcludedDiscoverCreator(creatorName, null, (u as any).email, creatorUid)) {
+        return false;
+      }
+      return true;
     });
 
     let currentAuthUser: any = null;
