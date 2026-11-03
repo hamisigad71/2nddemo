@@ -16,6 +16,7 @@ interface CreatorLayoutProps {
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
   { name: 'Go Live Studio', path: '/creator/live', icon: Radio, isLive: true },
+  { name: 'My Profile', path: '/creator/me', icon: Eye },
   { name: 'My Feed', path: '/feed', icon: Rss },
   { name: 'Creator Playbook', path: '/guide', icon: BookOpen },
   { name: 'Analytics', path: '/analytics', icon: LineChart },
@@ -211,12 +212,13 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
         
         <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide px-1 pb-6 -mx-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const itemPath = item.path === '/creator/me' && user?.id ? `/creator/${user.id}` : item.path;
+            const isActive = location.pathname === itemPath || (item.path === '/creator/me' && user?.id && location.pathname === `/creator/${user.id}`);
             const Icon = item.icon;
             return (
               <Link
                 key={item.name}
-                to={item.path}
+                to={itemPath}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${
                   isActive

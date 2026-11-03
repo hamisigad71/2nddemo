@@ -51,7 +51,7 @@ export const isExcludedDiscoverCreator = (
   name?: string | null,
   handle?: string | null,
   email?: string | null,
-  uid?: string | null,
+  _uid?: string | null,
 ): boolean => {
   if (name) {
     const cleanName = name.trim().toLowerCase();

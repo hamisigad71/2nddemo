@@ -243,6 +243,22 @@ const CreatorFeed = () => {
                         ? <><Lock className="w-3 h-3" /> KES {post.price}</>
                         : <><Unlock className="w-3 h-3" /> Public</>)}
                   </span>
+
+                  {/* Direct Delete Button for Creator */}
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    disabled={deletingId === post.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold transition-all border border-red-500/20 active:scale-95 disabled:opacity-50"
+                    title="Delete Post"
+                  >
+                    {deletingId === post.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>Delete</span>
+                  </button>
+
                   {/* Menu */}
                   <div className="relative">
                     <button
