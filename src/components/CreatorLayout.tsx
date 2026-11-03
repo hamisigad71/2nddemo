@@ -48,8 +48,11 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
     if (!user?.id) return;
 
     // 1. Instant load from local cache or auth metadata
+    const cachedUserAvatar = localStorage.getItem(`tgd_user_avatar_${user.id}`);
     const local = getStoredCreatorProfile(user.id);
-    if (local?.avatar || local?.avatar_url) {
+    if (cachedUserAvatar && hasUploadedProfilePhoto(cachedUserAvatar)) {
+      setCreatorAvatar(cachedUserAvatar);
+    } else if (local?.avatar || local?.avatar_url) {
       setCreatorAvatar(local.avatar || local.avatar_url);
     }
     if (local?.name || local?.display_name) {

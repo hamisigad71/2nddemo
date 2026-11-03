@@ -777,13 +777,13 @@ const EditProfile = () => {
         }
       }
 
-      // 5. Update Supabase Auth user metadata
+      // 5. Update Supabase Auth user metadata (safe metadata only, avoid giant base64 strings that cause Auth 400 rejection)
       try {
+        const isBase64 = finalAvatarUrl?.startsWith("data:");
+        const authAvatarPayload = isBase64 ? undefined : finalAvatarUrl;
         const { data: updatedAuth } = await supabase.auth.updateUser({
           data: {
-            avatar_url: finalAvatarUrl,
-            picture: finalAvatarUrl,
-            avatar: finalAvatarUrl,
+            ...(authAvatarPayload ? { avatar_url: authAvatarPayload, picture: authAvatarPayload, avatar: authAvatarPayload } : {}),
             name: profileData.displayName,
             full_name: profileData.displayName,
             gender: profileData.gender,
