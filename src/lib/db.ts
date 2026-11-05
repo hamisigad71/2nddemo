@@ -1015,9 +1015,7 @@ export const uploadFileToSupabase = async (
       if (data?.publicUrl) return data.publicUrl;
     } catch (xhrErr: any) {
       console.warn("XHR upload notice, falling back to standard upload:", xhrErr?.message || xhrErr);
-      if (fileToUpload.type && fileToUpload.type.startsWith("video/")) {
-        throw xhrErr;
-      }
+      // Fall through to standard supabase.storage.upload
     }
   }
 
