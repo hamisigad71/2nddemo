@@ -300,6 +300,7 @@ const Signup = () => {
         }
       }
 
+      // 1. Pre-upload all creator files (Avatar, Cover, ID Document, Selfie) before signup call
       let uploadedCoverUrl = '';
       if (accountType === 'creator' && coverFile) {
         const coverExt = coverFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
@@ -312,6 +313,25 @@ const Signup = () => {
 
       if (accountType === 'creator' && !uploadedAvatarUrl.startsWith('http')) {
         throw new Error('Could not upload your profile photo. Please try again before creating your account.');
+      }
+
+      let uploadedIdUrl = idDocPreview;
+      let uploadedSelfieUrl = selfiePreview;
+
+      if (accountType === 'creator' && idDocFile && selfieFile) {
+        const idExt = idDocFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+        const selfieExt = selfieFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+        const tempPrefix = `signup_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const idPath = `kyc/${tempPrefix}-id.${idExt}`;
+        const selfiePath = `kyc/${tempPrefix}-selfie.${selfieExt}`;
+
+        const [idUploaded, selfieUploaded] = await Promise.all([
+          uploadFileToSupabase(idDocFile, 'Daysman Gad', idPath),
+          uploadFileToSupabase(selfieFile, 'Daysman Gad', selfiePath)
+        ]);
+
+        if (idUploaded) uploadedIdUrl = idUploaded;
+        if (selfieUploaded) uploadedSelfieUrl = selfieUploaded;
       }
 
       if (uploadedAvatarUrl) {
@@ -338,6 +358,8 @@ const Signup = () => {
           dob,
           gender,
           gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
+          kyc_id_url: uploadedIdUrl?.startsWith('http') ? uploadedIdUrl : null,
+          kyc_selfie_url: uploadedSelfieUrl?.startsWith('http') ? uploadedSelfieUrl : null,
           kyc_status: accountType === 'creator' ? 'pending' : 'unverified'
         }
       );
@@ -395,24 +417,8 @@ const Signup = () => {
       }
 
       if (accountType === 'creator') {
-        let uploadedIdUrl = idDocPreview;
-        let uploadedSelfieUrl = selfiePreview;
-
-        if (uid && idDocFile && selfieFile) {
+        if (uid) {
           try {
-            const idExt = idDocFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
-            const selfieExt = selfieFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
-            const idPath = `kyc/${uid}/${Date.now()}-id.${idExt}`;
-            const selfiePath = `kyc/${uid}/${Date.now()}-selfie.${selfieExt}`;
-
-            const [idUploaded, selfieUploaded] = await Promise.all([
-              uploadFileToSupabase(idDocFile, 'Daysman Gad', idPath),
-              uploadFileToSupabase(selfieFile, 'Daysman Gad', selfiePath)
-            ]);
-
-            if (idUploaded) uploadedIdUrl = idUploaded;
-            if (selfieUploaded) uploadedSelfieUrl = selfieUploaded;
-
             await supabase.from('users').update({
               legal_name: legalName.trim(),
               national_id_number: nationalId.trim(),
@@ -438,7 +444,7 @@ const Signup = () => {
               is_verified: false
             }));
           } catch (uploadErr) {
-            console.warn('KYC file persistence notice:', uploadErr);
+            console.warn('KYC user record update notice:', uploadErr);
           }
         }
 
