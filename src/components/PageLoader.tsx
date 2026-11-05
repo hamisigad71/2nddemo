@@ -181,19 +181,21 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
         {/* Brand name */}
         <div className="text-center relative z-10 mt-4">
-          <div className="mb-1 text-2xl font-bold tracking-tight sm:text-3xl text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+          <div className={`mb-1 text-2xl font-bold tracking-tight sm:text-3xl ${presentation.title} ${theme === 'dark' ? 'drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]' : ''}`}>
             The Gents Dollhouse<span className="text-rose-500">.</span>
           </div>
-          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+          <p className={`text-xs font-semibold tracking-[0.18em] uppercase ${presentation.subtitle} ${theme === 'dark' ? 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]' : ''}`}>
             Creator Platform
           </p>
         </div>
 
         {/* Progress bar */}
         <div className="relative z-10 mt-2 flex w-56 flex-col items-center gap-3">
-          <p className="text-sm font-medium text-white/85 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">Getting things ready</p>
+          <p className={`text-sm font-medium ${presentation.progressText} ${theme === 'dark' ? 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]' : ''}`}>
+            Getting things ready
+          </p>
           <div
-            className="h-1.5 w-full overflow-hidden rounded-full border border-white/20 bg-black/40 backdrop-blur-md shadow-inner"
+            className={`h-1.5 w-full overflow-hidden rounded-full ${presentation.progressTrack} shadow-inner`}
             role="progressbar"
             aria-label="Loading progress"
             aria-valuemin={0}
@@ -210,7 +212,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
               }}
             />
           </div>
-          <span className="text-xs font-bold tabular-nums text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+          <span className={`text-xs font-bold tabular-nums ${presentation.progressText} ${theme === 'dark' ? 'drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]' : ''}`}>
             {progress}%
           </span>
         </div>
@@ -218,7 +220,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
       {/* Bottom tagline */}
       <div
-        className="page-loader-motion absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[11px] font-semibold tracking-[0.12em] uppercase text-white/80 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
+        className={`page-loader-motion absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[11px] font-semibold tracking-[0.12em] uppercase ${presentation.bottomTagline} ${theme === 'dark' ? 'drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]' : ''}`}
         style={{ animation: 'loader-fade-up 1s ease-out forwards' }}
       >
         Built for African creators
