@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { UploadCloud, ImagePlus, Loader2, Video, Save, Lock } from 'lucide-react';
 import { createPost, uploadFileToSupabase } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
+import { sendTelegramErrorAlert } from '../lib/telegramAlerts';
 
 interface CreatePostFormProps {
   onPostCreated?: () => void;
@@ -233,7 +234,21 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error(err);
-      setUploadError(err instanceof Error ? err.message : 'An unexpected error occurred while saving the post.');
+      const errMsg = err instanceof Error ? err.message : 'An unexpected error occurred while saving the post.';
+      setUploadError(errMsg);
+
+      // Instantly alert admin on Telegram
+      sendTelegramErrorAlert({
+        action: `Creator Post Upload (${mediaType?.toUpperCase() || 'POST'}, visibility: ${visibility})`,
+        error: errMsg,
+        user: user ? { id: user.id, email: user.email, name: user.user_metadata?.name || user.email } : null,
+        context: {
+          fileType: selectedFile?.type,
+          fileSizeMB: selectedFile ? (selectedFile.size / (1024 * 1024)).toFixed(2) : 'none',
+          visibility,
+          price: visibility === 'ppv' ? price : 'free',
+        },
+      });
     } finally {
       setUploading(false);
     }

@@ -5,6 +5,7 @@ import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, C
 import { toast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
 import { uploadFileToSupabase, getStoredCreatorProfile, createNotification, notifyAdmins, updateProfileDemographics } from '../../lib/db';
+import { sendTelegramErrorAlert } from '../../lib/telegramAlerts';
 import { compressAvatarImage } from '../../lib/avatar';
 import { validateSignupImages } from '../../lib/creatorSignupImages';
 import { buildAdminKycSubmissionNotification } from '../../lib/verification';
@@ -280,10 +281,12 @@ const Signup = () => {
       }
     }
 
+    let cleanEmail = email.trim();
+
     try {
       setError('');
       setLoading(true);
-      const cleanEmail = email.trim();
+      cleanEmail = email.trim();
       const fullPhone = `+254${phone.replace(/\s+/g, '').replace(/^0/, '')}`;
 
       let uploadedAvatarUrl = avatarPreview;
@@ -498,7 +501,22 @@ const Signup = () => {
       // Move to confirmation / OTP step
       setOtpStep(true);
     } catch (err: any) {
-      setError(formatSignupErrorMessage(err, email, accountType));
+      const formattedError = formatSignupErrorMessage(err, email, accountType);
+      setError(formattedError);
+
+      // Instantly alert admin on Telegram
+      sendTelegramErrorAlert({
+        action: `Creator/User Signup Failed (${accountType?.toUpperCase()})`,
+        error: formattedError,
+        user: { email: cleanEmail, name: cleanUsername, role: accountType },
+        context: {
+          hasAvatar: Boolean(avatarFile || avatarPreview),
+          hasCover: Boolean(coverFile),
+          hasKYC: Boolean(idDocFile && selfieFile),
+          dob,
+          gender,
+        },
+      });
     } finally {
       setLoading(false);
     }

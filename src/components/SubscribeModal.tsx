@@ -4,6 +4,7 @@ import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, 
 import { formatPhone } from '../lib/daraja';
 import { subscribeToCreator, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
+import { sendTelegramErrorAlert } from '../lib/telegramAlerts';
 
 interface SubscribeModalProps {
   isOpen: boolean;
@@ -194,12 +195,38 @@ export default function SubscribeModal({
         return;
       }
 
-      setErrorMessage(paymentResult.error || 'Failed to send STK prompt. Please check your phone number and try again.');
+      const failureMsg = paymentResult.error || 'Failed to send STK prompt. Please check your phone number and try again.';
+      setErrorMessage(failureMsg);
       setStep('failed');
+
+      sendTelegramErrorAlert({
+        action: `Subscription M-Pesa STK Failed`,
+        error: failureMsg,
+        user: user ? { id: user.id, email: user.email, name: user.user_metadata?.name || user.email, role: 'subscriber' } : null,
+        context: {
+          creatorId,
+          creatorName,
+          price,
+          phone,
+        },
+      });
     } catch (e: any) {
       console.error('Payment initiation error:', e);
-      setErrorMessage(e?.message || 'Failed to send STK prompt. Try again.');
+      const excMsg = e?.message || 'Failed to send STK prompt. Try again.';
+      setErrorMessage(excMsg);
       setStep('failed');
+
+      sendTelegramErrorAlert({
+        action: `Subscription Payment Error`,
+        error: excMsg,
+        user: user ? { id: user.id, email: user.email, name: user.user_metadata?.name || user.email, role: 'subscriber' } : null,
+        context: {
+          creatorId,
+          creatorName,
+          price,
+          phone,
+        },
+      });
     }
   };
 
