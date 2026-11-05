@@ -41,20 +41,22 @@
   }
 
   .light {
-    --bg: hsl(0 0% 98%);
-    --fg: hsl(240 10% 6%);
+    --bg: hsl(0 0% 100%);
+    --fg: hsl(240 10% 3.9%);
     --card: hsl(0 0% 100%);
-    --card-fg: hsl(240 10% 6%);
+    --card-fg: hsl(240 10% 3.9%);
     --primary: hsl(346.8 77.2% 49.8%);
-    --primary-fg: hsl(0 0% 100%);
-    --secondary: hsl(240 5% 96%);
-    --secondary-fg: hsl(240 6% 10%);
-    --muted: hsl(240 5% 94%);
-    --muted-fg: hsl(240 4% 46%);
-    --accent: hsl(240 5% 96%);
-    --accent-fg: hsl(240 6% 10%);
-    --border: hsl(240 6% 88%);
-    --input: hsl(240 6% 88%);
+    --primary-fg: hsl(355.7 100% 97.3%);
+    --secondary: hsl(240 4.8% 95.9%);
+    --secondary-fg: hsl(240 5.9% 10%);
+    --muted: hsl(240 4.8% 95.9%);
+    --muted-fg: hsl(240 3.8% 46.1%);
+    --accent: hsl(240 4.8% 95.9%);
+    --accent-fg: hsl(240 5.9% 10%);
+    --destructive: hsl(0 84.2% 60.2%);
+    --destructive-foreground: hsl(0 0% 98%);
+    --border: hsl(240 5.9% 90%);
+    --input: hsl(240 5.9% 90%);
     --ring: hsl(346.8 77.2% 49.8%);
   }
 
@@ -66,6 +68,61 @@
 
 /* ── Light Mode Surface & Card Rules Across All Components ── */
 html.light, .light {
+  /* Complete Light Mode Theme coverage for User & Admin Portals */
+  aside,
+  header,
+  nav,
+  table,
+  tbody,
+  thead,
+  tr,
+  th,
+  td {
+    border-color: var(--border) !important;
+  }
+
+  /* Specific admin and user card/panel containers */
+  aside[class*="bg-"],
+  header[class*="bg-"],
+  div[class*="bg-[#0"],
+  div[class*="bg-[#1"],
+  section[class*="bg-[#0"],
+  section[class*="bg-[#1"],
+  article[class*="bg-[#0"],
+  article[class*="bg-[#1"] {
+    border-color: var(--border) !important;
+  }
+
+  /* Stat cards, tables and container backgrounds in Admin & User */
+  .bg-card,
+  [class*="bg-[#0d0e12]"],
+  [class*="bg-[#0D0E12]"],
+  [class*="bg-[#0c0d12]"],
+  [class*="bg-[#0a0b0f]"],
+  [class*="bg-[#111217]"],
+  [class*="bg-[#101116]"] {
+    background-color: var(--card) !important;
+    color: var(--card-fg) !important;
+    border-color: var(--border) !important;
+  }
+
+  /* Admin & User Table headers and rows */
+  th {
+    color: var(--muted-fg) !important;
+    background-color: var(--muted) !important;
+  }
+  tr:hover {
+    background-color: var(--accent) !important;
+  }
+
+  /* Fix warning/notice banners and badges in light mode */
+  [class*="bg-amber-950"],
+  [class*="bg-red-950"],
+  [class*="bg-[#1b0809]"] {
+    background-color: var(--card) !important;
+    border-color: var(--border) !important;
+  }
+
   /* 1. Global Card and Container Backgrounds: universal matching for all dark hex & zinc cards */
   [class*="bg-[#0"]:not([class*="bg-[#1877F2]"]):not([class*="fixed"]):not([class*="absolute inset-0 bg-gradient"]):not([class*="from-"]):not([class*="to-"]),
   [class*="bg-[#1"]:not([class*="bg-[#1877F2]"]):not([class*="fixed"]):not([class*="absolute inset-0 bg-gradient"]):not([class*="from-"]):not([class*="to-"]),
@@ -127,21 +184,42 @@ html.light, .light {
     border-color: var(--border) !important;
   }
 
-  /* 6. Text contrast for light theme */
-  .text-white:not(.bg-primary *, .bg-red-600 *, .bg-red-500 *, .bg-emerald-500 *, .bg-emerald-600 *, .bg-blue-600 *, .btn-solid *, [class*="bg-red-"] *, [class*="bg-rose-"] *, [class*="bg-emerald-"] *, [class*="bg-black"] *, [class*="bg-zinc-9"] *, [class*="bg-zinc-8"] *),
-  .text-zinc-100,
-  .text-zinc-200,
-  .text-zinc-300 {
+  /* 6. Text contrast for light theme - never override text inside colored/solid buttons or badges */
+  .text-white:not(
+    .bg-primary, .bg-primary *,
+    .bg-primary-foreground, .bg-primary-foreground *,
+    [class*="bg-red-"], [class*="bg-red-"] *,
+    [class*="bg-rose-"], [class*="bg-rose-"] *,
+    [class*="bg-emerald-"], [class*="bg-emerald-"] *,
+    [class*="bg-blue-"], [class*="bg-blue-"] *,
+    [class*="bg-purple-"], [class*="bg-purple-"] *,
+    [class*="bg-zinc-9"], [class*="bg-zinc-9"] *,
+    [class*="bg-zinc-8"], [class*="bg-zinc-8"] *,
+    [class*="bg-black"], [class*="bg-black"] *,
+    button:not([class*="bg-transparent"]):not([class*="bg-white"]):not([class*="bg-zinc-100"]):not([class*="border-input"]),
+    button:not([class*="bg-transparent"]):not([class*="bg-white"]):not([class*="bg-zinc-100"]):not([class*="border-input"]) *,
+    .badge-solid, .badge-solid *,
+    .page-loader-container, .page-loader-container *
+  ),
+  .text-zinc-100:not(
+    .bg-primary *, [class*="bg-red-"] *, [class*="bg-rose-"] *, [class*="bg-emerald-"] *, [class*="bg-blue-"] *, [class*="bg-zinc-9"] *
+  ),
+  .text-zinc-200:not(
+    .bg-primary *, [class*="bg-red-"] *, [class*="bg-rose-"] *, [class*="bg-emerald-"] *, [class*="bg-blue-"] *, [class*="bg-zinc-9"] *
+  ),
+  .text-zinc-300:not(
+    .bg-primary *, [class*="bg-red-"] *, [class*="bg-rose-"] *, [class*="bg-emerald-"] *, [class*="bg-blue-"] *, [class*="bg-zinc-9"] *
+  ) {
     color: var(--fg) !important;
   }
 
-  .text-zinc-400,
-  .text-zinc-500 {
+  .text-zinc-400:not([class*="bg-red-"] *, [class*="bg-rose-"] *, .bg-primary *),
+  .text-zinc-500:not([class*="bg-red-"] *, [class*="bg-rose-"] *, .bg-primary *) {
     color: var(--muted-fg) !important;
   }
 
   /* 7. Inputs and Textareas in light mode */
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([class*="bg-red"]),
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([class*="bg-red"]):not([class*="bg-rose"]),
   textarea,
   select {
     background-color: var(--card) !important;
@@ -154,17 +232,20 @@ html.light, .light {
     color: var(--muted-fg) !important;
   }
 
-  /* 8. Keep buttons with red / primary / status backgrounds readable */
+  /* 8. Strictly enforce crisp white text on ANY red / rose / primary elements & buttons */
   .bg-primary,
-  .bg-red-600,
-  .bg-red-500,
+  .bg-primary *,
+  [class*="bg-red-"]:not([class*="bg-red-50"]):not([class*="bg-red-100"]):not([class*="bg-red-500/10"]):not([class*="bg-red-500/15"]):not([class*="bg-red-500/20"]),
+  [class*="bg-red-"]:not([class*="bg-red-50"]):not([class*="bg-red-100"]):not([class*="bg-red-500/10"]):not([class*="bg-red-500/15"]):not([class*="bg-red-500/20"]) *,
+  [class*="bg-rose-"]:not([class*="bg-rose-50"]):not([class*="bg-rose-100"]):not([class*="bg-rose-500/10"]):not([class*="bg-rose-500/15"]):not([class*="bg-rose-500/20"]):not([class*="bg-rose-600/10"]),
+  [class*="bg-rose-"]:not([class*="bg-rose-50"]):not([class*="bg-rose-100"]):not([class*="bg-rose-500/10"]):not([class*="bg-rose-500/15"]):not([class*="bg-rose-500/20"]):not([class*="bg-rose-600/10"]) *,
   .bg-emerald-500,
+  .bg-emerald-500 *,
   .bg-emerald-600,
-  .bg-blue-600 {
+  .bg-emerald-600 *,
+  .bg-blue-600,
+  .bg-blue-600 * {
     color: #ffffff !important;
-    * {
-      color: inherit;
-    }
   }
 }
 

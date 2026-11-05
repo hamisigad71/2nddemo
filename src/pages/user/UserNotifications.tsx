@@ -147,11 +147,11 @@ const UserNotifications = () => {
       const isPpv = /unlock|ppv/i.test(`${item.title} ${item.message}`);
       return {
         icon: isTip ? DollarSign : isSub ? Award : isPpv ? Film : CreditCard,
-        iconColor: isTip ? 'text-emerald-400' : isSub ? 'text-amber-400' : isPpv ? 'text-purple-400' : 'text-emerald-400',
+        iconColor: isTip ? 'text-emerald-400' : isSub ? 'text-rose-400' : isPpv ? 'text-purple-400' : 'text-emerald-400',
         badgeBg: isTip 
           ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' 
           : isSub 
-            ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' 
+            ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' 
             : isPpv 
               ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' 
               : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
@@ -162,8 +162,8 @@ const UserNotifications = () => {
       const isPolicy = /terms|policy|security|warning/i.test(`${item.title} ${item.message}`);
       return {
         icon: isPolicy ? ShieldAlert : ShieldCheck,
-        iconColor: 'text-amber-400',
-        badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
+        iconColor: isPolicy ? 'text-rose-400' : 'text-blue-400',
+        badgeBg: isPolicy ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20',
         label: isPolicy ? 'Policy' : 'Notice',
       };
     }
@@ -174,9 +174,9 @@ const UserNotifications = () => {
 
     return {
       icon: isDebut ? Star : isVideo ? Film : isMessage ? MessageCircle : ImageIcon,
-      iconColor: isDebut ? 'text-amber-400' : isMessage ? 'text-sky-400' : 'text-rose-400',
+      iconColor: isDebut ? 'text-rose-400' : isMessage ? 'text-sky-400' : 'text-rose-400',
       badgeBg: isDebut 
-        ? 'bg-amber-400/10 text-amber-300 border-amber-400/20' 
+        ? 'bg-rose-500/10 text-rose-300 border-rose-500/20' 
         : isMessage
           ? 'bg-sky-500/10 text-sky-300 border-sky-500/20'
           : 'bg-rose-500/10 text-rose-300 border-rose-500/20',
@@ -295,7 +295,7 @@ const UserNotifications = () => {
                     : (item.badge || meta.label);
 
               const badgePillClass = isNewCreator
-                ? 'bg-amber-400/10 text-amber-300 border-amber-400/25'
+                ? 'bg-rose-500/10 text-rose-300 border-rose-500/25'
                 : isLive
                   ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
                   : isVideo
@@ -311,7 +311,7 @@ const UserNotifications = () => {
                   key={item.id}
                   className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-start gap-4 group ${
                     isUnread
-                      ? 'bg-gradient-to-r from-amber-500/[0.03] via-[#14151e] to-[#101117] border-amber-500/25 shadow-[0_4px_24px_-8px_rgba(217,119,6,0.12)]'
+                      ? 'bg-gradient-to-r from-rose-500/[0.04] via-[#151620] to-[#101117] border-rose-500/30 shadow-[0_4px_24px_-8px_rgba(225,29,72,0.15)]'
                       : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
                   }`}
                 >
@@ -334,7 +334,7 @@ const UserNotifications = () => {
                           className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
                         />
                         <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-0.5 rounded-full ring-1 ring-white/10 flex items-center justify-center">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 fill-amber-500/20" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-rose-400 fill-rose-500/20" />
                         </div>
                       </div>
                     ) : isNewCreator ? (
@@ -344,8 +344,8 @@ const UserNotifications = () => {
                           alt="Creator"
                           className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
                         />
-                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-amber-500/30 flex items-center justify-center">
-                          <Star className="w-3 h-3 text-amber-400 fill-amber-400/20" />
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-rose-500/30 flex items-center justify-center">
+                          <Star className="w-3 h-3 text-rose-400 fill-rose-400/20" />
                         </div>
                       </div>
                     ) : (
@@ -364,8 +364,8 @@ const UserNotifications = () => {
 
                       {isUnread && (
                         <span className="relative flex h-2 w-2 shrink-0" title="Unread notification">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
                         </span>
                       )}
 
@@ -408,10 +408,10 @@ const UserNotifications = () => {
                           onClick={() => {
                             if (isUnread) handleMarkAsRead(item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-amber-400/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-rose-500/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
                         >
                           <span>{targetLabel}</span>
-                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-300" />
+                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-rose-400" />
                         </Link>
                       ) : null}
 

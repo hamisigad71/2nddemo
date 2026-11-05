@@ -74,6 +74,8 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Post published successfully!');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadPhase, setUploadPhase] = useState<'uploading' | 'saving'>('uploading');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
@@ -176,6 +178,8 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
     }
 
     setUploading(true);
+    setUploadProgress(0);
+    setUploadPhase('uploading');
     setUploadError(null);
     try {
       let mediaUrl: string | null = null;
@@ -187,7 +191,12 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
 
         const cleanName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const fileName = `${Date.now()}_${cleanName}`;
-        mediaUrl = await uploadFileToSupabase(fileToUpload, 'Daysman Gad', `posts/${user.id}/${fileName}`);
+        mediaUrl = await uploadFileToSupabase(
+          fileToUpload,
+          'Daysman Gad',
+          `posts/${user.id}/${fileName}`,
+          (percent) => setUploadProgress(percent)
+        );
 
         if (!mediaUrl) {
           setUploadError('Upload failed. Please check your storage settings or connection.');
@@ -195,6 +204,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
         }
       }
 
+      setUploadPhase('saving');
       const isLocked = visibility === 'ppv' || visibility === 'subscribers';
       const finalPrice = visibility === 'ppv' ? numericPrice : 0;
 
@@ -253,13 +263,27 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
         >
           {/* Overlay when uploading */}
           {uploading && (
-            <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-white pointer-events-none animate-in fade-in duration-200">
+            <div className="absolute inset-0 z-40 bg-black/75 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-white pointer-events-none animate-in fade-in duration-200 px-6">
               <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center animate-pulse">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
-              <div className="text-center px-4">
-                <p className="font-bold text-sm text-white">Uploading & Processing {mediaType === 'video' ? 'Video' : 'Media'}...</p>
-                <p className="text-xs text-zinc-300">Applying security & saving post</p>
+              <div className="text-center w-full max-w-xs">
+                <p className="font-bold text-sm text-white">
+                  {uploadPhase === 'uploading'
+                    ? `Uploading ${mediaType === 'video' ? 'Video' : 'Media'} (${uploadProgress}%)`
+                    : 'Applying security & saving post...'}
+                </p>
+                <div className="w-full bg-zinc-800 rounded-full h-2 my-2 overflow-hidden border border-zinc-700">
+                  <div
+                    className="bg-primary h-full transition-all duration-300 ease-out rounded-full"
+                    style={{ width: `${uploadPhase === 'uploading' ? uploadProgress : 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-zinc-300">
+                  {uploadPhase === 'uploading'
+                    ? 'Transferring securely to cloud storage...'
+                    : 'Finalizing post metadata and permissions...'}
+                </p>
               </div>
             </div>
           )}

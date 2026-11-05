@@ -70,7 +70,7 @@ export default function LiveStudio() {
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back to Dashboard
           </button>
           
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-black uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-xs font-black uppercase tracking-wider">
             <Clock className="w-3.5 h-3.5" /> Under Development
           </span>
         </div>
@@ -276,23 +276,23 @@ export default function LiveStudio() {
         </div>
 
         {/* Development Progress Strip */}
-        <div className="p-6 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/80 to-black border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-6 rounded-2xl bg-card border border-border flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-500 dark:text-amber-400 shrink-0">
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Engineering Status: In Development</h4>
-              <p className="text-xs text-zinc-400">WebRTC video ingest & live transaction listeners are being optimized.</p>
+              <h4 className="text-sm font-bold text-foreground">Engineering Status: In Development</h4>
+              <p className="text-xs text-muted-foreground">WebRTC video ingest & live transaction listeners are being optimized.</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
             <Link
               to="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-secondary-foreground font-bold text-xs uppercase tracking-wider transition-colors border border-border shadow-sm"
             >
-              <LayoutDashboard className="w-4 h-4 text-red-500" /> Go to Dashboard
+              <LayoutDashboard className="w-4 h-4 text-rose-500" /> Go to Dashboard
             </Link>
           </div>
         </div>

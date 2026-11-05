@@ -79,7 +79,7 @@ const CreatorDashboard = () => {
                <h3 className="text-base font-bold text-emerald-400 flex items-center gap-2">
                  Identity Verified & Active 👑
                </h3>
-               <p className="text-xs sm:text-sm text-zinc-300 font-medium mt-0.5">
+               <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
                  Your official Blue Verification Badge is active across discovery, feed, and profile. Full monetization and payouts are unlocked.
                </p>
              </div>
@@ -89,7 +89,7 @@ const CreatorDashboard = () => {
            </span>
          </div>
        ) : profile?.kyc_status === 'pending' || (profile?.kyc_id_url && profile?.kyc_selfie_url) ? (
-         <div className="mb-8 p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+         <div className="mb-8 p-5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 dark:border-amber-500/40 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div className="flex items-start sm:items-center gap-3.5">
              <div className="p-2 rounded-xl bg-amber-600/20 text-amber-400 shrink-0 mt-0.5 sm:mt-0 border border-amber-500/30">
                <Clock className="w-6 h-6 text-amber-400" />
@@ -98,7 +98,7 @@ const CreatorDashboard = () => {
                <h3 className="text-base font-bold text-amber-400 flex items-center gap-2">
                  Identity Verification In Review
                </h3>
-               <p className="text-xs sm:text-sm text-zinc-300 font-medium mt-0.5">
+               <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
                  Your government ID and selfie have been received and are awaiting admin review. Once approved, you will receive the Blue Verification Badge.
                </p>
              </div>
@@ -108,23 +108,23 @@ const CreatorDashboard = () => {
            </span>
          </div>
        ) : (
-         <div className="mb-8 p-5 rounded-2xl bg-[#1b0809]/90 border border-red-600/40 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+         <div className="mb-8 p-5 rounded-2xl bg-rose-500/10 dark:bg-[#1b0809]/90 border border-rose-500/30 dark:border-red-600/40 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div className="flex items-start sm:items-center gap-3.5">
-             <div className="p-2 rounded-xl bg-red-600/10 text-red-500 shrink-0 mt-0.5 sm:mt-0 border border-red-500/20">
+             <div className="p-2 rounded-xl bg-rose-500/15 dark:bg-red-600/10 text-rose-600 dark:text-red-500 shrink-0 mt-0.5 sm:mt-0 border border-rose-500/25 dark:border-red-500/20">
                <AlertCircle className="w-6 h-6 text-red-500" />
              </div>
              <div>
-               <h3 className="text-base font-bold text-red-500 flex items-center gap-2">
+               <h3 className="text-base font-bold text-rose-600 dark:text-red-500 flex items-center gap-2">
                  Action Required: Mandatory Identity Verification
                </h3>
-               <p className="text-xs sm:text-sm text-zinc-300 font-medium mt-0.5">
+               <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
                  Strict verification is required before your profile can receive the Blue Verification Tick or withdraw earnings.
                </p>
              </div>
            </div>
            <Link 
              to="/edit-profile" 
-             className="w-full sm:w-auto text-center bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs tracking-wider uppercase px-5 py-2.5 rounded-full transition-all shadow-md shadow-red-600/30 border border-red-500 whitespace-nowrap"
+             className="w-full sm:w-auto text-center bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs tracking-wider uppercase px-5 py-2.5 rounded-full transition-all shadow-md shadow-rose-600/25 border border-rose-500 whitespace-nowrap"
            >
              COMPLETE KYC →
            </Link>

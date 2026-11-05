@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
+import path from 'path'
 
 function paymentDevPlugin(): Plugin {
   return {
@@ -235,6 +236,11 @@ function paymentDevPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   plugins: [react(), paymentDevPlugin()],
   build: {
     chunkSizeWarningLimit: 800,

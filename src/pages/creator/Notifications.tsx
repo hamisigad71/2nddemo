@@ -26,8 +26,8 @@ function getNotificationMeta(type?: string) {
     case 'creator':
       return {
         icon: Star,
-        iconColor: 'text-amber-400',
-        badgeBg: 'bg-amber-400/10 text-amber-300 border-amber-400/25',
+        iconColor: 'text-rose-400',
+        badgeBg: 'bg-rose-500/10 text-rose-300 border-rose-500/25',
         label: 'Creator spotlight',
         category: 'All',
         actionLabel: 'View profile',
@@ -300,7 +300,7 @@ const Notifications = () => {
                     : (item.badge || meta.label);
 
               const badgePillClass = isNewCreator
-                ? 'bg-amber-400/10 text-amber-300 border-amber-400/25'
+                ? 'bg-rose-500/10 text-rose-300 border-rose-500/25'
                 : isLive
                   ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
                   : isVideo
@@ -316,7 +316,7 @@ const Notifications = () => {
                   key={item.id} 
                   className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-start gap-4 group ${
                     isUnread 
-                      ? 'bg-gradient-to-r from-amber-500/[0.03] via-[#14151e] to-[#101117] border-amber-500/25 shadow-[0_4px_24px_-8px_rgba(217,119,6,0.12)]'
+                      ? 'bg-gradient-to-r from-rose-500/[0.04] via-[#151620] to-[#101117] border-rose-500/30 shadow-[0_4px_24px_-8px_rgba(225,29,72,0.15)]'
                       : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
                   }`}
                 >
@@ -339,7 +339,7 @@ const Notifications = () => {
                           className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
                         />
                         <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-0.5 rounded-full ring-1 ring-white/10 flex items-center justify-center">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 fill-amber-500/20" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-rose-400 fill-rose-500/20" />
                         </div>
                       </div>
                     ) : isNewCreator ? (
@@ -349,8 +349,8 @@ const Notifications = () => {
                           alt="Creator"
                           className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
                         />
-                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-amber-500/30 flex items-center justify-center">
-                          <Star className="w-3 h-3 text-amber-400 fill-amber-400/20" />
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-rose-500/30 flex items-center justify-center">
+                          <Star className="w-3 h-3 text-rose-400 fill-rose-400/20" />
                         </div>
                       </div>
                     ) : (
@@ -369,8 +369,8 @@ const Notifications = () => {
 
                       {isUnread && (
                         <span className="relative flex h-2 w-2 shrink-0" title="Unread notification">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
                         </span>
                       )}
 
@@ -400,10 +400,10 @@ const Notifications = () => {
                           onClick={() => {
                             if (isUnread) handleItemRead(item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-amber-400/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-rose-500/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
                         >
                           <span>{targetLabel}</span>
-                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-300" />
+                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-rose-400" />
                         </Link>
                       )}
 

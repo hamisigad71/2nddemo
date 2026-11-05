@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -75,47 +75,23 @@ const RouteLoading = () => (
 
 const AppRoutes = () => {
   const location = useLocation();
-  const { user } = useAuth();
-  const [displayLocation, setDisplayLocation] = useState(location);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
-  useEffect(() => {
-    // If logging out or navigating to login, instantly sync location and bypass transition loader
-    if (!user || location.pathname === '/login') {
-      setDisplayLocation(location);
-      setIsTransitioning(false);
-      setInitialLoad(false);
-      return;
-    }
-
-    if (location.pathname !== displayLocation.pathname || location.search !== displayLocation.search) {
-      if (!initialLoad) {
-        setIsTransitioning(true);
-      }
-    }
-  }, [location, displayLocation.pathname, displayLocation.search, initialLoad, user]);
-
-  const handleLoaderReady = useCallback(() => {
-    setDisplayLocation(location);
-  }, [location]);
-
   const handleLoaderComplete = useCallback(() => {
-    setIsTransitioning(false);
-    if (initialLoad) setInitialLoad(false);
-  }, [initialLoad]);
+    setInitialLoad(false);
+  }, []);
 
   return (
     <>
-      {(isTransitioning || initialLoad) && (
-        <PageLoader onReady={handleLoaderReady} onComplete={handleLoaderComplete} />
+      {initialLoad && (
+        <PageLoader onComplete={handleLoaderComplete} />
       )}
       <div className="min-h-screen bg-background text-foreground font-sans">
         <InstallAppPrompt />
         <CreatorSupportChat />
         <ErrorBoundary>
           <Suspense fallback={<RouteLoading />}>
-            <Routes location={displayLocation}>
+            <Routes location={location}>
               <Route path="/" element={<Landing />} />
               <Route path="/discover" element={<Discover />} />
               <Route path="/login" element={<Login />} />

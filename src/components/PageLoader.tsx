@@ -23,10 +23,9 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
   useEffect(() => {
     const steps = [
-      { target: 30, delay: 30 },
-      { target: 65, delay: 20 },
-      { target: 85, delay: 30 },
-      { target: 100, delay: 15 },
+      { target: 45, delay: 6 },
+      { target: 85, delay: 6 },
+      { target: 100, delay: 4 },
     ];
 
     let current = 0;
@@ -38,8 +37,8 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
           setFading(true);
           setTimeout(() => {
             if (onCompleteRef.current) onCompleteRef.current();
-          }, 600);
-        }, 200);
+          }, 250);
+        }, 80);
         return;
       }
 
@@ -49,7 +48,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
         setProgress(current);
         if (current >= target) {
           clearInterval(interval);
-          setTimeout(() => runStep(stepIndex + 1), 120);
+          setTimeout(() => runStep(stepIndex + 1), 20);
         }
       }, delay);
     };
@@ -61,7 +60,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
     <div
       role="status"
       aria-label="Preparing The Gents Dollhouse"
-      className={`page-loader-motion fixed inset-0 z-[9999] flex flex-col items-center justify-center transition-opacity duration-700 ${
+      className={`page-loader-motion fixed inset-0 z-[9999] flex flex-col items-center justify-center transition-opacity duration-300 page-loader-container ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
@@ -78,7 +77,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
       {/* Mobile background image */}
       {presentation.showMobilePhoto && <img
-        src="https://i.pinimg.com/736x/b1/39/54/b13954cc1f7c47fac66562a002262af9.jpg"
+        src="/pic1.webp"
         alt=""
         className="md:hidden absolute inset-0 w-full h-full object-cover object-center pointer-events-none filter saturate-[0.85]"
         loading="eager"
@@ -182,19 +181,19 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
         {/* Brand name */}
         <div className="text-center relative z-10 mt-4">
-          <div className={`mb-1 text-2xl font-bold tracking-tight sm:text-3xl ${presentation.title} ${theme === 'dark' ? 'drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]' : ''}`}>
-            The Gents Dollhouse<span className="text-red-500">.</span>
+          <div className="mb-1 text-2xl font-bold tracking-tight sm:text-3xl text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+            The Gents Dollhouse<span className="text-rose-500">.</span>
           </div>
-          <p className={`text-xs font-semibold tracking-[0.18em] uppercase ${presentation.subtitle} ${theme === 'dark' ? 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]' : ''}`}>
+          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             Creator Platform
           </p>
         </div>
 
         {/* Progress bar */}
         <div className="relative z-10 mt-2 flex w-56 flex-col items-center gap-3">
-          <p className={`text-sm font-medium ${presentation.subtitle}`}>Getting things ready</p>
+          <p className="text-sm font-medium text-white/85 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">Getting things ready</p>
           <div
-            className={`h-1.5 w-full overflow-hidden rounded-full ${presentation.progressTrack}`}
+            className="h-1.5 w-full overflow-hidden rounded-full border border-white/20 bg-black/40 backdrop-blur-md shadow-inner"
             role="progressbar"
             aria-label="Loading progress"
             aria-valuemin={0}
@@ -205,13 +204,13 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
               className="page-loader-motion h-full rounded-full"
               style={{
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, #be123c, #e11d48)',
+                background: 'linear-gradient(90deg, #be123c, #f43f5e)',
                 transition: 'width 0.15s ease-out',
-                boxShadow: theme === 'dark' ? '0 0 12px rgba(239,68,68,0.6)' : 'none',
+                boxShadow: '0 0 12px rgba(244,63,94,0.7)',
               }}
             />
           </div>
-          <span className={`text-xs font-semibold tabular-nums ${presentation.progressText}`}>
+          <span className="text-xs font-bold tabular-nums text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
             {progress}%
           </span>
         </div>
@@ -219,7 +218,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
       {/* Bottom tagline */}
       <div
-        className={`page-loader-motion absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[11px] font-semibold tracking-[0.12em] uppercase ${presentation.bottomTagline} ${theme === 'dark' ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : ''}`}
+        className="page-loader-motion absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[11px] font-semibold tracking-[0.12em] uppercase text-white/80 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
         style={{ animation: 'loader-fade-up 1s ease-out forwards' }}
       >
         Built for African creators

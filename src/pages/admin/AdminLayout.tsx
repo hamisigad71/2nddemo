@@ -168,12 +168,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#0d0e12]">
+    <div className="flex flex-col h-full bg-card">
       {/* Logo */}
-      <Link to="/" className="flex items-center gap-3 px-6 py-8 border-b border-zinc-800 shrink-0">
+      <Link to="/" className="flex items-center gap-3 px-6 py-8 border-b border-border shrink-0">
         <img src="/logo.svg" alt="Logo" className="w-10 h-10 object-contain drop-shadow-md" />
         <div className="flex flex-col">
-          <span className="text-lg font-black tracking-tight text-white leading-none">The Gents Dollhouse</span>
+          <span className="text-lg font-black tracking-tight text-foreground leading-none">The Gents Dollhouse</span>
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-red-500 bg-red-600/10 border border-red-500/20 px-2 py-0.5 rounded-full w-fit mt-1.5">Admin Portal</span>
         </div>
       </Link>
@@ -196,10 +196,10 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 group ${
                 active
                   ? 'bg-red-600 text-white shadow-xl shadow-red-600/20'
-                  : 'text-zinc-400 hover:bg-[#0d0e12] hover:text-white'
+                  : 'text-muted-foreground hover:bg-card hover:text-foreground'
               }`}
             >
-              <Icon className={`w-[18px] h-[18px] shrink-0 transition-colors ${active ? 'text-white' : 'text-zinc-500 group-hover:text-red-400'}`} />
+              <Icon className={`w-[18px] h-[18px] shrink-0 transition-colors ${active ? 'text-white' : 'text-muted-foreground group-hover:text-red-400'}`} />
               <span className="flex-1">{label}</span>
               {isNew && !active && !computedBadge && (
                 <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
@@ -223,12 +223,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-zinc-800 p-4 space-y-2 shrink-0 bg-[#0d0e12]">
+      <div className="border-t border-border p-4 space-y-2 shrink-0 bg-card">
         <button
           onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-[#0d0e12] hover:text-white transition-colors text-sm font-bold group"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-card hover:text-foreground transition-colors text-sm font-bold group"
         >
-          {theme === 'dark' ? <Sun className="w-[18px] h-[18px] text-zinc-500 group-hover:text-yellow-400" /> : <Moon className="w-[18px] h-[18px] text-zinc-500 group-hover:text-blue-400" />}
+          {theme === 'dark' ? <Sun className="w-[18px] h-[18px] text-muted-foreground group-hover:text-yellow-400" /> : <Moon className="w-[18px] h-[18px] text-muted-foreground group-hover:text-blue-400" />}
           {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </button>
         <button
@@ -236,16 +236,16 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             lockAdminSession();
             toast.info('Admin terminal locked.');
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
         >
-          <Lock className="w-[18px] h-[18px] text-zinc-500 group-hover:text-red-400 transition-colors" />
+          <Lock className="w-[18px] h-[18px] text-muted-foreground group-hover:text-red-400 transition-colors" />
           Lock Terminal
         </button>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
         >
-          <LogOut className="w-[18px] h-[18px] text-zinc-500 group-hover:text-red-400 transition-colors" />
+          <LogOut className="w-[18px] h-[18px] text-muted-foreground group-hover:text-red-400 transition-colors" />
           Logout
         </button>
       </div>
@@ -256,7 +256,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-[280px] shrink-0 flex-col bg-[#0d0e12] border-r border-zinc-800">
+      <aside className="hidden lg:flex w-[280px] shrink-0 flex-col bg-card border-r border-border">
         <SidebarContent />
       </aside>
 
@@ -264,7 +264,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       {open && (
         <div className="fixed inset-0 z-[200] lg:hidden flex">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="relative w-[280px] h-full bg-[#0d0e12] border-r border-zinc-800 flex flex-col shadow-2xl animate-slide-in-left">
+          <div className="relative w-[280px] h-full bg-card border-r border-border flex flex-col shadow-2xl animate-slide-in-left">
             <SidebarContent />
           </div>
         </div>
@@ -274,16 +274,16 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top Bar */}
-        <header className="h-16 shrink-0 flex items-center justify-between px-4 md:px-6 border-b border-zinc-800 bg-[#0d0e12]/80 backdrop-blur-xl sticky top-0 z-50">
+        <header className="h-16 shrink-0 flex items-center justify-between px-4 md:px-6 border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-50">
           <div className="flex items-center gap-3">
-            <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-xl hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
+            <button onClick={() => setOpen(true)} className="lg:hidden p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
               <Menu className="w-5 h-5" />
             </button>
             <div>
               <div className="text-sm font-black text-white">
                 {navItems.find(n => n.path === location.pathname)?.label ?? 'Admin'}
               </div>
-              <div className="text-[10px] text-zinc-500 font-bold hidden sm:block">The Gents Dollhouse Platform Admin</div>
+              <div className="text-[10px] text-muted-foreground font-bold hidden sm:block">The Gents Dollhouse Platform Admin</div>
             </div>
           </div>
 
@@ -293,7 +293,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               <button
                 onClick={() => setShowNotifications(prev => !prev)}
                 title={totalUnreadBadge > 0 ? `${totalUnreadBadge} unread notifications` : 'Admin Notifications'}
-                className="relative p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer active:scale-95"
+                className="relative p-2.5 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer active:scale-95"
               >
                 <Bell className="w-5 h-5 transition-colors" />
                 {totalUnreadBadge > 0 ? (
@@ -309,9 +309,9 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                  <div className={`${adminNotificationPopoverClassName} bg-[#0c0d12] border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col min-h-0 max-h-[calc(100dvh-5.5rem)] sm:max-h-[min(540px,calc(100dvh-5.5rem))] animate-in fade-in zoom-in-95 duration-150`}>
+                  <div className={`${adminNotificationPopoverClassName} bg-[#0c0d12] border border-border rounded-2xl sm:rounded-3xl shadow-2xl z-50 overflow-hidden flex flex-col min-h-0 max-h-[calc(100dvh-5.5rem)] sm:max-h-[min(540px,calc(100dvh-5.5rem))] animate-in fade-in zoom-in-95 duration-150`}>
                     {/* Header */}
-                    <div className="p-3 sm:p-4 border-b border-zinc-800 flex items-center justify-between gap-2 bg-zinc-950/60">
+                    <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between gap-2 bg-zinc-950/60">
                       <div className="flex min-w-0 items-center gap-2">
                         <Bell className="w-4 h-4 text-red-500 shrink-0" />
                         <span className="text-sm font-black text-white truncate">Platform Notifications</span>
@@ -328,7 +328,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                               await markAllAdminNotificationsAsRead();
                               setAdminNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
                             }}
-                            className="min-h-11 px-2 text-[11px] font-bold text-zinc-400 hover:text-white flex items-center gap-1 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                            className="min-h-11 px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                           >
                             <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> Read all
                           </button>
@@ -336,7 +336,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                         <button
                           onClick={() => setShowNotifications(false)}
                           aria-label="Close notifications"
-                          className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                          className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -344,13 +344,13 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     </div>
 
                     {/* Filter Tabs: All Alerts vs Payments Only */}
-                    <div className="p-2 border-b border-zinc-800/80 bg-zinc-950/40 flex items-center gap-2">
+                    <div className="p-2 border-b border-border/80 bg-zinc-950/40 flex items-center gap-2">
                       <button
                         onClick={() => setNotifTab('all')}
                         className={`flex-1 min-h-11 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 ${
                           notifTab === 'all'
                             ? 'bg-zinc-800 text-white shadow-sm'
-                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                            : 'text-muted-foreground hover:text-zinc-200 hover:bg-zinc-900/50'
                         }`}
                       >
                         <Bell className="w-3.5 h-3.5" />
@@ -367,7 +367,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                         className={`flex-1 min-h-11 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                           notifTab === 'payments'
                             ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-950/40'
-                            : 'text-zinc-400 hover:text-emerald-400 hover:bg-emerald-950/30'
+                            : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-950/30'
                         }`}
                       >
                         <Receipt className="w-3.5 h-3.5" />
@@ -399,30 +399,30 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                             <div className="text-xs font-bold text-white group-hover:text-red-400 transition-colors">
                               {pendingPayoutsCount} Pending Withdrawal Request{pendingPayoutsCount > 1 ? 's' : ''}
                             </div>
-                            <div className="text-[10px] text-zinc-400">Creators awaiting payout dispatches</div>
+                            <div className="text-[10px] text-muted-foreground">Creators awaiting payout dispatches</div>
                           </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                       </Link>
                     )}
 
                     {/* Notification Stream */}
                     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain divide-y divide-zinc-800/60 custom-scrollbar">
                       {displayedNotifs.length === 0 ? (
-                        <div className="py-12 px-6 text-center text-zinc-500">
+                        <div className="py-12 px-6 text-center text-muted-foreground">
                           {notifTab === 'payments' ? (
                             <>
                               <Receipt className="w-9 h-9 mx-auto mb-2.5 opacity-30 text-emerald-400" />
                               <div className="text-xs font-bold text-zinc-300">No Payment Records Yet</div>
-                              <div className="text-[11px] mt-1 text-zinc-500 max-w-xs mx-auto">
+                              <div className="text-[11px] mt-1 text-muted-foreground max-w-xs mx-auto">
                                 All subscriptions, tips, and unlock payments made on the platform will appear here in real-time.
                               </div>
                             </>
                           ) : (
                             <>
-                              <Bell className="w-8 h-8 mx-auto mb-2.5 opacity-30 text-zinc-400" />
+                              <Bell className="w-8 h-8 mx-auto mb-2.5 opacity-30 text-muted-foreground" />
                               <div className="text-xs font-bold text-zinc-300">All caught up!</div>
-                              <div className="text-[11px] mt-1 text-zinc-500">
+                              <div className="text-[11px] mt-1 text-muted-foreground">
                                 You'll receive live alerts when new creators join, post videos, or start broadcasting.
                               </div>
                             </>
@@ -496,12 +496,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                 </div>
 
                                 {/* Flow Row: Payer -> Creator */}
-                                <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-2.5 mb-2 flex items-center justify-between gap-2 text-xs">
+                                <div className="bg-zinc-900/60 border border-border/80 rounded-xl p-2.5 mb-2 flex items-center justify-between gap-2 text-xs">
                                   <div className="flex items-center gap-1.5 min-w-0 max-w-[42%]">
                                     {details?.payer_avatar ? (
                                       <img src={details.payer_avatar} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                                     ) : (
-                                      <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                                      <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                     )}
                                     <span className="text-xs font-bold text-zinc-200 truncate">{payerName}</span>
                                   </div>
@@ -521,15 +521,15 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                 {/* Financial Split Row */}
                                 <div className="grid grid-cols-2 gap-2 px-0.5 text-[11px]">
                                   <div className="min-w-0 rounded-lg bg-emerald-500/5 px-2 py-1.5">
-                                    <div className="text-zinc-400">Platform fee</div>
+                                    <div className="text-muted-foreground">Platform fee</div>
                                     <div className="truncate font-bold text-emerald-300">+{currency} {fee.toLocaleString()}</div>
                                   </div>
                                   <div className="min-w-0 rounded-lg bg-zinc-800/50 px-2 py-1.5">
-                                    <div className="text-zinc-400">Creator share</div>
+                                    <div className="text-muted-foreground">Creator share</div>
                                     <div className="truncate font-bold text-zinc-200">{currency} {creatorShare.toLocaleString()}</div>
                                   </div>
                                 </div>
-                                <div className="mt-2 text-right text-[11px] text-zinc-400">
+                                <div className="mt-2 text-right text-[11px] text-muted-foreground">
                                   {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               </button>
@@ -572,7 +572,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                 ) : isNewCreator ? (
                                   <UserPlus className="w-4 h-4 text-emerald-400" />
                                 ) : (
-                                  <Bell className="w-4 h-4 text-zinc-400" />
+                                  <Bell className="w-4 h-4 text-muted-foreground" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -584,14 +584,14 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                                         ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
                                         : isNewCreator
                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                        : 'bg-zinc-800 text-zinc-400'
+                                        : 'bg-zinc-800 text-muted-foreground'
                                     }`}>
                                       {notif.badge}
                                     </span>
                                   )}
                                 </div>
                                 <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">{notif.message}</p>
-                                <div className="mt-1 text-[11px] text-zinc-400">
+                                <div className="mt-1 text-[11px] text-muted-foreground">
                                   {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(notif.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                 </div>
                               </div>
@@ -602,7 +602,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     </div>
 
                     {/* Footer */}
-                    <div className="p-2 sm:p-3 border-t border-zinc-800/80 bg-zinc-950/80 flex items-center justify-between gap-2 text-xs">
+                    <div className="p-2 sm:p-3 border-t border-border/80 bg-zinc-950/80 flex items-center justify-between gap-2 text-xs">
                       <Link
                         to="/admin/transactions"
                         onClick={() => setShowNotifications(false)}
@@ -613,7 +613,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                       <Link
                         to="/admin/creators"
                         onClick={() => setShowNotifications(false)}
-                        className="min-h-11 px-2 text-zinc-300 hover:text-white transition-colors font-bold flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                        className="min-h-11 px-2 text-zinc-300 hover:text-foreground transition-colors font-bold flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                       >
                         Manage Creators &rarr;
                       </Link>
@@ -630,19 +630,19 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 toast.info('Admin terminal locked.');
               }}
               title="Lock Admin Terminal"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/20 text-xs font-bold transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-foreground border border-red-500/20 text-xs font-bold transition-all active:scale-95"
             >
               <Lock className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Lock Gate</span>
             </button>
 
-            <div className="flex items-center gap-3 pl-4 border-l border-zinc-800">
+            <div className="flex items-center gap-3 pl-4 border-l border-border">
               <div className="w-9 h-9 rounded-full border-2 border-red-500/20 bg-red-600/10 flex items-center justify-center text-red-500 flex-shrink-0">
                 <User className="w-4 h-4" />
               </div>
               <div className="hidden sm:block">
                 <div className="text-xs font-black text-white truncate max-w-[120px]">{user?.user_metadata?.name || user?.user_metadata?.full_name || 'System Admin'}</div>
-                <div className="text-[10px] text-zinc-500 font-bold truncate max-w-[120px]">{user?.email || 'admin@hideaway.com'}</div>
+                <div className="text-[10px] text-muted-foreground font-bold truncate max-w-[120px]">{user?.email || 'admin@hideaway.com'}</div>
               </div>
             </div>
           </div>

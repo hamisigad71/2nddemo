@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, supabaseUrl, supabaseAnonKey } from "./supabase";
 import { FALLBACK_POSTS } from "../data/mockPosts";
 import { getEscorts } from "./mockData";
 import {
@@ -930,6 +930,7 @@ export const uploadFileToSupabase = async (
   file: File,
   bucket: string,
   path: string,
+  onProgress?: (progressPercent: number) => void,
 ): Promise<string | null> => {
   let fileToUpload = file;
   let compactFallbackDataUrl = "";
@@ -950,13 +951,75 @@ export const uploadFileToSupabase = async (
   }
 
   const cleanPath = path.replace(/^\/+/, "").replace(/\s+/g, "_");
-  const bucketsToTry = Array.from(
-    new Set(
-      [bucket, "Daysman Gad", "avatars", "media", "public", "posts"].filter(
-        Boolean,
-      ),
-    ),
-  );
+  const targetBucket = bucket || "Daysman Gad";
+
+  // Use XMLHttpRequest when onProgress is requested or for large files/videos so we get actual upload % and avoid silent hangs
+  if (onProgress && typeof window !== "undefined") {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/${encodeURIComponent(targetBucket)}/${cleanPath}`;
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", uploadUrl);
+        xhr.setRequestHeader("x-upsert", "true");
+        if (fileToUpload.type) {
+          xhr.setRequestHeader("Content-Type", fileToUpload.type);
+        }
+        xhr.setRequestHeader("apikey", supabaseAnonKey);
+        if (token) {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        }
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            onProgress(100);
+            resolve();
+          } else {
+            let msg = xhr.statusText;
+            try {
+              const body = JSON.parse(xhr.responseText);
+              if (body?.message) msg = body.message;
+            } catch {}
+            reject(new Error(msg || `Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network connection error during upload."));
+        xhr.ontimeout = () => reject(new Error("Upload timed out. Check your internet connection."));
+
+        xhr.send(fileToUpload);
+      });
+
+      // Get public or signed url
+      try {
+        const { data: signedData } = await supabase.storage
+          .from(targetBucket)
+          .createSignedUrl(cleanPath, 60 * 60 * 24 * 30);
+        if (signedData?.signedUrl) return signedData.signedUrl;
+      } catch {}
+
+      const { data } = supabase.storage.from(targetBucket).getPublicUrl(cleanPath);
+      if (data?.publicUrl) return data.publicUrl;
+    } catch (xhrErr: any) {
+      console.warn("XHR upload notice, falling back to standard upload:", xhrErr?.message || xhrErr);
+      if (fileToUpload.type && fileToUpload.type.startsWith("video/")) {
+        throw xhrErr;
+      }
+    }
+  }
+
+  // Standard upload
+  const bucketsToTry = [targetBucket];
 
   for (const b of bucketsToTry) {
     try {
@@ -967,6 +1030,7 @@ export const uploadFileToSupabase = async (
           contentType: fileToUpload.type || "image/jpeg",
         });
       if (!error) {
+        if (onProgress) onProgress(100);
         try {
           const { data: signedData } = await supabase.storage
             .from(b)
@@ -987,6 +1051,11 @@ export const uploadFileToSupabase = async (
 
   // Resilient fallback: Return compact data URL (< 50KB) guaranteed to save into DB without payload limit errors
   if (compactFallbackDataUrl) return compactFallbackDataUrl;
+
+  // Never attempt to convert a large video to Base64 in memory as it freezes the browser
+  if (fileToUpload.type && fileToUpload.type.startsWith("video/")) {
+    throw new Error("Failed to upload video to storage. Please check your network connection and try again.");
+  }
 
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -1265,7 +1334,7 @@ export const createPost = async (
       .insert(dbRecord)
       .select()
       .maybeSingle();
-    if (error && (error.message.includes("column") || error.code === "42703")) {
+    if (error && (error.message.includes("column") || error.code === "42703" || error.code === "PGRST204")) {
       const basicRecord = {
         creator_id: creatorId,
         content,

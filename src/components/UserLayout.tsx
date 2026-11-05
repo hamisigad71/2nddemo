@@ -192,13 +192,13 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
   }, [user?.id]);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0C] text-foreground flex flex-col md:flex-row font-sans selection:bg-primary/30 relative">
+    <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row font-sans selection:bg-primary/30 relative">
       
       {/* Floating Open Sidebar Button when closed on Desktop */}
       {!isSidebarOpen && (
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="hidden md:flex fixed top-4 left-4 z-40 items-center gap-2.5 px-3 py-2.5 bg-[#0D0E12]/95 border border-white/15 hover:border-red-500/60 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-md text-zinc-300 hover:text-white transition-all hover:scale-105 active:scale-95 group"
+          className="hidden md:flex fixed top-4 left-4 z-40 items-center gap-2.5 px-3 py-2.5 bg-card/95 border border-border hover:border-red-500/60 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-md text-zinc-300 hover:text-white transition-all hover:scale-105 active:scale-95 group"
           title="Open Sidebar"
         >
           <PanelLeftOpen className="w-5 h-5 text-red-500 transition-transform group-hover:scale-110" />
@@ -207,14 +207,14 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       )}
 
       {/* Mobile Top Header */}
-      <div className="md:hidden flex items-center justify-between px-5 py-3.5 border-b border-white/5 bg-[#0D0E12]/90 backdrop-blur-xl sticky top-0 z-40">
+      <div className="md:hidden flex items-center justify-between px-5 py-3.5 border-b border-border bg-card/90 backdrop-blur-xl sticky top-0 z-40">
         <Link to="/user" className="flex items-center gap-2.5 group">
           <img src="/logo.svg" alt="Logo" className="w-10 h-10 object-contain drop-shadow-md" />
           <span className="text-lg font-black tracking-tight text-white">The Gents Dollhouse<span className="text-primary">.</span></span>
         </Link>
         <button 
           onClick={() => setIsMobileMenuOpen(true)} 
-          className="p-2 -mr-2 text-foreground/80 hover:text-foreground rounded-xl hover:bg-white/5 active:scale-95 transition-all"
+          className="p-2 -mr-2 text-foreground/80 hover:text-foreground rounded-xl hover:bg-accent active:scale-95 transition-all"
         >
           <Menu className="w-6 h-6" />
         </button>
@@ -229,7 +229,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
       )}
 
       {/* Classic & Premium Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 bg-[#100F12] border-r border-white/[0.08] p-4 flex flex-col h-screen transform transition-all duration-300 shadow-2xl ${
+      <aside className={`fixed inset-y-0 left-0 z-50 bg-card border-r border-border p-4 flex flex-col h-screen transform transition-all duration-300 shadow-2xl ${
         isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full'
       } ${
         isSidebarOpen 
@@ -240,7 +240,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
         {/* Desktop Edge Close Pill Button */}
         <button
           onClick={() => setIsSidebarOpen(false)}
-          className="hidden md:flex absolute -right-3.5 top-7 z-50 w-7 h-7 bg-[#100F12] border border-white/15 hover:border-primary/60 rounded-full items-center justify-center text-zinc-400 hover:text-white shadow-xl transition-all hover:scale-110 active:scale-95"
+          className="hidden md:flex absolute -right-3.5 top-7 z-50 w-7 h-7 bg-card border border-border hover:border-primary/60 rounded-full items-center justify-center text-muted-foreground hover:text-white shadow-xl transition-all hover:scale-110 active:scale-95"
           title="Close Sidebar"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -257,7 +257,7 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
           </Link>
 
           {/* Close button for Mobile */}
-          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl transition-colors">
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-xl transition-colors">
             <X className="w-5 h-5" />
           </button>
 
@@ -356,14 +356,14 @@ const UserLayout: React.FC<UserLayoutProps> = ({ children }) => {
           </button>
 
           {/* User Profile Pill */}
-          <div className="p-2 rounded-xl bg-white/[0.035] border border-white/[0.08] flex items-center justify-between group hover:bg-white/[0.06] transition-colors">
+          <div className="p-2 rounded-xl bg-white/[0.035] border border-border flex items-center justify-between group hover:bg-white/[0.06] transition-colors">
             <Link to="/user/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 min-w-0 flex-1">
               <div className="relative">
                 <img 
                   src={userAvatar} 
                   alt="avatar" 
                   referrerPolicy="no-referrer" 
-                  className="w-9 h-9 rounded-full object-cover border border-white/15 group-hover:border-primary/50 transition-colors"
+                  className="w-9 h-9 rounded-full object-cover border border-border group-hover:border-primary/50 transition-colors"
                 />
                 <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#100F12]" />
               </div>

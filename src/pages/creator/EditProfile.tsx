@@ -1488,7 +1488,7 @@ const EditProfile = () => {
                     ? "bg-emerald-950/30 border-emerald-500/40"
                     : kycStatus === "pending"
                       ? "bg-yellow-950/30 border-yellow-500/40"
-                      : "bg-red-950/40 border-red-500/40"
+                      : "bg-rose-500/10 dark:bg-red-950/40 border-rose-500/30 dark:border-red-500/40"
                 }`}
               >
                 <div>
@@ -1693,7 +1693,7 @@ const EditProfile = () => {
           {/* 3. PAYOUTS TAB */}
           {activeTab === "payouts" && (
             <div className="p-6 sm:p-10 space-y-8 max-w-3xl">
-              <div className="mb-4 p-6 bg-red-950/40 border border-red-500/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="mb-4 p-6 bg-rose-500/10 dark:bg-red-950/40 border border-rose-500/30 dark:border-red-500/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-black flex items-center gap-2 text-red-500 mb-1">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" /> Setup
