@@ -953,6 +953,9 @@ export const uploadFileToSupabase = async (
   const cleanPath = path.replace(/^\/+/, "").replace(/\s+/g, "_");
   const targetBucket = bucket || "Daysman Gad";
 
+  // If a caller passes a bucket other than 'Daysman Gad', make sure 'Daysman Gad' is available as a fallback
+  const bucketsToTry = Array.from(new Set([targetBucket, "Daysman Gad"]));
+
   // Use XMLHttpRequest when onProgress is requested or for large files/videos so we get actual upload % and avoid silent hangs
   if (onProgress && typeof window !== "undefined") {
     try {
@@ -1019,8 +1022,6 @@ export const uploadFileToSupabase = async (
   }
 
   // Standard upload
-  const bucketsToTry = [targetBucket];
-
   for (const b of bucketsToTry) {
     try {
       const { error } = await supabase.storage

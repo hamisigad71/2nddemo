@@ -291,7 +291,7 @@ const Signup = () => {
         try {
           const ext = avatarFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
           const avatarPath = `avatars/signup_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-          const uploaded = await uploadFileToSupabase(avatarFile, 'avatars', avatarPath);
+          const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', avatarPath);
           if (uploaded) {
             uploadedAvatarUrl = uploaded;
           }
@@ -406,8 +406,8 @@ const Signup = () => {
             const selfiePath = `kyc/${uid}/${Date.now()}-selfie.${selfieExt}`;
 
             const [idUploaded, selfieUploaded] = await Promise.all([
-              uploadFileToSupabase(idDocFile, 'kyc-documents', idPath),
-              uploadFileToSupabase(selfieFile, 'kyc-documents', selfiePath)
+              uploadFileToSupabase(idDocFile, 'Daysman Gad', idPath),
+              uploadFileToSupabase(selfieFile, 'Daysman Gad', selfiePath)
             ]);
 
             if (idUploaded) uploadedIdUrl = idUploaded;

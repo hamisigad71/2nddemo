@@ -322,16 +322,16 @@ const Login = () => {
       if (avatarFile) {
         const ext = avatarFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
         const avatarPath = `avatars/${user.id}_avatar_${Date.now()}.${ext}`;
-        const uploaded = await uploadFileToSupabase(avatarFile, 'avatars', avatarPath);
+        const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', avatarPath);
         if (uploaded) finalAvatarUrl = uploaded;
       }
 
-      // 2. Upload Cover (using 'covers' bucket)
+      // 2. Upload Cover (using 'Daysman Gad' bucket)
       let finalCoverUrl = coverPreview;
       if (coverFile) {
         const coverExt = coverFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
         const coverPath = `covers/${user.id}_cover_${Date.now()}.${coverExt}`;
-        const uploadedCover = await uploadFileToSupabase(coverFile, 'covers', coverPath);
+        const uploadedCover = await uploadFileToSupabase(coverFile, 'Daysman Gad', coverPath);
         if (uploadedCover) finalCoverUrl = uploadedCover;
       }
 
@@ -340,7 +340,7 @@ const Login = () => {
       if (idDocFile) {
         const docExt = idDocFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
         const docPath = `kyc-documents/${user.id}_id_${Date.now()}.${docExt}`;
-        const uploadedDoc = await uploadFileToSupabase(idDocFile, 'kyc-documents', docPath);
+        const uploadedDoc = await uploadFileToSupabase(idDocFile, 'Daysman Gad', docPath);
         if (uploadedDoc) finalIdDocUrl = uploadedDoc;
       }
 
@@ -349,7 +349,7 @@ const Login = () => {
       if (selfieFile) {
         const selfieExt = selfieFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
         const selfiePath = `kyc-documents/${user.id}_selfie_${Date.now()}.${selfieExt}`;
-        const uploadedSelfie = await uploadFileToSupabase(selfieFile, 'kyc-documents', selfiePath);
+        const uploadedSelfie = await uploadFileToSupabase(selfieFile, 'Daysman Gad', selfiePath);
         if (uploadedSelfie) finalSelfieUrl = uploadedSelfie;
       }
 
