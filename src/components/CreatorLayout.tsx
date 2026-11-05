@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake, Download, Radio, Headphones } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Plus, MessageCircle, FolderHeart, Settings, Bell, Menu, X, LineChart, Bot, Calendar, Tag, LogOut, Sun, Moon, Rss, BookOpen, Heart, Eye, Handshake, Download, Radio, Headphones, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserNotifications, getUserProfile, getStoredCreatorProfile, getCreatorProfile } from '../lib/db';
@@ -334,17 +334,14 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
 
       {/* Mobile Bottom Navbar (quick access) */}
       <nav
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 py-2 transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}`}
-        style={{
-          background: 'color-mix(in srgb, var(--color-background) 92%, transparent)',
-          borderTop: '1px solid color-mix(in srgb, var(--color-border) 60%, transparent)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          boxShadow: '0 -4px 24px rgba(0,0,0,0.25)',
-        }}
+        aria-label="Mobile Navigation"
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-1.5 transition-all duration-300 border-t border-border/60 bg-background/90 backdrop-blur-xl shadow-lg shadow-black/20 ${
+          isMobileMenuOpen ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'
+        }`}
       >
+        <div className="flex items-center justify-around max-w-md mx-auto relative">
           {[
-            { name: 'Home', path: '/dashboard', icon: BarChart3 },
+            { name: 'Home', path: '/dashboard', icon: LayoutDashboard },
             { name: 'Feed', path: '/feed', icon: Rss },
             { name: 'Post', path: '/create-post', icon: Plus, isAction: true },
             { name: 'Messages', path: '/messages', icon: MessageCircle },
@@ -352,40 +349,49 @@ const CreatorLayout: React.FC<CreatorLayoutProps> = ({ children }) => {
           ].map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
+
             if (item.isAction) {
               return (
-                <Link key={item.name} to={item.path}
-                  className="flex items-center justify-center w-14 h-14 rounded-full -mt-7 transition-all duration-300 hover:scale-110 active:scale-95"
-                  style={{
-                    background: 'linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, var(--color-secondary)))',
-                    boxShadow: '0 4px 20px color-mix(in srgb, var(--color-primary) 60%, transparent), 0 0 0 3px color-mix(in srgb, var(--color-background) 100%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 30%, transparent)',
-                  }}>
-                  <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  aria-label="Create New Post"
+                  className="group relative -mt-6 flex flex-col items-center justify-center focus-visible:outline-none"
+                >
+                  <div
+                    className="flex items-center justify-center w-13 h-13 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/35 ring-4 ring-background transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
+                  >
+                    <Icon className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-muted-foreground mt-1 group-hover:text-foreground">
+                    {item.name}
+                  </span>
                 </Link>
               );
             }
+
             return (
-              <Link key={item.name} to={item.path}
-                className="relative flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-2xl transition-all duration-200 active:scale-90"
-                style={{
-                  color: isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
-                  background: isActive ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'transparent',
-                }}
+              <Link
+                key={item.name}
+                to={item.path}
+                className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all duration-200 active:scale-95 focus-visible:outline-none ${
+                  isActive
+                    ? 'text-primary font-bold bg-primary/10'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40 font-medium'
+                }`}
               >
-                <Icon 
-                  className="w-5 h-5 transition-all duration-200"
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                  style={{ filter: isActive ? 'drop-shadow(0 0 6px color-mix(in srgb, var(--color-primary) 80%, transparent))' : 'none' }}
+                <Icon
+                  className="w-5 h-5 transition-transform duration-200"
+                  strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className="text-[9px] font-bold tracking-wide">{item.name}</span>
+                <span className="text-[10px] tracking-tight mt-0.5">{item.name}</span>
                 {isActive && (
-                  <span className="absolute -bottom-0.5 w-1 h-1 rounded-full"
-                    style={{ background: 'var(--color-primary)', boxShadow: '0 0 6px var(--color-primary)' }}
-                  />
+                  <span className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-primary ring-2 ring-background" />
                 )}
               </Link>
             );
           })}
+        </div>
       </nav>
 
       {/* Creator Profile Image Prompt Modal */}
