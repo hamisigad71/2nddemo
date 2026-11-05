@@ -408,7 +408,7 @@ const AdminUsers = () => {
                               {u.status === 'active' ? (
                                 <button 
                                   onClick={() => handleToggleBan(u.id, u.status)}
-                                  className="px-3 py-1.5 bg-[#0d0e12] text-yellow-500 border border-yellow-500/20 hover:bg-yellow-600 hover:text-black text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+                                  className="px-3 py-1.5 bg-muted/60 text-foreground border border-border hover:text-amber-600 dark:hover:text-amber-400 text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
                                   title="Suspend Subscriber"
                                 >
                                   <UserX className="w-3.5 h-3.5" /> Suspend
@@ -416,7 +416,7 @@ const AdminUsers = () => {
                               ) : (
                                 <button 
                                   onClick={() => handleToggleBan(u.id, u.status)}
-                                  className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer"
+                                  className="px-3 py-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                                   title="Unsuspend Subscriber and restore account"
                                 >
                                   <UserCheck className="w-3.5 h-3.5" /> Unsuspend
@@ -424,7 +424,7 @@ const AdminUsers = () => {
                               )}
                               <button
                                 onClick={() => setDeleteModalUser(u)}
-                                className="px-3 py-1.5 bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+                                className="px-3 py-1.5 bg-red-600/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
                                 title="Permanently Delete Account"
                               >
                                 <Trash2 className="w-3.5 h-3.5" /> Delete

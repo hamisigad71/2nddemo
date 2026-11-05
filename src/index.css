@@ -232,13 +232,15 @@ html.light, .light {
     color: var(--muted-fg) !important;
   }
 
-  /* 8. Strictly enforce crisp white text on ANY red / rose / primary elements & buttons */
+  /* 8. Strictly enforce crisp white text on ANY SOLID colored elements (solid red/rose/emerald/blue) */
   .bg-primary,
   .bg-primary *,
-  [class*="bg-red-"]:not([class*="bg-red-50"]):not([class*="bg-red-100"]):not([class*="bg-red-500/10"]):not([class*="bg-red-500/15"]):not([class*="bg-red-500/20"]),
-  [class*="bg-red-"]:not([class*="bg-red-50"]):not([class*="bg-red-100"]):not([class*="bg-red-500/10"]):not([class*="bg-red-500/15"]):not([class*="bg-red-500/20"]) *,
-  [class*="bg-rose-"]:not([class*="bg-rose-50"]):not([class*="bg-rose-100"]):not([class*="bg-rose-500/10"]):not([class*="bg-rose-500/15"]):not([class*="bg-rose-500/20"]):not([class*="bg-rose-600/10"]),
-  [class*="bg-rose-"]:not([class*="bg-rose-50"]):not([class*="bg-rose-100"]):not([class*="bg-rose-500/10"]):not([class*="bg-rose-500/15"]):not([class*="bg-rose-500/20"]):not([class*="bg-rose-600/10"]) *,
+  .bg-red-600,
+  .bg-red-600 *,
+  .bg-red-700,
+  .bg-red-700 *,
+  .bg-rose-600,
+  .bg-rose-600 *,
   .bg-emerald-500,
   .bg-emerald-500 *,
   .bg-emerald-600,
@@ -246,6 +248,81 @@ html.light, .light {
   .bg-blue-600,
   .bg-blue-600 * {
     color: #ffffff !important;
+  }
+
+  /* 9. CRITICAL FIX FOR LIGHT MODE: Ensure semi-transparent badges/buttons NEVER have white text */
+  [class*="bg-red-600/"],
+  [class*="bg-red-500/"],
+  [class*="bg-rose-600/"],
+  [class*="bg-rose-500/"],
+  [class*="bg-red-950/"],
+  [class*="bg-rose-950/"] {
+    color: hsl(0 85% 40%) !important;
+  }
+  [class*="bg-red-600/"] *,
+  [class*="bg-red-500/"] *,
+  [class*="bg-rose-600/"] *,
+  [class*="bg-rose-500/"] *,
+  [class*="bg-red-950/"] *,
+  [class*="bg-rose-950/"] * {
+    color: hsl(0 85% 40%) !important;
+  }
+
+  [class*="bg-amber-500/"],
+  [class*="bg-amber-600/"],
+  [class*="bg-yellow-500/"],
+  [class*="bg-amber-950/"] {
+    color: hsl(38 92% 35%) !important;
+  }
+  [class*="bg-amber-500/"] *,
+  [class*="bg-amber-600/"] *,
+  [class*="bg-yellow-500/"] *,
+  [class*="bg-amber-950/"] * {
+    color: hsl(38 92% 35%) !important;
+  }
+
+  [class*="bg-emerald-500/"],
+  [class*="bg-emerald-600/"] {
+    color: hsl(152 75% 30%) !important;
+  }
+  [class*="bg-emerald-500/"] *,
+  [class*="bg-emerald-600/"] * {
+    color: hsl(152 75% 30%) !important;
+  }
+
+  [class*="bg-blue-500/"],
+  [class*="bg-blue-600/"] {
+    color: hsl(217 91% 45%) !important;
+  }
+  [class*="bg-blue-500/"] *,
+  [class*="bg-blue-600/"] * {
+    color: hsl(217 91% 45%) !important;
+  }
+
+  /* 10. Fix Header gradient cards in light mode (e.g. Creator Management header) */
+  [class*="from-[#0d0e12]"],
+  [class*="to-[#0d0e12]"],
+  [class*="from-zinc-950"],
+  [class*="to-zinc-950"] {
+    background-image: none !important;
+    background-color: var(--card) !important;
+    color: var(--card-fg) !important;
+    border-color: var(--border) !important;
+  }
+
+  [class*="from-[#0d0e12]"] h1,
+  [class*="from-[#0d0e12]"] h2,
+  [class*="from-[#0d0e12]"] h3,
+  [class*="from-[#0d0e12]"] span,
+  [class*="to-[#0d0e12]"] h1,
+  [class*="to-[#0d0e12]"] h2,
+  [class*="to-[#0d0e12]"] h3 {
+    color: var(--fg) !important;
+  }
+
+  [class*="from-[#0d0e12]"] p,
+  [class*="to-[#0d0e12]"] p {
+    color: var(--muted-fg) !important;
   }
 }
 

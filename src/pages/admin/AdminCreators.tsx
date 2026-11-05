@@ -351,8 +351,8 @@ const AdminCreators = () => {
                           onClick={() => setKycModalCreator(c)}
                           className={`px-2.5 py-1.5 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95 border ${
                             c.hasId || c.hasSelfie
-                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
-                              : 'bg-[#0d0e12] text-zinc-500 border-zinc-800 hover:text-zinc-300'
+                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40 hover:bg-amber-500/25'
+                              : 'bg-muted/50 text-foreground border-border hover:bg-muted'
                           }`}
                           title="Inspect Creator ID & Selfie Documents"
                         >
@@ -361,16 +361,16 @@ const AdminCreators = () => {
                         {c.isVerified ? (
                           <button 
                             onClick={() => handleToggleVerified(c.id, false)} 
-                            className="px-2.5 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95"
+                            className="px-2.5 py-1.5 bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/40 hover:bg-red-500/15 hover:text-red-600 hover:border-red-500/40 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95"
                             title="Revoke Blue Verified Badge"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500" /> Verified
+                            <CheckCircle2 className="w-3.5 h-3.5 fill-blue-500 text-white" /> Verified
                           </button>
                         ) : (
                           <button 
                             onClick={() => handleToggleVerified(c.id, true)} 
                             disabled={!c.hasId || !c.hasSelfie}
-                            className="px-2.5 py-1.5 bg-[#0d0e12] text-zinc-400 border border-zinc-700 hover:text-blue-400 hover:border-blue-500/40 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95"
+                            className="px-2.5 py-1.5 bg-muted/50 text-foreground border border-border hover:text-blue-600 hover:border-blue-500/40 text-[10px] uppercase tracking-wider font-black rounded-xl transition-all flex items-center gap-1 active:scale-95"
                             title={c.hasId && c.hasSelfie ? "Approve submitted identity verification" : "Creator must submit ID and selfie first"}
                           >
                             + Verify
@@ -381,14 +381,14 @@ const AdminCreators = () => {
                             <button 
                               onClick={() => handleStatusChange(c.id, 'active')} 
                               disabled={actionLoadingId === c.id}
-                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[11px] uppercase tracking-wider font-black rounded-xl border border-red-500 shadow-lg shadow-red-600/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                              className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] uppercase tracking-wider font-black rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1"
                             >
                               {actionLoadingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Approve'}
                             </button>
                             <button 
                               onClick={() => handleStatusChange(c.id, 'suspended')} 
                               disabled={actionLoadingId === c.id}
-                              className="px-3 py-1.5 bg-[#0d0e12] text-zinc-400 hover:text-red-400 text-[11px] uppercase tracking-wider font-black rounded-xl border border-zinc-700 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                              className="px-3 py-1.5 bg-muted/60 text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-[11px] uppercase tracking-wider font-black rounded-xl border border-border transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                             >
                               Reject
                             </button>
@@ -398,7 +398,7 @@ const AdminCreators = () => {
                           <button 
                             onClick={() => handleStatusChange(c.id, 'suspended')} 
                             disabled={actionLoadingId === c.id}
-                            className="px-3 py-1.5 bg-[#0d0e12] text-yellow-500 hover:text-yellow-400 hover:border-yellow-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-yellow-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                            className="px-3 py-1.5 bg-muted/60 text-foreground hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/50 text-[11px] uppercase tracking-wider font-black rounded-xl border border-border transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1"
                             title="Suspend creator and terminate active sessions"
                           >
                             {actionLoadingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Suspend'}
@@ -408,7 +408,7 @@ const AdminCreators = () => {
                           <button 
                             onClick={() => handleStatusChange(c.id, 'active')} 
                             disabled={actionLoadingId === c.id}
-                            className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 shadow-md shadow-emerald-500/10 flex items-center gap-1 cursor-pointer disabled:opacity-50" 
+                            className="px-3 py-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50" 
                             title="Unsuspend creator and restore account"
                           >
                             {actionLoadingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5" /> Unsuspend</>}
@@ -416,7 +416,7 @@ const AdminCreators = () => {
                         )}
                         <button
                           onClick={() => setDeleteModalCreator(c)}
-                          className="px-3 py-1.5 bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                          className="px-3 py-1.5 bg-red-600/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-600 hover:text-white text-[11px] uppercase tracking-wider font-black rounded-xl transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                           title="Permanently Delete Creator"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
