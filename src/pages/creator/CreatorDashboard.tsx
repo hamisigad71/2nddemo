@@ -2,6 +2,7 @@ import { BarChart3, Users, DollarSign, Eye, ArrowUp, Calendar, Loader2, AlertCir
 import { Link, useNavigate } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
+import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { getCreatorDashboardStats, getUserProfile, getStoredCreatorProfile } from '../../lib/db';
@@ -131,48 +132,50 @@ const CreatorDashboard = () => {
          </div>
        )}
 
-       {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 w-full">
+       {/* Stats Grid - 2 columns on mobile/phone, 4 columns on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 w-full">
           {[
             { 
               label: "Total Earnings", value: `KES ${stats.totalEarnings.toLocaleString()}`, increase: stats.totalEarnings > 0 ? "+100%" : "0.0%", 
-              iconWrapperClass: "bg-emerald-500/10",
-              icon: <DollarSign className="w-5 h-5 text-emerald-500" /> 
+              iconWrapperClass: "bg-emerald-500/10 text-emerald-500",
+              icon: <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" /> 
             },
             { 
               label: "Active Subs", value: stats.activeSubs.toString(), increase: stats.activeSubs > 0 ? `+${stats.activeSubs}` : "0.0%", 
-              iconWrapperClass: "bg-blue-500/10",
-              icon: <Users className="w-5 h-5 text-blue-500" /> 
+              iconWrapperClass: "bg-blue-500/10 text-blue-500",
+              icon: <Users className="w-4 h-4 sm:w-5 sm:h-5" /> 
             },
             { 
               label: "Content Views", value: "0", increase: "0.0%", 
-              iconWrapperClass: "bg-primary/10",
-              icon: <Eye className="w-5 h-5 text-primary" /> 
+              iconWrapperClass: "bg-primary/10 text-primary",
+              icon: <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> 
             },
             { 
               label: "Engagement", value: "0%", increase: "0.0%", 
-              iconWrapperClass: "bg-orange-500/10",
-              icon: <BarChart3 className="w-5 h-5 text-orange-500" /> 
+              iconWrapperClass: "bg-orange-500/10 text-orange-500",
+              icon: <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" /> 
             }
           ].map((stat, i) => (
-            <div key={i} className="bg-background border border-border p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                <div className={`p-2 rounded-xl ${stat.iconWrapperClass}`}>
-                  {stat.icon}
-                </div>
-              </div>
-              <div className="mt-2">
-                <h3 className="text-3xl font-bold text-foreground mb-1 tracking-tight">{stat.value}</h3>
-                <div className="flex items-center gap-1.5 text-sm mt-3">
-                  <div className={`flex items-center gap-1 font-semibold ${stat.increase.startsWith('+') ? (stat.increase !== '+0.0%' ? 'text-emerald-500' : 'text-muted-foreground') : 'text-red-500'}`}>
-                    {stat.increase.startsWith('+') && stat.increase !== '+0.0%' ? <ArrowUp className="w-4 h-4" /> : null}
-                    {stat.increase}
+            <Card key={i} className="hover:shadow-md transition-shadow duration-200">
+              <CardContent className="p-3.5 sm:p-6 flex flex-col justify-between h-full">
+                <div className="flex items-center justify-between mb-2 sm:mb-4 gap-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{stat.label}</p>
+                  <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 ${stat.iconWrapperClass}`}>
+                    {stat.icon}
                   </div>
-                  <span className="text-muted-foreground text-xs ml-1 font-medium">from last month</span>
                 </div>
-              </div>
-            </div>
+                <div className="mt-1 sm:mt-2">
+                  <h3 className="text-lg sm:text-3xl font-bold text-foreground mb-1 tracking-tight truncate">{stat.value}</h3>
+                  <div className="flex flex-wrap items-center gap-1 text-[11px] sm:text-sm mt-1.5 sm:mt-3">
+                    <div className={`inline-flex items-center gap-0.5 font-semibold ${stat.increase.startsWith('+') ? (stat.increase !== '+0.0%' ? 'text-emerald-500' : 'text-muted-foreground') : 'text-red-500'}`}>
+                      {stat.increase.startsWith('+') && stat.increase !== '+0.0%' ? <ArrowUp className="w-3 h-3 sm:w-4 sm:h-4" /> : null}
+                      {stat.increase}
+                    </div>
+                    <span className="text-muted-foreground text-[10px] sm:text-xs font-medium whitespace-nowrap">vs last mo</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
