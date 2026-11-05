@@ -296,7 +296,7 @@ export default function SubscribeModal({
       />
 
       {/* Modal */}
-      <div className={`relative bg-black border border-white/10 rounded-[28px] w-full ${step === 'pesapal_iframe' ? 'max-w-xl' : 'max-w-[380px]'} overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,1)] animate-in zoom-in-[0.98] duration-300`}>
+      <div className={`relative bg-black border border-white/10 rounded-[28px] w-full ${step === 'pesapal_iframe' ? 'max-w-xl' : 'max-w-[380px]'} overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,1)] animate-emil-modal`}>
         {/* Top edge red glow highlight */}
         <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent" />
 

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import CreatorLayout from '../../components/CreatorLayout';
 import CreatePostForm from '../../components/CreatePostForm';
 import { Card, CardContent } from '@/components/ui/card';
+import { AnimatedCounter } from '../../components/ui/AnimatedCounter';
 import { useAuth } from '../../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { getCreatorDashboardStats, getUserProfile, getStoredCreatorProfile } from '../../lib/db';
@@ -136,27 +137,40 @@ const CreatorDashboard = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 w-full">
           {[
             { 
-              label: "Total Earnings", value: `KES ${stats.totalEarnings.toLocaleString()}`, increase: stats.totalEarnings > 0 ? "+100%" : "0.0%", 
+              label: "Total Earnings",
+              rawValue: stats.totalEarnings,
+              prefix: "KES ",
+              increase: stats.totalEarnings > 0 ? "+100%" : "0.0%", 
               iconWrapperClass: "bg-emerald-500/10 text-emerald-500",
               icon: <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" /> 
             },
             { 
-              label: "Active Subs", value: stats.activeSubs.toString(), increase: stats.activeSubs > 0 ? `+${stats.activeSubs}` : "0.0%", 
+              label: "Active Subs",
+              rawValue: stats.activeSubs,
+              prefix: "",
+              increase: stats.activeSubs > 0 ? `+${stats.activeSubs}` : "0.0%", 
               iconWrapperClass: "bg-blue-500/10 text-blue-500",
               icon: <Users className="w-4 h-4 sm:w-5 sm:h-5" /> 
             },
             { 
-              label: "Content Views", value: "0", increase: "0.0%", 
+              label: "Content Views",
+              rawValue: 0,
+              prefix: "",
+              increase: "0.0%", 
               iconWrapperClass: "bg-primary/10 text-primary",
               icon: <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> 
             },
             { 
-              label: "Engagement", value: "0%", increase: "0.0%", 
+              label: "Engagement",
+              rawValue: 0,
+              prefix: "",
+              suffix: "%",
+              increase: "0.0%", 
               iconWrapperClass: "bg-orange-500/10 text-orange-500",
               icon: <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" /> 
             }
           ].map((stat, i) => (
-            <Card key={i} className="hover:shadow-md transition-shadow duration-200">
+            <Card key={i} className="emil-card-hover border-border transition-all duration-200">
               <CardContent className="p-3.5 sm:p-6 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between mb-2 sm:mb-4 gap-1">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{stat.label}</p>
@@ -165,7 +179,13 @@ const CreatorDashboard = () => {
                   </div>
                 </div>
                 <div className="mt-1 sm:mt-2">
-                  <h3 className="text-lg sm:text-3xl font-bold text-foreground mb-1 tracking-tight truncate">{stat.value}</h3>
+                  <h3 className="text-lg sm:text-3xl font-bold text-foreground mb-1 tracking-tight truncate">
+                    <AnimatedCounter
+                      value={stat.rawValue}
+                      prefix={stat.prefix}
+                      suffix={stat.suffix || ''}
+                    />
+                  </h3>
                   <div className="flex flex-wrap items-center gap-1 text-[11px] sm:text-sm mt-1.5 sm:mt-3">
                     <div className={`inline-flex items-center gap-0.5 font-semibold ${stat.increase.startsWith('+') ? (stat.increase !== '+0.0%' ? 'text-emerald-500' : 'text-muted-foreground') : 'text-red-500'}`}>
                       {stat.increase.startsWith('+') && stat.increase !== '+0.0%' ? <ArrowUp className="w-3 h-3 sm:w-4 sm:h-4" /> : null}
