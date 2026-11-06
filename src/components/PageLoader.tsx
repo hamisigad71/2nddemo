@@ -1,6 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import { useTheme } from '../context/ThemeContext';
-import { getPageLoaderPresentation } from '../lib/pageLoaderPresentation';
 
 interface PageLoaderProps {
   onComplete: () => void;
@@ -8,8 +6,6 @@ interface PageLoaderProps {
 }
 
 const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
-  const { theme } = useTheme();
-  const presentation = getPageLoaderPresentation(theme);
   const [progress, setProgress] = useState(0);
   const [fading, setFading] = useState(false);
 
@@ -76,18 +72,15 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
       />
 
       {/* Mobile background image */}
-      {presentation.showMobilePhoto && <img
+      <img
         src="/pic1.webp"
         alt=""
         className="md:hidden absolute inset-0 w-full h-full object-cover object-center pointer-events-none filter saturate-[0.85]"
         loading="eager"
-      />}
+      />
       
       {/* Mobile overlay - subtle dark gradient to ensure legibility while keeping image crisp */}
-      {presentation.showMobilePhoto && (
-        <div className="md:hidden absolute inset-0 bg-black/40 bg-gradient-to-t from-[#13141A] via-[#13141A]/50 to-black/60 backdrop-blur-[3px] pointer-events-none" />
-      )}
-      {!presentation.showMobilePhoto && <div className={presentation.mobileBackdrop} aria-hidden="true" />}
+      <div className="md:hidden absolute inset-0 bg-black/40 bg-gradient-to-t from-[#13141A] via-[#13141A]/50 to-black/60 backdrop-blur-[3px] pointer-events-none" />
 
       {/* Ambient background glow blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -113,7 +106,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
       </div>
 
       {/* Central content */}
-      <div className={`relative flex flex-col items-center gap-8 ${presentation.surface}`}>
+      <div className="relative flex flex-col items-center gap-8">
 
         {/* Spinning rings + logo */}
         <div className="relative w-24 h-24 flex items-center justify-center">
@@ -181,21 +174,21 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
         {/* Brand name */}
         <div className="text-center relative z-10 mt-4">
-          <div className={`mb-1 text-2xl font-bold tracking-tight sm:text-3xl ${presentation.title} ${theme === 'dark' ? 'drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]' : ''}`}>
+          <div className="mb-1 text-2xl font-bold tracking-tight sm:text-3xl text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
             The Gents Dollhouse<span className="text-rose-500">.</span>
           </div>
-          <p className={`text-xs font-semibold tracking-[0.18em] uppercase ${presentation.subtitle} ${theme === 'dark' ? 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]' : ''}`}>
+          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             Creator Platform
           </p>
         </div>
 
         {/* Progress bar */}
         <div className="relative z-10 mt-2 flex w-56 flex-col items-center gap-3">
-          <p className={`text-sm font-medium ${presentation.progressText} ${theme === 'dark' ? 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]' : ''}`}>
+          <p className="text-sm font-medium text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             Getting things ready
           </p>
           <div
-            className={`h-1.5 w-full overflow-hidden rounded-full ${presentation.progressTrack} shadow-inner`}
+            className="h-1.5 w-full overflow-hidden rounded-full border border-white/20 bg-black/40 backdrop-blur-md shadow-inner"
             role="progressbar"
             aria-label="Loading progress"
             aria-valuemin={0}
@@ -212,7 +205,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
               }}
             />
           </div>
-          <span className={`text-xs font-bold tabular-nums ${presentation.progressText} ${theme === 'dark' ? 'drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]' : ''}`}>
+          <span className="text-xs font-bold tabular-nums text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
             {progress}%
           </span>
         </div>
@@ -220,7 +213,7 @@ const PageLoader = ({ onComplete, onReady }: PageLoaderProps) => {
 
       {/* Bottom tagline */}
       <div
-        className={`page-loader-motion absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[11px] font-semibold tracking-[0.12em] uppercase ${presentation.bottomTagline} ${theme === 'dark' ? 'drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]' : ''}`}
+        className="page-loader-motion absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[11px] font-semibold tracking-[0.12em] uppercase text-white/80 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
         style={{ animation: 'loader-fade-up 1s ease-out forwards' }}
       >
         Built for African creators

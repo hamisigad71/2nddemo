@@ -41,23 +41,23 @@
   }
 
   .light {
-    --bg: hsl(0 0% 100%);
-    --fg: hsl(240 10% 3.9%);
-    --card: hsl(0 0% 100%);
-    --card-fg: hsl(240 10% 3.9%);
-    --primary: hsl(346.8 77.2% 49.8%);
-    --primary-fg: hsl(355.7 100% 97.3%);
-    --secondary: hsl(240 4.8% 95.9%);
-    --secondary-fg: hsl(240 5.9% 10%);
-    --muted: hsl(240 4.8% 95.9%);
-    --muted-fg: hsl(240 3.8% 46.1%);
-    --accent: hsl(240 4.8% 95.9%);
-    --accent-fg: hsl(240 5.9% 10%);
+    --bg: #eef2f6;
+    --fg: hsl(222 47% 11%);
+    --card: #ffffff;
+    --card-fg: hsl(222 47% 11%);
+    --primary: hsl(0 84% 50%);
+    --primary-fg: #ffffff;
+    --secondary: #e2e8f0;
+    --secondary-fg: hsl(222 47% 11%);
+    --muted: #f1f5f9;
+    --muted-fg: #64748b;
+    --accent: #e2e8f0;
+    --accent-fg: hsl(222 47% 11%);
     --destructive: hsl(0 84.2% 60.2%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(240 5.9% 90%);
-    --input: hsl(240 5.9% 90%);
-    --ring: hsl(346.8 77.2% 49.8%);
+    --border: #dbe2ea;
+    --input: #dbe2ea;
+    --ring: hsl(0 84% 50%);
   }
 
   body {
@@ -95,15 +95,117 @@ html.light, .light {
 
   /* Stat cards, tables and container backgrounds in Admin & User */
   .bg-card,
-  [class*="bg-[#0d0e12]"],
-  [class*="bg-[#0D0E12]"],
-  [class*="bg-[#0c0d12]"],
-  [class*="bg-[#0a0b0f]"],
-  [class*="bg-[#111217]"],
-  [class*="bg-[#101116]"] {
-    background-color: var(--card) !important;
+  [class*=bg-card],
+  .card,
+  [class*=bg-[#0d0e12]],
+  [class*=bg-[#0D0E12]],
+  [class*=bg-[#0c0d12]],
+  [class*=bg-[#0a0b0f]],
+  [class*=bg-[#111217]],
+  [class*=bg-[#101116]] {
+    background-color: #ffffff !important;
     color: var(--card-fg) !important;
-    border-color: var(--border) !important;
+    border-color: #dbe2ea !important;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.06) !important;
+  }
+
+  /* Make panels and sections styled with bg-background inside page containers elevate to card white with shadow */
+  main div[class*=bg-background][class*=rounded],
+  main section[class*=bg-background][class*=rounded],
+  div[class*=flex-1] > div[class*=bg-background][class*=rounded],
+  div[class*=space-y] > div[class*=bg-background][class*=rounded],
+  div[class*=grid] > div[class*=bg-background][class*=rounded] {
+    background-color: #ffffff !important;
+    color: var(--card-fg) !important;
+    border-color: #dbe2ea !important;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.06) !important;
+  }
+
+  /* Sidebar styling for light mode - crisp white with defined right border */
+  aside {
+    background-color: #ffffff !important;
+    border-color: #dbe2ea !important;
+    box-shadow: 1px 0 3px 0 rgba(15, 23, 42, 0.04) !important;
+  }
+
+  /* Distinct button & card surfaces inside sidebar in light mode */
+  aside nav a:not([class*="bg-primary"]):not([class*="text-primary"]) {
+    color: #475569 !important;
+  }
+  aside nav a:not([class*="bg-primary"]):not([class*="text-primary"]):hover {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+  }
+  aside nav a[class*="bg-primary"],
+  aside nav a[class*="text-primary"] {
+    background-color: #fee2e2 !important;
+    color: #dc2626 !important;
+  }
+  aside nav a span[class*="bg-amber"] {
+    background-color: #fef3c7 !important;
+    color: #b45309 !important;
+    border-color: #fde68a !important;
+  }
+  aside .p-2\.5,
+  aside div[class*="p-2"],
+  aside div[class*="bg-white/["],
+  aside div[class*="bg-foreground/"] {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
+  }
+  aside .p-2\.5:hover,
+  aside div[class*="p-2"]:hover {
+    background-color: #f1f5f9 !important;
+  }
+  aside button,
+  aside button[type="button"] {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05) !important;
+  }
+  aside button:hover,
+  aside button[type="button"]:hover {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+  }
+  aside button[class*="rose"],
+  aside button[class*="red"],
+  aside button:has(svg.text-rose-400),
+  aside button:has(svg.text-rose-500) {
+    background-color: #fff1f2 !important;
+    color: #e11d48 !important;
+    border: 1px solid #fecdd3 !important;
+    box-shadow: 0 1px 2px 0 rgba(225, 29, 72, 0.06) !important;
+  }
+  aside button[class*="rose"]:hover,
+  aside button[class*="red"]:hover,
+  aside button:has(svg.text-rose-400):hover,
+  aside button:has(svg.text-rose-500):hover {
+    background-color: #ffe4e6 !important;
+    border-color: #fda4af !important;
+    color: #be123c !important;
+  }
+  aside button span[class*="bg-rose-500"],
+  aside button span[class*="bg-rose-200"] {
+    background-color: #fecdd3 !important;
+    color: #9f1239 !important;
+  }
+  aside button:last-child {
+    background-color: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #475569 !important;
+  }
+  aside button:last-child:hover {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+  }
+
+  /* Page canvas background rule */
+  body, main {
+    background-color: var(--bg) !important;
   }
 
   /* Admin & User Table headers and rows */
@@ -116,9 +218,8 @@ html.light, .light {
   }
 
   /* Fix warning/notice banners and badges in light mode */
-  [class*="bg-amber-950"],
-  [class*="bg-red-950"],
-  [class*="bg-[#1b0809]"] {
+  [class*="bg-amber-950"]:not([class*="/"]),
+  [class*="bg-[#1b0809]"]:not([class*="/"]) {
     background-color: var(--card) !important;
     border-color: var(--border) !important;
   }
@@ -199,7 +300,9 @@ html.light, .light {
     button:not([class*="bg-transparent"]):not([class*="bg-white"]):not([class*="bg-zinc-100"]):not([class*="border-input"]),
     button:not([class*="bg-transparent"]):not([class*="bg-white"]):not([class*="bg-zinc-100"]):not([class*="border-input"]) *,
     .badge-solid, .badge-solid *,
-    .page-loader-container, .page-loader-container *
+    .page-loader-container, .page-loader-container *,
+    .hero-headline, .hero-headline *,
+    [data-preserve-white], [data-preserve-white] *
   ),
   .text-zinc-100:not(
     .bg-primary *, [class*="bg-red-"] *, [class*="bg-rose-"] *, [class*="bg-emerald-"] *, [class*="bg-blue-"] *, [class*="bg-zinc-9"] *
@@ -235,12 +338,18 @@ html.light, .light {
   /* 8. Strictly enforce crisp white text on ANY SOLID colored elements (solid red/rose/emerald/blue) */
   .bg-primary,
   .bg-primary *,
+  .bg-red-500,
+  .bg-red-500 *,
   .bg-red-600,
   .bg-red-600 *,
   .bg-red-700,
   .bg-red-700 *,
+  .bg-rose-500,
+  .bg-rose-500 *,
   .bg-rose-600,
   .bg-rose-600 *,
+  .bg-rose-700,
+  .bg-rose-700 *,
   .bg-emerald-500,
   .bg-emerald-500 *,
   .bg-emerald-600,
@@ -250,28 +359,73 @@ html.light, .light {
     color: #ffffff !important;
   }
 
-  /* 9. CRITICAL FIX FOR LIGHT MODE: Ensure semi-transparent badges/buttons NEVER have white text */
-  [class*="bg-red-600/"],
-  [class*="bg-red-500/"],
-  [class*="bg-rose-600/"],
-  [class*="bg-rose-500/"],
+  /* 9. CRITICAL FIX FOR LIGHT MODE: Ensure semi-transparent badges/buttons NEVER have washed out white layers or white text */
+  [class*="bg-red-600/"]:not(button:hover):not(a:hover):not(.bg-red-600):not(.bg-rose-600),
+  [class*="bg-red-500/"]:not(button:hover):not(a:hover):not(.bg-red-500):not(.bg-rose-500),
+  [class*="bg-rose-600/"]:not(button:hover):not(a:hover):not(.bg-rose-600):not(.bg-red-600),
+  [class*="bg-rose-500/"]:not(button:hover):not(a:hover):not(.bg-rose-500):not(.bg-red-500) {
+    background-color: hsl(0 85% 96%) !important;
+    border-color: hsl(0 85% 85%) !important;
+    color: hsl(0 85% 42%) !important;
+  }
+  [class*="bg-red-600/"]:not(button:hover):not(a:hover):not(.bg-red-600):not(.bg-rose-600) *,
+  [class*="bg-red-500/"]:not(button:hover):not(a:hover):not(.bg-red-500):not(.bg-rose-500) *,
+  [class*="bg-rose-600/"]:not(button:hover):not(a:hover):not(.bg-rose-600):not(.bg-red-600) *,
+  [class*="bg-rose-500/"]:not(button:hover):not(a:hover):not(.bg-rose-500):not(.bg-red-500) * {
+    color: hsl(0 85% 42%) !important;
+  }
+
+  /* Solid colored buttons & links must ALWAYS have pure crisp white text */
+  .bg-rose-600,
+  .bg-rose-600 *,
+  .bg-rose-500,
+  .bg-rose-500 *,
+  .bg-red-600,
+  .bg-red-600 *,
+  .bg-red-500,
+  .bg-red-500 *,
+  a.bg-rose-600,
+  a.bg-rose-600 *,
+  a.bg-red-600,
+  a.bg-red-600 *,
+  button.bg-rose-600,
+  button.bg-rose-600 *,
+  button.bg-red-600,
+  button.bg-red-600 * {
+    color: #ffffff !important;
+  }
+
   [class*="bg-red-950/"],
   [class*="bg-rose-950/"] {
+    background-color: hsl(0 85% 97%) !important;
+    border-color: hsl(0 85% 88%) !important;
     color: hsl(0 85% 40%) !important;
   }
-  [class*="bg-red-600/"] *,
-  [class*="bg-red-500/"] *,
-  [class*="bg-rose-600/"] *,
-  [class*="bg-rose-500/"] *,
   [class*="bg-red-950/"] *,
   [class*="bg-rose-950/"] * {
     color: hsl(0 85% 40%) !important;
+  }
+
+  /* When hovering an outline/tinted delete or action button into solid red, turn text crisp white */
+  button[class*="bg-red-"]:hover,
+  button[class*="hover:bg-red-600"]:hover,
+  button[class*="hover:bg-red-700"]:hover {
+    background-color: hsl(0 85% 50%) !important;
+    color: #ffffff !important;
+    border-color: hsl(0 85% 50%) !important;
+  }
+  button[class*="bg-red-"]:hover *,
+  button[class*="hover:bg-red-600"]:hover *,
+  button[class*="hover:bg-red-700"]:hover * {
+    color: #ffffff !important;
   }
 
   [class*="bg-amber-500/"],
   [class*="bg-amber-600/"],
   [class*="bg-yellow-500/"],
   [class*="bg-amber-950/"] {
+    background-color: hsl(45 93% 95%) !important;
+    border-color: hsl(45 93% 82%) !important;
     color: hsl(38 92% 35%) !important;
   }
   [class*="bg-amber-500/"] *,
@@ -283,6 +437,8 @@ html.light, .light {
 
   [class*="bg-emerald-500/"],
   [class*="bg-emerald-600/"] {
+    background-color: hsl(152 75% 95%) !important;
+    border-color: hsl(152 75% 82%) !important;
     color: hsl(152 75% 30%) !important;
   }
   [class*="bg-emerald-500/"] *,
@@ -292,6 +448,8 @@ html.light, .light {
 
   [class*="bg-blue-500/"],
   [class*="bg-blue-600/"] {
+    background-color: hsl(217 91% 95%) !important;
+    border-color: hsl(217 91% 82%) !important;
     color: hsl(217 91% 45%) !important;
   }
   [class*="bg-blue-500/"] *,
@@ -299,30 +457,102 @@ html.light, .light {
     color: hsl(217 91% 45%) !important;
   }
 
-  /* 10. Fix Header gradient cards in light mode (e.g. Creator Management header) */
+  /* 10. Fix Header gradient cards, owner hubs & dark cards across entire project in light mode */
   [class*="from-[#0d0e12]"],
   [class*="to-[#0d0e12]"],
   [class*="from-zinc-950"],
-  [class*="to-zinc-950"] {
+  [class*="to-zinc-950"],
+  [class*="from-zinc-900"],
+  [class*="to-zinc-900"],
+  [class*="from-black"],
+  [class*="to-black"],
+  .creator-profile-surface,
+  div[class*="creator-profile-surface"] {
     background-image: none !important;
     background-color: var(--card) !important;
     color: var(--card-fg) !important;
     border-color: var(--border) !important;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08) !important;
   }
 
-  [class*="from-[#0d0e12]"] h1,
-  [class*="from-[#0d0e12]"] h2,
-  [class*="from-[#0d0e12]"] h3,
-  [class*="from-[#0d0e12]"] span,
-  [class*="to-[#0d0e12]"] h1,
-  [class*="to-[#0d0e12]"] h2,
-  [class*="to-[#0d0e12]"] h3 {
-    color: var(--fg) !important;
+  /* Secondary action buttons styled as bg-zinc-900/bg-zinc-800 inside creator profile, feeds, or dashboards */
+  a.bg-zinc-900:not([class*="bg-primary"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-emerald-"]),
+  a.bg-zinc-800:not([class*="bg-primary"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-emerald-"]),
+  div.creator-profile-actions a.bg-zinc-900,
+  div.creator-profile-actions a.bg-zinc-800,
+  div.creator-profile-actions button.bg-zinc-900,
+  div.creator-profile-actions button.bg-zinc-800 {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.06) !important;
   }
 
-  [class*="from-[#0d0e12]"] p,
-  [class*="to-[#0d0e12]"] p {
-    color: var(--muted-fg) !important;
+  a.bg-zinc-900:hover:not([class*="bg-primary"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-emerald-"]),
+  a.bg-zinc-800:hover:not([class*="bg-primary"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-emerald-"]),
+  div.creator-profile-actions a.bg-zinc-900:hover,
+  div.creator-profile-actions a.bg-zinc-800:hover,
+  div.creator-profile-actions button.bg-zinc-900:hover,
+  div.creator-profile-actions button.bg-zinc-800:hover {
+    background-color: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+  }
+
+  /* Creator control hub internal sub-cards and links */
+  .creator-profile-surface .bg-zinc-900\/80,
+  .creator-profile-surface [class*="bg-zinc-900"],
+  .creator-profile-surface [class*="bg-zinc-800"] {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: var(--card-fg) !important;
+  }
+
+  .creator-profile-surface .bg-zinc-900\/80:hover,
+  .creator-profile-surface [class*="bg-zinc-900"]:hover,
+  .creator-profile-surface [class*="bg-zinc-800"]:hover {
+    background-color: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .creator-profile-surface a[class*="from-red-600"] {
+    background: linear-gradient(to bottom right, #dc2626, #b91c1c) !important;
+    color: #ffffff !important;
+    border-color: #ef4444 !important;
+  }
+  .creator-profile-surface a[class*="from-red-600"] * {
+    color: #ffffff !important;
+  }
+
+  .creator-profile-surface a[class*="bg-white\/5"],
+  .creator-profile-surface button[class*="bg-white\/10"],
+  .creator-profile-surface button[class*="bg-white\/15"],
+  .creator-profile-surface a[class*="bg-white\/10"] {
+    background-color: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #334155 !important;
+  }
+
+  .creator-profile-surface a[class*="bg-white\/5"]:hover,
+  .creator-profile-surface button[class*="bg-white\/10"]:hover,
+  .creator-profile-surface button[class*="bg-white\/15"]:hover,
+  .creator-profile-surface a[class*="bg-white\/10"]:hover {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+  }
+
+  .creator-profile-surface h1,
+  .creator-profile-surface h2,
+  .creator-profile-surface h3,
+  .creator-profile-surface h4,
+  .creator-profile-surface .text-white:not(.bg-primary *):not([class*="bg-red-"] *) {
+    color: #0f172a !important;
+  }
+
+  .creator-profile-surface p,
+  .creator-profile-surface .text-zinc-400,
+  .creator-profile-surface .text-zinc-300:not(.bg-primary *):not([class*="bg-red-"] *) {
+    color: #475569 !important;
   }
 }
 

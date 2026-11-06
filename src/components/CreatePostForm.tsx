@@ -255,7 +255,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   };
 
   return (
-    <div className="bg-background border border-border rounded-2xl p-6 mb-8 shadow-sm">
+    <div className="bg-card border border-border rounded-2xl p-6 mb-8 shadow-sm">
       <h3 className="text-lg font-bold mb-5 flex items-center gap-2">
         <ImagePlus className="w-5 h-5 text-primary" /> New Post
       </h3>
@@ -444,7 +444,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
             type="submit"
             value="published"
             disabled={!selectedFile || uploading}
-            className="bg-primary text-primary-foreground font-bold rounded-xl py-3.5 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
+            className="bg-red-600 hover:bg-red-700 text-white font-black rounded-xl py-3.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 shadow-md shadow-red-600/30"
           >
             {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Publish Now'}
           </button>

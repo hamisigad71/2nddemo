@@ -186,7 +186,7 @@ const Landing = () => {
               </div>
 
               {/* Headline */}
-              <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-3 md:mb-6 leading-[1.15]">
+              <h1 className="hero-headline text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-3 md:mb-6 leading-[1.15]" data-preserve-white>
                 <span className="text-white drop-shadow-md">Your Content.</span>{' '}
                 <span className="text-white drop-shadow-md">Your Fans.</span>{' '}
                 <span className="text-red-500 drop-shadow-[0_2px_10px_rgba(239,68,68,0.4)]">
@@ -195,7 +195,7 @@ const Landing = () => {
               </h1>
 
               {/* Description */}
-              <p className="text-xs sm:text-base md:text-xl text-white/85 max-w-lg md:max-w-2xl leading-relaxed px-2">
+              <p className="hero-headline text-xs sm:text-base md:text-xl text-white/90 max-w-lg md:max-w-2xl leading-relaxed px-2 drop-shadow-md" data-preserve-white>
                 The premium subscription platform for African creators. Monetize your audience directly through{' '}
                 <span className="text-white font-semibold underline decoration-red-500 decoration-2 underline-offset-2">M-Pesa</span>, cards &amp; more. No middleman. No hassle.
               </p>

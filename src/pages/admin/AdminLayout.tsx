@@ -253,7 +253,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   );
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-screen bg-[#eef2f6] dark:bg-background text-foreground overflow-hidden">
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-[280px] shrink-0 flex-col bg-card border-r border-border">
@@ -649,7 +649,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-background">
+        <main className="flex-1 overflow-y-auto bg-[#eef2f6] dark:bg-background">
           {children}
         </main>
       </div>

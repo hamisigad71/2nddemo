@@ -126,7 +126,7 @@ const CreatorDashboard = () => {
            </div>
            <Link 
              to="/edit-profile" 
-             className="w-full sm:w-auto text-center bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs tracking-wider uppercase px-5 py-2.5 rounded-full transition-all shadow-md shadow-rose-600/25 border border-rose-500 whitespace-nowrap"
+             className="w-full sm:w-auto text-center bg-rose-600 hover:bg-rose-700 !text-white font-extrabold text-xs tracking-wider uppercase px-5 py-2.5 rounded-full transition-all shadow-md shadow-rose-600/25 border border-rose-500 whitespace-nowrap"
            >
              COMPLETE KYC →
            </Link>
@@ -204,11 +204,11 @@ const CreatorDashboard = () => {
 
        {/* Charts / Activity Placeholder */}
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-background border border-border rounded-2xl p-6 shadow-sm">
+          <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6 shadow-sm">
             <h3 className="text-lg font-bold mb-6 text-foreground">Revenue Overview</h3>
             <div className="h-64 flex items-end justify-between gap-2 border-b border-l border-border pl-2 pb-2">
                {[40, 25, 60, 30, 80, 50, 95].map((h, i) => (
-                  <div key={i} className="w-full bg-primary/80 hover:bg-primary transition-colors rounded-t-sm" style={{ height: `${h}%` }}></div>
+                  <div key={i} className="w-full bg-red-600 hover:bg-red-700 transition-colors rounded-t-sm" style={{ height: `${h}%` }}></div>
                ))}
             </div>
             <div className="flex justify-between text-xs text-muted-foreground pt-4">
@@ -216,7 +216,7 @@ const CreatorDashboard = () => {
             </div>
           </div>
           
-          <div className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
              <h3 className="text-lg font-bold mb-6 text-foreground">Recent Subscribers</h3>
              <div className="space-y-4">
                {loading ? (
