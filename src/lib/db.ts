@@ -1,4 +1,4 @@
-import { supabase, supabaseUrl, supabaseAnonKey } from "./supabase";
+import { supabase } from "./supabase";
 import { FALLBACK_POSTS } from "../data/mockPosts";
 import { getEscorts } from "./mockData";
 import {
@@ -958,15 +958,15 @@ export const uploadFileToSupabase = async (
 
   let lastStorageError = "";
 
-  // 1. Direct Supabase Storage Upload via official SDK (handles auth, FormData, headers and RLS cleanly)
+  // 1. Direct Supabase Storage Upload via official SDK
   for (const b of bucketsToTry) {
     try {
-      if (onProgress) onProgress(15);
+      if (onProgress) onProgress(25);
       const { data: uploadResult, error } = await supabase.storage
         .from(b)
         .upload(cleanPath, fileToUpload, {
           upsert: true,
-          contentType: fileToUpload.type || (fileToUpload.name?.endsWith(".mp4") ? "video/mp4" : "application/octet-stream"),
+          contentType: fileToUpload.type || "video/mp4",
         });
 
       if (!error && uploadResult) {
@@ -982,50 +982,11 @@ export const uploadFileToSupabase = async (
         if (data?.publicUrl) return data.publicUrl;
       } else if (error) {
         lastStorageError = error.message;
-        console.warn(`Supabase storage SDK error (${b}):`, error.message);
+        console.warn(`Supabase storage upload notice (${b}):`, error.message);
       }
     } catch (err: any) {
       lastStorageError = err?.message || String(err);
-      console.warn(`Supabase storage SDK exception (${b}):`, lastStorageError);
-    }
-  }
-
-  // 2. Fallback to direct REST endpoint if SDK failed
-  if (typeof window !== "undefined") {
-    try {
-      if (onProgress) onProgress(50);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      const uploadUrl = `${supabaseUrl}/storage/v1/object/${encodeURIComponent(targetBucket)}/${cleanPath}`;
-      const res = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          "x-upsert": "true",
-          "apikey": supabaseAnonKey,
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-          ...(fileToUpload.type ? { "Content-Type": fileToUpload.type } : {}),
-        },
-        body: fileToUpload,
-      });
-
-      if (res.ok) {
-        if (onProgress) onProgress(100);
-        try {
-          const { data: signedData } = await supabase.storage
-            .from(targetBucket)
-            .createSignedUrl(cleanPath, 60 * 60 * 24 * 30);
-          if (signedData?.signedUrl) return signedData.signedUrl;
-        } catch {}
-
-        const { data } = supabase.storage.from(targetBucket).getPublicUrl(cleanPath);
-        if (data?.publicUrl) return data.publicUrl;
-      } else {
-        const errText = await res.text();
-        console.warn("Storage REST endpoint notice:", res.status, errText);
-      }
-    } catch (fetchErr: any) {
-      console.warn("Storage REST endpoint exception:", fetchErr?.message || fetchErr);
+      console.warn(`Supabase storage exception (${b}):`, lastStorageError);
     }
   }
 

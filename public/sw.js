@@ -1,5 +1,5 @@
 // Service Worker for The Gents Dollhouse PWA
-const CACHE_NAME = 'tgd-pwa-v5';
+const CACHE_NAME = 'tgd-pwa-v6';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
