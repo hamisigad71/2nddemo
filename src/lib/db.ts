@@ -953,8 +953,8 @@ export const uploadFileToSupabase = async (
   const cleanPath = path.replace(/^\/+/, "").replace(/\s+/g, "_");
   const targetBucket = bucket || "Daysman Gad";
 
-  // Try targetBucket first, then other available video/media buckets in Supabase as fallback
-  const bucketsToTry = Array.from(new Set([targetBucket, "media", "Daysman Gad", "hideaway post storage"]));
+  // Order buckets with "media" first (strictly standard identifier, public, 500MB, no special chars)
+  const bucketsToTry = Array.from(new Set(["media", targetBucket, "Daysman Gad", "hideaway post storage"]));
 
   let lastStorageError = "";
 
