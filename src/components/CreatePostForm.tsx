@@ -8,7 +8,7 @@ interface CreatePostFormProps {
   onPostCreated?: () => void;
 }
 
-const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB limit
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB Supabase Storage limit
 
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve) => {
@@ -99,8 +99,9 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
     }
 
     if (file.type.startsWith('video/')) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
       if (file.size > MAX_VIDEO_SIZE) {
-        setUploadError('Video file exceeds maximum size limit of 500MB.');
+        setUploadError(`Selected video is too large (${sizeMB}MB). Supabase storage allows a maximum of 50MB per video. Please compress or trim the video under 50MB.`);
         return;
       }
       if (videoPreview) URL.revokeObjectURL(videoPreview);
@@ -329,6 +330,9 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
                     src={videoPreview}
                     controls
                     playsInline
+                    onError={() => {
+                      setUploadError("Your phone video codec (such as HEVC/ProRes) cannot be previewed in web browsers. For best results, use standard MP4 (H.264).");
+                    }}
                     className="w-full max-h-72 object-contain rounded-lg shadow-md"
                   />
                   {visibility !== 'public' && (
