@@ -953,82 +953,23 @@ export const uploadFileToSupabase = async (
   const cleanPath = path.replace(/^\/+/, "").replace(/\s+/g, "_");
   const targetBucket = bucket || "Daysman Gad";
 
-  // If a caller passes a bucket other than 'Daysman Gad', make sure 'Daysman Gad' is available as a fallback
-  const bucketsToTry = Array.from(new Set([targetBucket, "Daysman Gad"]));
+  // Try targetBucket first, then other available video/media buckets in Supabase as fallback
+  const bucketsToTry = Array.from(new Set([targetBucket, "media", "Daysman Gad", "hideaway post storage"]));
 
-  // Use XMLHttpRequest when onProgress is requested or for large files/videos so we get actual upload % and avoid silent hangs
-  if (onProgress && typeof window !== "undefined") {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      const uploadUrl = `${supabaseUrl}/storage/v1/object/${encodeURIComponent(targetBucket)}/${cleanPath}`;
+  let lastStorageError = "";
 
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", uploadUrl);
-        xhr.setRequestHeader("x-upsert", "true");
-        if (fileToUpload.type) {
-          xhr.setRequestHeader("Content-Type", fileToUpload.type);
-        }
-        xhr.setRequestHeader("apikey", supabaseAnonKey);
-        if (token) {
-          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-        }
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const percent = Math.round((event.loaded / event.total) * 100);
-            onProgress(percent);
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            onProgress(100);
-            resolve();
-          } else {
-            let msg = xhr.statusText;
-            try {
-              const body = JSON.parse(xhr.responseText);
-              if (body?.message) msg = body.message;
-            } catch {}
-            reject(new Error(msg || `Upload failed with status ${xhr.status}`));
-          }
-        };
-
-        xhr.onerror = () => reject(new Error("Network connection error during upload."));
-        xhr.ontimeout = () => reject(new Error("Upload timed out. Check your internet connection."));
-
-        xhr.send(fileToUpload);
-      });
-
-      // Get public or signed url
-      try {
-        const { data: signedData } = await supabase.storage
-          .from(targetBucket)
-          .createSignedUrl(cleanPath, 60 * 60 * 24 * 30);
-        if (signedData?.signedUrl) return signedData.signedUrl;
-      } catch {}
-
-      const { data } = supabase.storage.from(targetBucket).getPublicUrl(cleanPath);
-      if (data?.publicUrl) return data.publicUrl;
-    } catch (xhrErr: any) {
-      console.warn("XHR upload notice, falling back to standard upload:", xhrErr?.message || xhrErr);
-      // Fall through to standard supabase.storage.upload
-    }
-  }
-
-  // Standard upload
+  // 1. Direct Supabase Storage Upload via official SDK (handles auth, FormData, headers and RLS cleanly)
   for (const b of bucketsToTry) {
     try {
-      const { error } = await supabase.storage
+      if (onProgress) onProgress(15);
+      const { data: uploadResult, error } = await supabase.storage
         .from(b)
         .upload(cleanPath, fileToUpload, {
           upsert: true,
-          contentType: fileToUpload.type || "image/jpeg",
+          contentType: fileToUpload.type || (fileToUpload.name?.endsWith(".mp4") ? "video/mp4" : "application/octet-stream"),
         });
-      if (!error) {
+
+      if (!error && uploadResult) {
         if (onProgress) onProgress(100);
         try {
           const { data: signedData } = await supabase.storage
@@ -1039,12 +980,52 @@ export const uploadFileToSupabase = async (
 
         const { data } = supabase.storage.from(b).getPublicUrl(cleanPath);
         if (data?.publicUrl) return data.publicUrl;
-      } else {
-        console.warn(`Storage upload notice (${b}):`, error.message);
+      } else if (error) {
+        lastStorageError = error.message;
+        console.warn(`Supabase storage SDK error (${b}):`, error.message);
       }
     } catch (err: any) {
-      // 500MB limit enabled
-      console.warn(`Storage exception (${b}):`, err?.message || err);
+      lastStorageError = err?.message || String(err);
+      console.warn(`Supabase storage SDK exception (${b}):`, lastStorageError);
+    }
+  }
+
+  // 2. Fallback to direct REST endpoint if SDK failed
+  if (typeof window !== "undefined") {
+    try {
+      if (onProgress) onProgress(50);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/${encodeURIComponent(targetBucket)}/${cleanPath}`;
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          "x-upsert": "true",
+          "apikey": supabaseAnonKey,
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          ...(fileToUpload.type ? { "Content-Type": fileToUpload.type } : {}),
+        },
+        body: fileToUpload,
+      });
+
+      if (res.ok) {
+        if (onProgress) onProgress(100);
+        try {
+          const { data: signedData } = await supabase.storage
+            .from(targetBucket)
+            .createSignedUrl(cleanPath, 60 * 60 * 24 * 30);
+          if (signedData?.signedUrl) return signedData.signedUrl;
+        } catch {}
+
+        const { data } = supabase.storage.from(targetBucket).getPublicUrl(cleanPath);
+        if (data?.publicUrl) return data.publicUrl;
+      } else {
+        const errText = await res.text();
+        console.warn("Storage REST endpoint notice:", res.status, errText);
+      }
+    } catch (fetchErr: any) {
+      console.warn("Storage REST endpoint exception:", fetchErr?.message || fetchErr);
     }
   }
 
@@ -1053,7 +1034,7 @@ export const uploadFileToSupabase = async (
 
   // Never attempt to convert a large video to Base64 in memory as it freezes the browser
   if (fileToUpload.type && fileToUpload.type.startsWith("video/")) {
-    throw new Error("Failed to upload video to storage. Please check your network connection and try again.");
+    throw new Error(lastStorageError || "Failed to upload video to storage. Please check your network connection and try again.");
   }
 
   return new Promise((resolve) => {
