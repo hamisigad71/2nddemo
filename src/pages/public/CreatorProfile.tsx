@@ -1294,15 +1294,16 @@ export default function CreatorProfile() {
                         <button
                           onClick={() => handleDeletePost(post.id)}
                           disabled={deletingPostId === post.id}
-                          className="px-3 py-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer border border-transparent hover:border-red-500/20"
+                          className="p-2 sm:px-3 sm:py-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer border border-transparent hover:border-red-500/20 shrink-0"
                           title="Delete post"
+                          aria-label="Delete post"
                         >
                           {deletingPostId === post.id ? (
                             <Loader2 className="w-4 h-4 animate-spin text-red-500" />
                           ) : (
                             <Trash2 className="w-4 h-4 text-red-400" />
                           )}
-                          <span className="text-red-400">Delete</span>
+                          <span className="hidden sm:inline text-red-400">Delete</span>
                         </button>
                       )}
                     </div>

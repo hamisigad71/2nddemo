@@ -221,42 +221,43 @@ const CreatorFeed = () => {
           {posts.map((post, index) => (
             <article key={post.id} className="bg-card border border-border overflow-hidden shadow-sm flex flex-col transition-all duration-300 hover:border-border/80 -mx-1 sm:mx-0 rounded-3xl sm:rounded-[20px]">
               {/* Post Header */}
-              <div className="flex items-center justify-between px-5 py-4">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-2 px-3.5 sm:px-5 py-3 sm:py-4">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                   <img
                     src={resolveUserAvatar(userAvatar, userName)}
                     alt="avatar"
-                    className="w-10 h-10 rounded-full object-cover border border-border"
+                    className="w-10 h-10 rounded-full object-cover border border-border shrink-0"
                     referrerPolicy="no-referrer"
                   />
-                  <div>
-                    <p className="font-bold text-sm text-foreground">{userName}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(post.created_at)}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm text-foreground truncate">{userName}</p>
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(post.created_at)}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Lock badge */}
-                  <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${post.visibility && post.visibility !== 'public' || post.is_locked ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  {/* Lock / PPV badge */}
+                  <span className={`inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${post.visibility && post.visibility !== 'public' || post.is_locked ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                     {post.status === 'draft' ? 'Draft' : ((post.visibility === 'subscribers' || (post.is_locked && (!post.price || post.price === 0)))
-                      ? <><Lock className="w-3 h-3" /> Subscribers</>
+                      ? <><Lock className="w-3 h-3 shrink-0" /> Subscribers</>
                       : (post.is_locked || post.visibility === 'ppv')
-                        ? <><Lock className="w-3 h-3" /> KES {post.price}</>
-                        : <><Unlock className="w-3 h-3" /> Public</>)}
+                        ? <><Lock className="w-3 h-3 shrink-0" /> {typeof post.price === 'number' ? `KES ${post.price.toLocaleString()}` : `KES ${post.price}`}</>
+                        : <><Unlock className="w-3 h-3 shrink-0" /> Public</>)}
                   </span>
 
-                  {/* Direct Delete Button for Creator */}
+                  {/* Direct Delete Button for Creator - responsive on mobile */}
                   <button
                     onClick={() => handleDelete(post.id)}
                     disabled={deletingId === post.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold transition-all border border-red-500/20 active:scale-95 disabled:opacity-50"
+                    className="flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold transition-all border border-red-500/20 active:scale-95 disabled:opacity-50 shrink-0"
                     title="Delete Post"
+                    aria-label="Delete Post"
                   >
                     {deletingId === post.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <Trash2 className="w-3.5 h-3.5" />
                     )}
-                    <span>Delete</span>
+                    <span className="hidden sm:inline">Delete</span>
                   </button>
 
                   {/* Menu */}
