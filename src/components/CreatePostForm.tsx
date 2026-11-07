@@ -8,7 +8,7 @@ interface CreatePostFormProps {
   onPostCreated?: () => void;
 }
 
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB Supabase Storage limit
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB limit
 
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve) => {
@@ -101,7 +101,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
     if (file.type.startsWith('video/')) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
       if (file.size > MAX_VIDEO_SIZE) {
-        setUploadError(`Selected video is too large (${sizeMB}MB). Supabase storage allows a maximum of 50MB per video. Please compress or trim the video under 50MB.`);
+        setUploadError(`Selected video is too large (${sizeMB}MB). Maximum allowed video size is 500MB.`);
         return;
       }
       if (videoPreview) URL.revokeObjectURL(videoPreview);
@@ -377,7 +377,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
               <p className="font-bold text-sm text-foreground">
                 {isDragging ? 'Drop your file now' : 'Click or drag & drop to upload'}
               </p>
-              <p className="text-xs">Images (JPEG, PNG, WebP) or Videos (MP4, WebM) — max 50MB</p>
+              <p className="text-xs">Images (JPEG, PNG, WebP) or Videos (MP4, WebM) — max 500MB</p>
             </div>
           )}
           <input

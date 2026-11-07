@@ -1043,7 +1043,7 @@ export const uploadFileToSupabase = async (
         console.warn(`Storage upload notice (${b}):`, error.message);
       }
     } catch (err: any) {
-      if (err?.message?.includes("50MB")) throw err;
+      // 500MB limit enabled
       console.warn(`Storage exception (${b}):`, err?.message || err);
     }
   }
@@ -1086,12 +1086,12 @@ export const uploadPrivatePostMedia = async (
         error.message?.toLowerCase().includes("exceeded the maximum")
       ) {
         throw new Error(
-          "Video exceeds Supabase’s maximum upload limit (50MB). Please compress the video under 50MB or upgrade your Supabase storage limit.",
+          "Video exceeds maximum upload limit (500MB).",
         );
       }
     }
   } catch (err: any) {
-    if (err?.message?.includes("50MB")) throw err;
+    // 500MB limit enabled
     console.warn("Private media storage exception:", err);
   }
 
