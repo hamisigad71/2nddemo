@@ -317,19 +317,20 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
             <div className="w-full relative overflow-hidden rounded-xl flex flex-col items-center p-3 bg-zinc-900 border border-zinc-800">
               <div className="relative z-10 w-full flex flex-col items-center">
                 <div className="relative w-full flex justify-center">
-                  <video
-                    src={videoPreview}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    className="w-full max-h-64 object-contain rounded-lg"
-                  />
-                  {visibility !== 'public' && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/80 border border-white/20 text-white text-[11px] font-bold shadow-lg">
-                      <Lock className="w-3 h-3 text-red-500" />
-                      <span>{visibility === 'ppv' ? `PPV · KES ${price || '0'}` : 'Subscriber-Only'}</span>
+                  <div className="w-full aspect-video max-h-64 bg-black rounded-lg flex flex-col items-center justify-center relative overflow-hidden border border-white/10 shadow-inner">
+                    <div className="w-16 h-16 rounded-full bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500 mb-2 shadow-lg shadow-red-600/20">
+                      <Video className="w-8 h-8 text-red-500" />
                     </div>
-                  )}
+                    <span className="text-white text-xs font-bold tracking-wide">Video Ready to Publish</span>
+                    <span className="text-zinc-400 text-[11px] mt-0.5 max-w-[85%] truncate">{selectedFile?.name}</span>
+
+                    {visibility !== 'public' && (
+                      <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/80 border border-white/20 text-white text-[11px] font-bold shadow-lg">
+                        <Lock className="w-3 h-3 text-red-500" />
+                        <span>{visibility === 'ppv' ? `PPV · KES ${price || '0'}` : 'Subscriber-Only'}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-2.5 flex items-center justify-between w-full px-2 text-xs">
                   <span className="text-emerald-400 font-bold flex items-center gap-1.5">
