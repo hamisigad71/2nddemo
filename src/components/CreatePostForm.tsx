@@ -314,37 +314,33 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
           )}
 
           {videoPreview ? (
-            <div className="w-full relative overflow-hidden rounded-xl flex flex-col items-center p-2">
-              {/* Blurred video backdrop to eliminate solid black letterbox background */}
-              <video
-                src={videoPreview}
-                muted
-                playsInline
-                className="absolute inset-0 w-full h-full object-cover filter blur-2xl scale-125 opacity-40 pointer-events-none"
-              />
-              <div className="absolute inset-0 bg-black/30 backdrop-blur-sm pointer-events-none" />
-
+            <div className="w-full relative overflow-hidden rounded-xl flex flex-col items-center p-3 bg-zinc-900 border border-zinc-800">
               <div className="relative z-10 w-full flex flex-col items-center">
                 <div className="relative w-full flex justify-center">
                   <video
                     src={videoPreview}
                     controls
                     playsInline
-                    onError={() => {
-                      setUploadError("Your phone video codec (such as HEVC/ProRes) cannot be previewed in web browsers. For best results, use standard MP4 (H.264).");
-                    }}
-                    className="w-full max-h-72 object-contain rounded-lg shadow-md"
+                    preload="metadata"
+                    className="w-full max-h-64 object-contain rounded-lg"
                   />
                   {visibility !== 'public' && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold shadow-lg">
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/80 border border-white/20 text-white text-[11px] font-bold shadow-lg">
                       <Lock className="w-3 h-3 text-red-500" />
                       <span>{visibility === 'ppv' ? `PPV · KES ${price || '0'}` : 'Subscriber-Only'}</span>
                     </div>
                   )}
                 </div>
-                <span className="mt-2 text-xs text-primary font-semibold flex items-center gap-1 bg-black/60 px-3 py-1 rounded-full backdrop-blur-md">
-                  <Video className="w-3.5 h-3.5" /> Video attached · Click or drag to change
-                </span>
+                <div className="mt-2.5 flex items-center justify-between w-full px-2 text-xs">
+                  <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                    <Video className="w-4 h-4 text-emerald-400" />
+                    {selectedFile?.name || "Video selected"}
+                    {selectedFile ? ` (${(selectedFile.size / (1024 * 1024)).toFixed(1)}MB)` : ""}
+                  </span>
+                  <span className="text-zinc-400 hover:text-white underline cursor-pointer">
+                    Change
+                  </span>
+                </div>
               </div>
             </div>
           ) : preview ? (
