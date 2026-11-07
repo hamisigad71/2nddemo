@@ -457,17 +457,10 @@ html.light, .light {
     color: hsl(217 91% 45%) !important;
   }
 
-  /* 10. Fix Header gradient cards, owner hubs & dark cards across entire project in light mode */
-  [class*="from-[#0d0e12]"],
-  [class*="to-[#0d0e12]"],
-  [class*="from-zinc-950"],
-  [class*="to-zinc-950"],
-  [class*="from-zinc-900"],
-  [class*="to-zinc-900"],
-  [class*="from-black"],
-  [class*="to-black"],
+  /* 10. Fix Header gradient cards, owner hubs & dark cards across entire project in light mode (excluding overlays that sit on top of images) */
   .creator-profile-surface,
-  div[class*="creator-profile-surface"] {
+  div[class*="creator-profile-surface"],
+  div.card-surface-dark {
     background-image: none !important;
     background-color: var(--card) !important;
     color: var(--card-fg) !important;

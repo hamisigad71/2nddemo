@@ -516,21 +516,21 @@ const Discover = () => {
                         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent pointer-events-none" />
 
                         {/* Top Badges */}
-                        <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
+                        <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between gap-1 pointer-events-none">
                           {creator.isDemo ? (
-                            <span className="bg-amber-500 text-black text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md border border-amber-300">
-                              DEMO ACCOUNT
+                            <span className="bg-amber-500 text-black text-[8px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md border border-amber-300 shrink-0">
+                              DEMO
                             </span>
                           ) : creator.hasPosts ? (
-                            <span className="bg-rose-600 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                              <Flame className="w-3 h-3 text-amber-300" />{" "}
-                              Active Feed
+                            <span className="bg-rose-600 text-white text-[8px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full flex items-center gap-0.5 sm:gap-1 shadow-sm shrink-0 whitespace-nowrap">
+                              <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-300" />{" "}
+                              Active
                             </span>
                           ) : (
                             <span />
                           )}
-                          <span className="text-[9px] sm:text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md uppercase tracking-wider border border-white/10 shadow-sm truncate max-w-[120px]">
-                            {creator.isDemo ? "SAMPLE PREVIEW" : category}
+                          <span className="text-[8px] sm:text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-white/10 shadow-sm truncate max-w-[90px] sm:max-w-[120px]">
+                            {creator.isDemo ? "PREVIEW" : category}
                           </span>
                         </div>
 
@@ -553,10 +553,10 @@ const Discover = () => {
                       </div>
 
                       {/* Card Content Surface (Clean Solid Surface: No Fog, High Contrast) */}
-                      <div className="discover-card-content p-3 sm:p-4 pt-1 sm:pt-1.5 flex flex-col flex-1 relative bg-card">
+                      <div className="discover-card-content p-2.5 sm:p-4 pt-1 sm:pt-1.5 flex flex-col flex-1 relative bg-card">
                         {/* Avatar & Price Row */}
-                        <div className="-mt-7 sm:-mt-8 mb-2 flex items-end justify-between relative z-10">
-                          <div className="relative">
+                        <div className="-mt-6 sm:-mt-8 mb-2 flex items-end justify-between relative z-10 gap-1.5">
+                          <div className="relative shrink-0">
                             <img
                               src={creator.avatar}
                               alt={creator.name}
@@ -568,7 +568,7 @@ const Discover = () => {
                                   target.src = fallback;
                                 }
                               }}
-                              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-card shadow-md object-cover bg-muted"
+                              className="w-10 h-10 sm:w-14 sm:h-14 rounded-full border-2 border-card shadow-md object-cover bg-muted"
                               loading="lazy"
                             />
                             {(() => {
@@ -578,17 +578,17 @@ const Discover = () => {
                               if (presence.isOnline) {
                                 return (
                                   <span
-                                    className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-card rounded-full flex items-center justify-center"
+                                    className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-card rounded-full flex items-center justify-center"
                                     title="Online now"
                                   >
-                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                                    <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full animate-ping" />
                                   </span>
                                 );
                               }
                               if (creator.hasPosts) {
                                 return (
                                   <span
-                                    className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-card rounded-full"
+                                    className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 border-2 border-card rounded-full"
                                     title="Active Feed Creator"
                                   />
                                 );
@@ -597,11 +597,11 @@ const Discover = () => {
                             })()}
                           </div>
 
-                          <div className="discover-card-price text-right pl-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 block">
+                          <div className="discover-card-price text-right min-w-0">
+                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 block leading-tight">
                               Access
                             </span>
-                            <span className="text-xs sm:text-sm font-black text-primary leading-none block">
+                            <span className="text-[11px] sm:text-sm font-black text-primary leading-tight block whitespace-nowrap">
                               {creator.price}
                             </span>
                           </div>
@@ -609,57 +609,57 @@ const Discover = () => {
 
                         {/* Name & Verified Badge */}
                         <div className="min-w-0 mb-0.5">
-                          <h3 className="discover-card-name text-sm sm:text-base font-bold text-foreground truncate flex items-center gap-1 group-hover:text-primary transition-colors">
+                          <h3 className="discover-card-name text-xs sm:text-base font-bold text-foreground truncate flex items-center gap-1 group-hover:text-primary transition-colors">
                             <span className="truncate">{creator.name}</span>
                             {creator.isVerified && (
-                              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0 fill-blue-500/10" />
+                              <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 shrink-0 fill-blue-500/10" />
                             )}
                             {creator.isDemo && (
-                              <span className="ml-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30 shrink-0">
+                              <span className="ml-1 text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30 shrink-0">
                                 Demo
                               </span>
                             )}
                           </h3>
-                          <p className="text-[11px] sm:text-xs text-muted-foreground truncate font-medium mt-0.5">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate font-medium mt-0.5">
                             {creator.handle}
                           </p>
                         </div>
 
-                        {/* Location */}
-                        <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground/80 truncate mb-2.5">
-                          <MapPin className="w-3 h-3 shrink-0 text-muted-foreground/60" />
-                          <span className="truncate">{creator.location}</span>
-                        </div>
-                        {(creator.gender || creator.age) && (
-                          <div className="mb-2.5 flex items-center gap-1.5 text-[10px] sm:text-[11px] text-muted-foreground">
-                            {creator.gender && <span>{creator.gender}</span>}
-                            {creator.gender && creator.age && (
-                              <span aria-hidden="true">·</span>
-                            )}
-                            {creator.age && <span>{creator.age} yrs</span>}
+                        {/* Location & Demographics */}
+                        <div className="flex flex-col gap-0.5 mb-2 text-[10px] sm:text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-1 truncate text-muted-foreground/80">
+                            <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0 text-muted-foreground/60" />
+                            <span className="truncate">{creator.location}</span>
                           </div>
-                        )}
+                          {(creator.gender || creator.age) && (
+                            <div className="flex items-center gap-1 truncate text-muted-foreground/75">
+                              {creator.gender && <span>{creator.gender}</span>}
+                              {creator.gender && creator.age && (
+                                <span aria-hidden="true">·</span>
+                              )}
+                              {creator.age && <span>{creator.age} yrs</span>}
+                            </div>
+                          )}
+                        </div>
 
                         {/* Stats & Link Footer */}
-                        <div className="discover-card-footer mt-auto pt-2 sm:pt-2.5 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-                          <div className="flex items-center gap-1.5 font-medium truncate">
+                        <div className="discover-card-footer mt-auto pt-2 border-t border-border/60 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-[10px] sm:text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-1 font-medium truncate text-muted-foreground/80">
                             <span className="font-semibold text-foreground/85">
                               {creator.subs}
                             </span>
                             {creator.postsCount > 0 && (
-                              <span className="text-muted-foreground/70">
-                                • {creator.postsCount} posts
-                              </span>
+                              <span>• {creator.postsCount} posts</span>
                             )}
                           </div>
 
-                          <span className="text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform shrink-0 flex items-center gap-1">
+                          <span className="text-[10px] sm:text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform shrink-0 flex items-center gap-1 whitespace-nowrap">
                             {isSubscribed ? (
                               <>View Profile &rarr;</>
                             ) : (
                               <>
-                                <Lock className="w-3 h-3 text-primary inline" />{" "}
-                                Subscribe to View &rarr;
+                                <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary inline shrink-0" />{" "}
+                                <span>Subscribe &rarr;</span>
                               </>
                             )}
                           </span>
