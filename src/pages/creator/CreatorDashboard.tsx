@@ -125,7 +125,7 @@ const CreatorDashboard = () => {
              </div>
            </div>
            <Link 
-             to="/edit-profile" 
+             to={profile?.role === 'subscriber' || profile?.role === 'fan' ? "/user/settings#identity-verification" : "/edit-profile?tab=kyc"} 
              className="w-full sm:w-auto text-center bg-rose-600 hover:bg-rose-700 !text-white font-extrabold text-xs tracking-wider uppercase px-5 py-2.5 rounded-full transition-all shadow-md shadow-rose-600/25 border border-rose-500 whitespace-nowrap"
            >
              COMPLETE KYC →

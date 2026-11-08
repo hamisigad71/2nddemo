@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
 import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2, Check, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -15,6 +15,7 @@ const UserSettings = () => {
   const { user, logout, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
@@ -88,6 +89,20 @@ const UserSettings = () => {
       }
     });
   }, [user]);
+
+  // Auto-scroll to #identity-verification if requested in URL hash or search params
+  useEffect(() => {
+    if (location.hash === '#identity-verification' || location.search.includes('tab=kyc')) {
+      const el = document.getElementById('identity-verification');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        setTimeout(() => {
+          document.getElementById('identity-verification')?.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+      }
+    }
+  }, [location.hash, location.search]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -414,7 +429,7 @@ const UserSettings = () => {
        <div className="space-y-8 max-w-3xl">
           
           {/* Profile Section */}
-          <section id="identity-verification" className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+          <section className="bg-background border border-border rounded-2xl p-6 shadow-sm">
              <h2 className="text-lg font-bold mb-6 pb-2 border-b border-border flex items-center gap-2">
                 <Globe className="w-5 h-5 text-muted-foreground" /> Public Profile
              </h2>
@@ -536,7 +551,7 @@ const UserSettings = () => {
           </section>
 
           {/* Identity Verification (KYC) Section */}
-          <section className="bg-background border border-border rounded-2xl p-6 shadow-sm">
+          <section id="identity-verification" className="bg-background border border-border rounded-2xl p-6 shadow-sm scroll-mt-20">
              <h2 className="text-lg font-bold mb-6 pb-2 border-b border-border flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-muted-foreground" /> Identity Verification (KYC)
              </h2>
