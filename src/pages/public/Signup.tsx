@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, Camera, UploadCloud, CheckCircle2, User as UserIcon, ImagePlus } from 'lucide-react';
+import { Mail, ArrowRight, RefreshCw, AlertTriangle, Eye, EyeOff, ShieldCheck, User as UserIcon, ImagePlus, Camera, CheckCircle2 } from 'lucide-react';
 import { toast } from '../../context/ToastContext';
 import { supabase } from '../../lib/supabase';
 import { uploadFileToSupabase, getStoredCreatorProfile, createNotification, notifyAdmins, updateProfileDemographics } from '../../lib/db';
@@ -118,33 +118,13 @@ const Signup = () => {
   const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   // Mandatory Creator KYC verification fields
-  const [legalName, setLegalName] = useState('');
-  const [nationalId, setNationalId] = useState('');
+  const [legalName] = useState('');
+  const [nationalId] = useState('');
   const [dob, setDob] = useState('');
-  const [idDocFile, setIdDocFile] = useState<File | null>(null);
-  const [idDocPreview, setIdDocPreview] = useState<string>('');
-  const [selfieFile, setSelfieFile] = useState<File | null>(null);
-  const [selfiePreview, setSelfiePreview] = useState<string>('');
-
-  const handleIdDocSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIdDocFile(file);
-      const reader = new FileReader();
-      reader.onload = () => setIdDocPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSelfieSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelfieFile(file);
-      const reader = new FileReader();
-      reader.onload = () => setSelfiePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  const [idDocFile] = useState<File | null>(null);
+  const [idDocPreview] = useState<string>('');
+  const [selfieFile] = useState<File | null>(null);
+  const [selfiePreview] = useState<string>('');
 
   const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
