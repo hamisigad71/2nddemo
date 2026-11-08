@@ -93,12 +93,15 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
   const processFile = (file: File) => {
     setUploadError(null);
 
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|webm|3gp|m4v|mkv|avi)$/i.test(file.name);
+    const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|heic|avif)$/i.test(file.name);
+
+    if (!isVideo && !isImage) {
       setUploadError('Please select a valid image or video file.');
       return;
     }
 
-    if (file.type.startsWith('video/')) {
+    if (isVideo) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
       if (file.size > MAX_VIDEO_SIZE) {
         setUploadError(`Selected video is too large (${sizeMB}MB). Maximum allowed video size is 500MB.`);
@@ -233,9 +236,9 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
       setSelectedFile(null);
       onPostCreated?.();
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      const errMsg = err instanceof Error ? err.message : 'An unexpected error occurred while saving the post.';
+      const errMsg = err?.message || err?.error_description || (typeof err === 'string' ? err : 'Upload failed. Please check file size and connection.');
       setUploadError(errMsg);
 
       // Instantly alert admin on Telegram
@@ -314,18 +317,22 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
           )}
 
           {videoPreview ? (
-            <div className="w-full relative overflow-hidden rounded-xl flex flex-col items-center p-3 bg-zinc-900 border border-zinc-800">
+            <div className="w-full relative overflow-hidden rounded-xl flex flex-col items-center p-3 bg-zinc-950 border border-zinc-800">
               <div className="relative z-10 w-full flex flex-col items-center">
                 <div className="relative w-full flex justify-center">
-                  <div className="w-full aspect-video max-h-64 bg-black rounded-lg flex flex-col items-center justify-center relative overflow-hidden border border-white/10 shadow-inner">
-                    <div className="w-16 h-16 rounded-full bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500 mb-2 shadow-lg shadow-red-600/20">
-                      <Video className="w-8 h-8 text-red-500" />
-                    </div>
-                    <span className="text-white text-xs font-bold tracking-wide">Video Ready to Publish</span>
-                    <span className="text-zinc-400 text-[11px] mt-0.5 max-w-[85%] truncate">{selectedFile?.name}</span>
+                  <div className="w-full aspect-video max-h-72 bg-black rounded-lg flex flex-col items-center justify-center relative overflow-hidden border border-white/10 shadow-inner group/video">
+                    {/* Real Video Player Preview with controls */}
+                    <video
+                      src={videoPreview}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="w-full h-full object-contain bg-black"
+                      onClick={(e) => e.stopPropagation()}
+                    />
 
                     {visibility !== 'public' && (
-                      <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/80 border border-white/20 text-white text-[11px] font-bold shadow-lg">
+                      <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/80 border border-white/20 text-white text-[11px] font-bold shadow-lg pointer-events-none">
                         <Lock className="w-3 h-3 text-red-500" />
                         <span>{visibility === 'ppv' ? `PPV · KES ${price || '0'}` : 'Subscriber-Only'}</span>
                       </div>
@@ -333,14 +340,21 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
                   </div>
                 </div>
                 <div className="mt-2.5 flex items-center justify-between w-full px-2 text-xs">
-                  <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-                    <Video className="w-4 h-4 text-emerald-400" />
-                    {selectedFile?.name || "Video selected"}
-                    {selectedFile ? ` (${(selectedFile.size / (1024 * 1024)).toFixed(1)}MB)` : ""}
+                  <span className="text-emerald-400 font-bold flex items-center gap-1.5 truncate max-w-[75%]">
+                    <Video className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span className="truncate">{selectedFile?.name || "Video selected"}</span>
+                    {selectedFile ? <span className="text-zinc-400 shrink-0 font-normal">({(selectedFile.size / (1024 * 1024)).toFixed(1)}MB)</span> : ""}
                   </span>
-                  <span className="text-zinc-400 hover:text-white underline cursor-pointer">
-                    Change
-                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    className="text-zinc-400 hover:text-white underline cursor-pointer shrink-0 font-medium"
+                  >
+                    Change video
+                  </button>
                 </div>
               </div>
             </div>
@@ -380,7 +394,7 @@ const CreatePostForm = ({ onPostCreated }: CreatePostFormProps) => {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/mp4,video/webm,video/quicktime"
+            accept="image/*,video/*"
             className="hidden"
             onChange={handleFileSelect}
           />

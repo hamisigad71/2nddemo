@@ -958,6 +958,27 @@ export const uploadFileToSupabase = async (
 
   let lastStorageError = "";
 
+  // Determine proper content type especially for Android where file.type can be empty or generic
+  const ext = cleanPath.split(".").pop()?.toLowerCase() || "";
+  const mimeMap: Record<string, string> = {
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    webm: "video/webm",
+    m4v: "video/mp4",
+    "3gp": "video/3gpp",
+    mkv: "video/x-matroska",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+  };
+  const resolvedContentType =
+    (fileToUpload.type && fileToUpload.type !== "application/octet-stream"
+      ? fileToUpload.type
+      : null) ||
+    mimeMap[ext] ||
+    (ext ? `video/${ext}` : "video/mp4");
+
   // 1. Direct Supabase Storage Upload via official SDK
   for (const b of bucketsToTry) {
     try {
@@ -966,7 +987,7 @@ export const uploadFileToSupabase = async (
         .from(b)
         .upload(cleanPath, fileToUpload, {
           upsert: true,
-          contentType: fileToUpload.type || "video/mp4",
+          contentType: resolvedContentType,
         });
 
       if (!error && uploadResult) {

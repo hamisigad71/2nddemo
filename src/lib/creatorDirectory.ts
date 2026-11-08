@@ -34,6 +34,8 @@ export const EXCLUDED_DISCOVER_NAMES = new Set([
   'gad hamsi',
   'daysman gad',
   'john raymond',
+  'kennedy ngugi kimemia',
+  'kennedy ngugi',
 ]);
 
 export const EXCLUDED_DISCOVER_HANDLES = new Set([
@@ -45,6 +47,10 @@ export const EXCLUDED_DISCOVER_HANDLES = new Set([
   '@daysmangad',
   'johnraymond',
   '@johnraymond',
+  'kennedyngugikimemia',
+  '@kennedyngugikimemia',
+  'kennedyngugi',
+  '@kennedyngugi',
 ]);
 
 export const isExcludedDiscoverCreator = (
@@ -68,7 +74,7 @@ export const isExcludedDiscoverCreator = (
   }
   if (email) {
     const cleanEmail = email.trim().toLowerCase();
-    if (cleanEmail.startsWith('test@') || cleanEmail.startsWith('daysman') || cleanEmail.startsWith('gadhamsi') || cleanEmail.startsWith('johnraymond')) {
+    if (cleanEmail.startsWith('test@') || cleanEmail.startsWith('daysman') || cleanEmail.startsWith('gadhamsi') || cleanEmail.startsWith('johnraymond') || cleanEmail.includes('kennedy')) {
       return true;
     }
   }
