@@ -1,5 +1,5 @@
 import { useState, useCallback, lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -12,7 +12,6 @@ import InstallAppPrompt from "./components/InstallAppPrompt";
 import CreatorSupportChat from "./components/CreatorSupportChat";
 
 // Keep the landing page in the initial bundle; load all other route screens on demand.
-const Discover = lazy(() => import("./pages/public/Discover"));
 const Login = lazy(() => import("./pages/public/Login"));
 const ForgotPassword = lazy(() => import("./pages/public/ForgotPassword"));
 const Signup = lazy(() => import("./pages/public/Signup"));
@@ -93,7 +92,7 @@ const AppRoutes = () => {
           <Suspense fallback={<RouteLoading />}>
             <Routes location={location}>
               <Route path="/" element={<Landing />} />
-              <Route path="/discover" element={<Discover />} />
+              <Route path="/discover" element={<Navigate to="/" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/signup" element={<Signup />} />
