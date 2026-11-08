@@ -13,7 +13,11 @@ const normalizeAuth = (key: string): string => {
 };
 
 const resolveCallbackUrl = (): string => {
-  const configured = PAYMENT_CALLBACK_URL || (VERCEL_URL ? `https://${VERCEL_URL}/api/pay/callback` : '');
+  const configured =
+    PAYMENT_CALLBACK_URL ||
+    (process.env.PUBLIC_URL ? `https://${process.env.PUBLIC_URL.replace(/^https?:\/\//, '')}/api/pay/callback` : '') ||
+    (VERCEL_URL ? `https://${VERCEL_URL}/api/pay/callback` : '') ||
+    'https://thegentsdollhouse.com/api/pay/callback';
   if (configured) {
     try {
       const url = new URL(configured);
@@ -25,7 +29,7 @@ const resolveCallbackUrl = (): string => {
     }
   }
 
-  return `${PAYMENT_GATEWAY_URL}/webhook-callback/`;
+  return 'https://thegentsdollhouse.com/api/pay/callback';
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

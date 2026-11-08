@@ -136,13 +136,17 @@ export default function CreatorProfile() {
 
         // Fetch real active subscriber count
         try {
-          const count = await getCreatorSubscriberCount(id);
+          let count = await getCreatorSubscriberCount(id);
+          // If viewer is actively subscribed to this creator, count must be at least 1
+          if (isSubscribed && count < 1) {
+            count = 1;
+          }
           if (isMounted) {
             setSubscriberCount(count);
           }
         } catch {
           if (isMounted) {
-            setSubscriberCount((profile as any).total_subscribers || 0);
+            setSubscriberCount(isSubscribed ? Math.max(1, (profile as any).total_subscribers || 0) : ((profile as any).total_subscribers || 0));
           }
         }
 
@@ -700,8 +704,8 @@ export default function CreatorProfile() {
                 </span>
                 <span>•</span>
                 <span className="text-zinc-300 font-semibold">
-                  {subscriberCount.toLocaleString()}{" "}
-                  {subscriberCount === 1 ? "subscriber" : "subscribers"}
+                  {Math.max(subscriberCount, isSubscribed ? 1 : 0).toLocaleString()}{" "}
+                  {Math.max(subscriberCount, isSubscribed ? 1 : 0) === 1 ? "subscriber" : "subscribers"}
                 </span>
               </div>
             </div>

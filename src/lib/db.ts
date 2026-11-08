@@ -2567,7 +2567,7 @@ export const subscribeToCreator = async (
     console.warn("LocalStorage subscription cache error:", e);
   }
 
-  // Increment creator subscriber count in creator_profiles
+  // Increment creator subscriber count in creator_profiles and local storage
   try {
     const { data: profile } = await supabase
       .from("creator_profiles")
@@ -2575,12 +2575,39 @@ export const subscribeToCreator = async (
       .eq("user_id", creatorId)
       .maybeSingle();
 
+    const newCount = Math.max(1, ((profile?.total_subscribers || 0) + 1));
+
     if (profile) {
       await supabase
         .from("creator_profiles")
-        .update({ total_subscribers: (profile.total_subscribers || 0) + 1 })
+        .update({ total_subscribers: newCount })
         .eq("user_id", creatorId);
     }
+
+    // Update local storage creator profile so the subscriber count reflects immediately
+    const existingLocal = getStoredCreatorProfile(creatorId) || {};
+    const updatedLocal = {
+      ...existingLocal,
+      total_subscribers: Math.max(newCount, (existingLocal.total_subscribers || 0) + 1),
+    };
+    localStorage.setItem(
+      `tgd_creator_profile_${creatorId}`,
+      JSON.stringify(updatedLocal),
+    );
+
+    // Save in global creator subscriber count store
+    const storedCountKey = `tgd_creator_sub_count_${creatorId}`;
+    const currentStoredCount = Number(localStorage.getItem(storedCountKey) || "0");
+    localStorage.setItem(storedCountKey, String(Math.max(currentStoredCount + 1, newCount)));
+
+    // Also record this subscriber in creator's local subscriber list
+    const creatorSubListKey = `tgd_creator_subs_${creatorId}`;
+    const creatorSubList = JSON.parse(localStorage.getItem(creatorSubListKey) || "[]");
+    const newCreatorSubList = [
+      { fan_id: fanId, tier_name: tierName, created_at: new Date().toISOString() },
+      ...creatorSubList.filter((item: any) => item.fan_id !== fanId),
+    ];
+    localStorage.setItem(creatorSubListKey, JSON.stringify(newCreatorSubList));
   } catch (e) {
     console.warn("Error incrementing subscriber count:", e);
   }
@@ -3181,20 +3208,32 @@ export const getCreatorSubscriberCount = async (
 
     if (
       data?.total_subscribers !== undefined &&
-      data?.total_subscribers !== null
+      data?.total_subscribers !== null &&
+      Number(data.total_subscribers) > 0
     ) {
-      return Number(data.total_subscribers) || 0;
+      return Number(data.total_subscribers);
     }
   } catch {}
 
-  // 3. Fallback to local storage cached creator profile
+  // 3. Fallback to local storage cached creator profile & subscriber records
   try {
+    const storedCountKey = `tgd_creator_sub_count_${creatorId}`;
+    const storedCount = Number(localStorage.getItem(storedCountKey) || "0");
+    if (storedCount > 0) return storedCount;
+
+    const creatorSubListKey = `tgd_creator_subs_${creatorId}`;
+    const creatorSubList = JSON.parse(localStorage.getItem(creatorSubListKey) || "[]");
+    if (Array.isArray(creatorSubList) && creatorSubList.length > 0) {
+      return creatorSubList.length;
+    }
+
     const local = getStoredCreatorProfile(creatorId);
     if (
       local?.total_subscribers !== undefined &&
-      local?.total_subscribers !== null
+      local?.total_subscribers !== null &&
+      Number(local.total_subscribers) > 0
     ) {
-      return Number(local.total_subscribers) || 0;
+      return Number(local.total_subscribers);
     }
   } catch {}
 
@@ -3844,11 +3883,28 @@ export const getDiscoverCreators = async (forceRefresh = false) => {
           }
         }
 
-        const realSubs = creatorSubCounts.has(creatorUid)
-          ? creatorSubCounts.get(creatorUid) || 0
-          : activeSubsQueriedSuccessfully
-            ? 0
-            : p?.total_subscribers || 0;
+        const localSubCount = Number(
+          (typeof window !== "undefined" &&
+            (localStorage.getItem(`tgd_creator_sub_count_${creatorUid}`) ||
+             localStorage.getItem(`tgd_creator_sub_count_${u.uid}`))) || "0"
+        );
+        const creatorSubList = (typeof window !== "undefined" &&
+          JSON.parse(
+            localStorage.getItem(`tgd_creator_subs_${creatorUid}`) ||
+            localStorage.getItem(`tgd_creator_subs_${u.uid}`) ||
+            "[]"
+          )) || [];
+        const localListCount = Array.isArray(creatorSubList) ? creatorSubList.length : 0;
+        const profileSubCount = Number(p?.total_subscribers || local?.total_subscribers || 0);
+
+        const realSubs = Math.max(
+          creatorSubCounts.get(creatorUid) || 0,
+          creatorSubCounts.get(u.uid) || 0,
+          localSubCount,
+          localListCount,
+          profileSubCount,
+          0
+        );
         const profileDob = u.dob || p?.dob || local?.dob;
         const profileAge = profileDob ? calculateAge(String(profileDob)) : null;
         const rawGender = u.gender || p?.gender || local?.gender;
@@ -5406,11 +5462,10 @@ export const requestCreatorPayout = async (
 
   let creatorName = "Creator";
   let creatorEmail = "";
-  let requiresPayoutKyc = false;
   const { data: userRow, error: userProfileError } = await supabase
     .from("users")
     .select(
-      "name, email, phone, status, role, payout_kyc_required, kyc_id_url, kyc_selfie_url",
+      "name, email, phone, status, role, payout_kyc_required, kyc_status, kyc_id_url, kyc_selfie_url",
     )
     .eq("uid", creatorId)
     .maybeSingle();
@@ -5424,15 +5479,16 @@ export const requestCreatorPayout = async (
     throw new Error("Creator account not found. Cannot request payout.");
   }
 
-  requiresPayoutKyc = Boolean(userRow.payout_kyc_required);
-  if (
-    requiresPayoutKyc &&
-    !hasPrivateKycEvidence(
+  // Enforce identity documents before withdrawal for all creators
+  const hasKycProof =
+    userRow.kyc_status === "verified" ||
+    hasPrivateKycEvidence(
       creatorId,
       userRow.kyc_id_url,
       userRow.kyc_selfie_url,
-    )
-  ) {
+    );
+
+  if (!hasKycProof) {
     throw new Error(
       "Upload your National ID and selfie with ID before requesting a withdrawal.",
     );
@@ -5483,17 +5539,13 @@ export const requestCreatorPayout = async (
       payoutTx = data;
     }
     if (error) {
-      if (requiresPayoutKyc) {
-        throw new Error(
-          error.message ||
-            "Your ID and selfie must be uploaded before withdrawal.",
-        );
-      }
-      console.warn("Supabase payout insert notice:", error.message);
+      throw new Error(
+        error.message ||
+          "Your ID and selfie must be uploaded and verified before withdrawal.",
+      );
     }
   } catch (err) {
-    if (requiresPayoutKyc) throw err;
-    console.warn("Supabase payout insert exception:", err);
+    throw err;
   }
 
   // Save in local transactions cache

@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect, useRef } from 'react';
 import { getUserProfile, getStoredCreatorProfile, uploadFileToSupabase, notifyAdmins, invalidateCreatorStorageAssets } from '../../lib/db';
-import { buildAdminKycSubmissionNotification, isCreatorProfileComplete } from '../../lib/verification';
+import { buildAdminKycSubmissionNotification } from '../../lib/verification';
 import { hasUploadedProfilePhoto, hasUploadedCoverPhoto } from '../../lib/avatar';
 import { isSelectedVerifiedCreator } from '../../lib/creatorDirectory';
 import { supabase } from '../../lib/supabase';
@@ -124,45 +124,17 @@ const Login = () => {
           const hasPhoto = Boolean(existingAvatar && hasUploadedProfilePhoto(existingAvatar));
           const hasCover = Boolean(existingCover && hasUploadedCoverPhoto(existingCover));
 
-          // If pre-verified target creator, verify profile and cover photos before entering dashboard
-          if (isTargetCreator) {
-            if (hasPhoto && hasCover) {
-              navigate('/dashboard', { replace: true });
-              return;
-            }
-
-            setCreatorUser({ ...profile, name: profile?.name || user.user_metadata?.name || 'Creator' });
-            if (hasPhoto) setAvatarPreview(existingAvatar);
-            if (hasCover) setCoverPreview(existingCover);
-            setNeedsCreatorUpdate(true);
-            setIsCheckingProfile(false);
-            return;
-          }
-
-          const isComplete = isCreatorProfileComplete(profile, creatorProfile, storedLocal);
-
-          // If creator has completed all required photos and KYC, allow entering dashboard
-          if (isComplete) {
+          // If creator has basic photos, let them enter dashboard directly so they can manage content and receive fans freely.
+          // Identity/KYC documents will only be required when they withdraw earnings.
+          if (hasPhoto && hasCover) {
             navigate('/dashboard', { replace: true });
             return;
           }
 
-          // Creator is missing required details or identity proofs -> require completion on login
+          // If creator is missing essential profile or cover photos, prompt them for photos
           setCreatorUser({ ...profile, name: profile?.name || user.user_metadata?.name || 'Creator' });
-          const existingLegal = profile?.legal_name || creatorProfile?.legal_name || storedLocal?.legalName;
-          const existingNatId = profile?.national_id_number || creatorProfile?.national_id_number || storedLocal?.nationalId;
-          const existingDobVal = profile?.dob || creatorProfile?.dob || storedLocal?.dob;
-          const existingId = profile?.kyc_id_url || creatorProfile?.kyc_id_url || storedLocal?.kyc_id_url;
-          const existingSelf = profile?.kyc_selfie_url || creatorProfile?.kyc_selfie_url || storedLocal?.kyc_selfie_url;
-
           if (hasPhoto) setAvatarPreview(existingAvatar);
           if (hasCover) setCoverPreview(existingCover);
-          if (existingLegal) setLegalName(existingLegal);
-          if (existingNatId) setNationalId(existingNatId);
-          if (existingDobVal) setDob(existingDobVal);
-          if (existingId) setIdDocPreview(existingId);
-          if (existingSelf) setSelfiePreview(existingSelf);
-
           setNeedsCreatorUpdate(true);
           setIsCheckingProfile(false);
           return;

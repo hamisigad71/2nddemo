@@ -59,11 +59,14 @@ const EarningsWallet = () => {
         setPayoutProfileStatus('error');
         return;
       }
-      const required = Boolean(profile.payout_kyc_required);
+      // Every creator requires identity verification before withdrawing funds
+      const required = true;
+      const isApproved = profile.kyc_status === 'verified';
+      const hasUploadedDocs = hasPrivateKycEvidence(user.id, profile.kyc_id_url, profile.kyc_selfie_url);
+
       setPayoutKycRequired(required);
-      setPayoutKycEvidenceProvided(
-        required && hasPrivateKycEvidence(user.id, profile.kyc_id_url, profile.kyc_selfie_url)
-      );
+      // Payout evidence is fully satisfied if the user's KYC documents have been uploaded and approved by admin
+      setPayoutKycEvidenceProvided(isApproved || hasUploadedDocs);
       setPayoutProfileStatus('ready');
     } catch (err) {
       console.error('Could not check withdrawal identity requirements:', err);

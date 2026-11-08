@@ -646,7 +646,13 @@ const Discover = () => {
                         <div className="discover-card-footer mt-auto pt-2 border-t border-border/60 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-[10px] sm:text-[11px] text-muted-foreground">
                           <div className="flex items-center gap-1 font-medium truncate text-muted-foreground/80">
                             <span className="font-semibold text-foreground/85">
-                              {creator.subs}
+                              {(() => {
+                                const count = Math.max(
+                                  creator.subscribersCount || 0,
+                                  isSubscribed ? 1 : 0
+                                );
+                                return `${count} ${count === 1 ? "subscriber" : "subscribers"}`;
+                              })()}
                             </span>
                             {creator.postsCount > 0 && (
                               <span>• {creator.postsCount} posts</span>
