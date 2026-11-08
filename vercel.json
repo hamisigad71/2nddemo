@@ -1,11 +1,4 @@
 {
-    "redirects": [
-        {
-            "source": "/discover",
-            "destination": "/",
-            "permanent": true
-        }
-    ],
     "rewrites": [
         {
             "source": "/((?!api/).*)",
