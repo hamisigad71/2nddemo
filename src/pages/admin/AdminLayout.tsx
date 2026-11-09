@@ -193,21 +193,21 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               key={path}
               to={path}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 group ${
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all duration-200 group active:scale-[0.98] ${
                 active
-                  ? 'bg-red-600 text-white shadow-xl shadow-red-600/20'
-                  : 'text-muted-foreground hover:bg-card hover:text-foreground'
+                  ? 'bg-red-600 !text-white shadow-lg shadow-red-600/25'
+                  : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
               }`}
             >
-              <Icon className={`w-[18px] h-[18px] shrink-0 transition-colors ${active ? 'text-white' : 'text-muted-foreground group-hover:text-red-400'}`} />
-              <span className="flex-1">{label}</span>
+              <Icon className={`w-[18px] h-[18px] shrink-0 transition-colors ${active ? '!text-white' : 'text-muted-foreground group-hover:text-red-500'}`} />
+              <span className={`flex-1 ${active ? '!text-white' : ''}`}>{label}</span>
               {isNew && !active && !computedBadge && (
-                <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
+                <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
                   New
                 </span>
               )}
               {isNew && active && !computedBadge && (
-                <span className="bg-white/20 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
+                <span className="bg-white/20 !text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
                   New
                 </span>
               )}
@@ -216,37 +216,37 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                   {computedBadge}
                 </span>
               ) : null}
-              {active && <ChevronRight className="w-4 h-4 opacity-60" />}
+              {active && <ChevronRight className="w-4 h-4 opacity-75 !text-white" />}
             </Link>
           );
         })}
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-border p-4 space-y-2 shrink-0 bg-card">
+      <div className="border-t border-border p-3 space-y-1.5 shrink-0 bg-card">
         <button
           onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-card hover:text-foreground transition-colors text-sm font-bold group"
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-all duration-150 text-xs font-bold group active:scale-[0.98]"
         >
-          {theme === 'dark' ? <Sun className="w-[18px] h-[18px] text-muted-foreground group-hover:text-yellow-400" /> : <Moon className="w-[18px] h-[18px] text-muted-foreground group-hover:text-blue-400" />}
-          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          {theme === 'dark' ? <Sun className="w-4 h-4 text-muted-foreground group-hover:text-yellow-400" /> : <Moon className="w-4 h-4 text-muted-foreground group-hover:text-blue-500" />}
+          <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
         <button
           onClick={() => {
             lockAdminSession();
             toast.info('Admin terminal locked.');
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-all duration-150 text-xs font-bold group active:scale-[0.98]"
         >
-          <Lock className="w-[18px] h-[18px] text-muted-foreground group-hover:text-red-400 transition-colors" />
-          Lock Terminal
+          <Lock className="w-4 h-4 text-muted-foreground group-hover:text-rose-500 transition-colors" />
+          <span>Lock Terminal</span>
         </button>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors text-sm font-bold group"
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-150 text-xs font-bold group active:scale-[0.98]"
         >
-          <LogOut className="w-[18px] h-[18px] text-muted-foreground group-hover:text-red-400 transition-colors" />
-          Logout
+          <LogOut className="w-4 h-4 text-muted-foreground group-hover:text-destructive transition-colors" />
+          <span>Logout</span>
         </button>
       </div>
     </div>
@@ -262,12 +262,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Mobile Drawer */}
       {open && (
-        <div className="fixed inset-0 z-[200] lg:hidden flex">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setOpen(false)} />
+        <aside className="fixed inset-0 z-[200] lg:hidden flex">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} />
           <div className="relative w-[280px] h-full bg-card border-r border-border flex flex-col shadow-2xl animate-slide-in-left">
             <SidebarContent />
           </div>
-        </div>
+        </aside>
       )}
 
       {/* Main area */}

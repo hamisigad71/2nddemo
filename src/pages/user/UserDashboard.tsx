@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from '../../components/UserLayout';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock, Star, Megaphone, ArrowRight } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Loader2, Rss, Send, CheckCircle2, Lock, Star, Megaphone, ArrowRight, Coins, Sparkles } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 import TipModal from '../../components/TipModal';
 import SubscribeModal from '../../components/SubscribeModal';
 import PPVUnlockModal from '../../components/PPVUnlockModal';
@@ -330,72 +333,82 @@ const FeedPost = ({ post, currentUserId, priority = false, onPostUnlocked }: { p
         )}
 
         {/* ── Actions Bar ── */}
-        <div className="px-4 sm:px-5 py-3 flex items-center justify-between bg-card border-b border-border/40">
-          <div className="flex items-center gap-4 sm:gap-5">
-            {/* Heart / Like */}
+        <div className="px-4 sm:px-5 py-2.5 flex items-center justify-between bg-card border-b border-border/40 select-none">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Heart / Like Button with Inline Counter */}
             <button
               onClick={handleToggleLike}
-              className={`flex items-center gap-1.5 transition-all active:scale-75 cursor-pointer ${
-                isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+              className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-150 ease-out cursor-pointer active:scale-95 ${
+                isLiked 
+                  ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/15' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
               }`}
               title="Like"
             >
               <Heart
-                className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 ${
-                  isLiked ? 'fill-red-500 text-red-500 scale-110 drop-shadow-[0_2px_8px_rgba(239,68,68,0.4)]' : 'hover:scale-110'
+                className={`w-[18px] h-[18px] transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90 ${
+                  isLiked ? 'fill-rose-500 text-rose-500 drop-shadow-[0_2px_8px_rgba(244,63,94,0.35)]' : ''
                 }`}
               />
+              <span className={`text-xs font-bold tabular-nums transition-colors ${
+                isLiked ? 'text-rose-600 dark:text-rose-400 font-black' : 'text-muted-foreground group-hover:text-foreground'
+              }`}>
+                {likesCount > 0 ? likesCount.toLocaleString() : 'Like'}
+              </span>
             </button>
 
-            {/* Comment */}
+            {/* Comment Button with Inline Counter */}
             <button
               onClick={handleToggleComments}
-              className={`flex items-center gap-1.5 transition-all active:scale-75 cursor-pointer ${
-                showComments ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-150 ease-out cursor-pointer active:scale-95 ${
+                showComments 
+                  ? 'bg-accent text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
               }`}
               title="Comment"
             >
-              <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 hover:scale-110 transition-transform duration-200" />
+              <MessageCircle className="w-[18px] h-[18px] transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90" />
+              <span className="text-xs font-bold tabular-nums text-muted-foreground group-hover:text-foreground">
+                {commentsCount > 0 ? commentsCount.toLocaleString() : 'Comment'}
+              </span>
             </button>
 
-            {/* Send Tip Pill */}
-            <button
+            {/* Send Tip Button */}
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsTipOpen(true)}
-              className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/60 text-xs font-black tracking-wider uppercase transition-all shadow-sm hover:shadow-[0_0_12px_rgba(16,185,129,0.2)] active:scale-95 cursor-pointer"
+              className="h-8 px-3 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/25 hover:border-emerald-500/40 text-[11px] font-bold tracking-tight gap-1.5 shadow-none hover:shadow-sm hover:shadow-emerald-500/10 active:scale-95 transition-all"
             >
-              <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-black leading-none">$</span>
-              <span>SEND TIP</span>
-            </button>
+              <Coins className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Send Tip</span>
+            </Button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setIsSaved(!isSaved)}
-              className={`p-1.5 rounded-full transition-all active:scale-90 cursor-pointer ${
-                isSaved ? 'text-red-500' : 'text-muted-foreground hover:text-foreground'
+              className={`p-2 rounded-full transition-all duration-150 ease-out active:scale-90 cursor-pointer ${
+                isSaved ? 'text-rose-500 bg-rose-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
               }`}
               title="Save Post"
             >
-              <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+              <Bookmark className={`w-[18px] h-[18px] ${isSaved ? 'fill-rose-500 text-rose-500' : ''}`} />
             </button>
           </div>
         </div>
 
-        {/* ── Like Counter & Caption ── */}
-        <div className="px-4 sm:px-5 py-3.5 bg-card space-y-1.5">
-          <div className="text-xs font-black text-foreground tracking-wide flex items-center gap-1.5">
-            <span>{likesCount.toLocaleString()} {likesCount === 1 ? 'like' : 'likes'}</span>
-          </div>
-
+        {/* ── Caption & Interactions ── */}
+        <div className="px-4 sm:px-5 py-3 bg-card space-y-2">
           {post.content && (
             <div className="text-[13px] sm:text-sm leading-relaxed text-foreground">
               <span
                 onClick={() => navigate(profileRoute)}
-                className="font-black text-foreground mr-2 hover:text-red-500 cursor-pointer transition-colors"
+                className="font-black text-foreground mr-2 hover:text-primary cursor-pointer transition-colors"
               >
                 {creatorName}
               </span>
-              <span className="text-foreground/90 font-normal">{post.content}</span>
+              <span className="text-foreground/90 font-normal selection:bg-rose-500/20">{post.content}</span>
             </div>
           )}
 
@@ -552,47 +565,50 @@ const SponsoredFeedCard = ({ ad }: { ad: PlatformAd }) => {
   const targetUrl = ad.cta_url || (ad.creator_id ? `/creator/${ad.creator_id}` : '/discover');
 
   return (
-    <div className="bg-[#0D0E12] border border-amber-500/30 hover:border-amber-500/60 transition-all rounded-3xl overflow-hidden shadow-2xl relative group">
+    <Card className="overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card text-card-foreground shadow-sm hover:shadow-xl transition-all duration-300 relative group/card">
       {/* Top Header */}
-      <div className="p-3.5 sm:p-4 flex items-center justify-between border-b border-zinc-800/80 bg-zinc-950/60">
+      <div className="px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between border-b border-border/60 bg-muted/30">
         <div 
           onClick={() => {
             trackAdClick(ad.id);
             navigate(targetUrl);
           }}
-          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer min-w-0"
+          className="flex items-center gap-3 cursor-pointer min-w-0 group/sponsor"
         >
           {ad.creator_avatar ? (
-            <img src={ad.creator_avatar} alt="" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-amber-500/40 shrink-0" />
+            <img 
+              src={ad.creator_avatar} 
+              alt={ad.sponsor_name} 
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-primary/20 shrink-0 transition-transform duration-200 group-hover/sponsor:scale-105" 
+            />
           ) : (
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-600/20 text-red-400 font-black flex items-center justify-center shrink-0 border border-red-500/30 text-xs">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 border border-primary/20 text-xs shadow-inner">
               {ad.sponsor_name[0] || 'A'}
             </div>
           )}
           <div className="min-w-0">
-            <div className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5 truncate">
+            <div className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-1.5 truncate group-hover/sponsor:text-primary transition-colors">
               <span>{ad.sponsor_name}</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20 shrink-0" />
             </div>
-            <div className="text-[10px] text-zinc-400 font-medium truncate">
+            <div className="text-[11px] text-muted-foreground font-normal truncate">
               {ad.creator_handle || 'Sponsored Promotion'}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md ${
-            isCreatorAd
-              ? 'bg-amber-500 text-black border border-amber-300'
-              : 'bg-rose-600 text-white border border-rose-400'
-          }`}>
+        <div className="flex items-center gap-1.5 shrink-0 pl-2">
+          <Badge
+            variant={isCreatorAd ? 'default' : 'rose'}
+            className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-border/60"
+          >
             {isCreatorAd ? (
-              <Star className="w-3 h-3 fill-current" />
+              <Sparkles className="w-3 h-3 fill-current" />
             ) : (
               <Megaphone className="w-3 h-3 fill-current" />
             )}
-            {ad.badge || (isCreatorAd ? 'Sponsored Creator' : 'Featured Announcement')}
-          </span>
+            <span>{ad.badge || (isCreatorAd ? 'Sponsored' : 'Featured')}</span>
+          </Badge>
         </div>
       </div>
 
@@ -602,17 +618,17 @@ const SponsoredFeedCard = ({ ad }: { ad: PlatformAd }) => {
           trackAdClick(ad.id);
           navigate(targetUrl);
         }}
-        className="relative aspect-[16/10] overflow-hidden bg-black cursor-pointer"
+        className="relative aspect-[16/10] overflow-hidden bg-muted cursor-pointer"
       >
         <img
           src={ad.image_url}
           alt={ad.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover/card:scale-[1.025] transition-transform duration-500 ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
-        <div className="absolute bottom-3 left-4 right-4 text-white pointer-events-none">
-          <h4 className="text-sm sm:text-base font-black tracking-tight text-white drop-shadow-md">
+        <div className="absolute bottom-3 left-4 right-4 sm:bottom-4 sm:left-5 sm:right-5 text-white pointer-events-none">
+          <h4 className="text-sm sm:text-base font-bold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
             {ad.title}
           </h4>
         </div>
@@ -620,28 +636,28 @@ const SponsoredFeedCard = ({ ad }: { ad: PlatformAd }) => {
 
       {/* Card Body & Call to Action */}
       <div className="p-4 sm:p-5 space-y-3.5">
-        <p className="text-xs text-zinc-300 leading-relaxed line-clamp-2">
+        <p className="text-xs sm:text-[13px] text-muted-foreground leading-relaxed line-clamp-2">
           {ad.description}
         </p>
 
         <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="text-[10px] sm:text-[11px] text-zinc-500 font-medium">
-            Sponsored by <strong className="text-zinc-300">{ad.sponsor_name}</strong>
+          <div className="text-[11px] text-muted-foreground font-medium truncate">
+            Sponsored by <strong className="text-foreground font-semibold">{ad.sponsor_name}</strong>
           </div>
 
-          <button
+          <Button
             onClick={() => {
               trackAdClick(ad.id);
               navigate(targetUrl);
             }}
-            className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-red-600/30 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer min-h-11"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-xs uppercase tracking-wider shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-11 cursor-pointer"
           >
-            <span>{ad.cta_text || 'View Profile & Subscribe'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+            <span>{ad.cta_text || 'View Offer'}</span>
+            <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover/card:translate-x-0.5" />
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

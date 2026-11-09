@@ -16,6 +16,9 @@ import {
   Receipt,
   Download,
 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import {
   getCreatorTransactions,
@@ -338,214 +341,222 @@ const EarningsWallet = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
         {/* Main Balance Card */}
-        <div className="lg:col-span-2 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#0d0e12] border border-zinc-800 shadow-xl relative flex flex-col justify-between gap-6 sm:gap-8">
-          <div className="relative z-10 flex flex-col gap-6">
-            {/* Card Header Status */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[11px] font-bold tracking-wider uppercase text-emerald-300">
-                  Live Ledger · 70% Creator Net Share
-                </span>
+        <Card className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-border/80 bg-card text-card-foreground shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          <div>
+            <CardHeader className="p-6 sm:p-8 pb-4 flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400 font-semibold tracking-wider uppercase text-[11px] px-3 py-1 rounded-full gap-2 shadow-none"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Live Ledger · 70% Creator Net Share</span>
+                </Badge>
+
+                <Badge
+                  variant="secondary"
+                  className="gap-1.5 px-3 py-1 rounded-full font-medium text-xs text-muted-foreground border border-border/60"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span>Safaricom M-Pesa Settlement</span>
+                </Badge>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-zinc-400 text-xs font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Safaricom M-Pesa Settlement</span>
-              </div>
-            </div>
-
-            {/* Prominent Balance Display */}
-            <div>
-              <div className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
-                Available to Withdraw <span className="text-zinc-500 normal-case font-normal">(Net after 30% platform fee)</span>
-              </div>
-              <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-zinc-500 font-bold text-2xl sm:text-3xl">KES</span>
-                <h2 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white tabular-nums">
-                  {availableBalance.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
-                </h2>
-              </div>
-            </div>
-
-            {/* 4-Metric Accounting Matrix */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-              {/* Gross Activity */}
-              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-2xl p-3.5 sm:p-4 transition-colors">
-                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Gross Activity</div>
-                <div className="text-base sm:text-lg font-extrabold text-white mt-1 tabular-nums">
-                  KES {totalGrossEarned.toLocaleString()}
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5">Total fan volume</div>
-              </div>
-
-              {/* 30% Platform Fee */}
-              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-2xl p-3.5 sm:p-4 transition-colors">
-                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>Platform Fee</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-semibold border border-rose-500/20">30%</span>
-                </div>
-                <div className="text-base sm:text-lg font-extrabold text-zinc-300 mt-1 tabular-nums">
-                  - KES {totalPlatformFees.toLocaleString()}
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5">Infra & hosting fee</div>
-              </div>
-
-              {/* Net 70% */}
-              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-emerald-500/15 rounded-2xl p-3.5 sm:p-4 transition-colors">
-                <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>Net Earned</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">70%</span>
-                </div>
-                <div className="text-base sm:text-lg font-extrabold text-emerald-400 mt-1 tabular-nums">
-                  KES {totalNetEarned.toLocaleString()}
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5">Your earnings to date</div>
-              </div>
-
-              {/* Total Paid Out */}
-              <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-2xl p-3.5 sm:p-4 transition-colors">
-                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Total Paid Out</div>
-                <div className="text-base sm:text-lg font-extrabold text-white mt-1 tabular-nums">
-                  KES {totalWithdrawn.toLocaleString()}
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5">Completed M-Pesa</div>
-              </div>
-            </div>
-
-            {/* Primary Actions - Fully Responsive Stacking */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-1">
-              <button
-                onClick={openWithdrawModal}
-                disabled={withdrawStatus === 'pending' || availableBalance < MINIMUM_CREATOR_PAYOUT_KES}
-                className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed border border-red-500 shadow-md transition-all active:scale-[0.98] cursor-pointer"
-              >
-                {withdrawStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
-                {withdrawStatus === 'success' && <CheckCircle className="w-4 h-4 text-emerald-300 shrink-0" />}
-                {withdrawStatus === 'idle' && <ArrowUpRight className="w-4 h-4 shrink-0" />}
-                <span>{withdrawStatus === 'success' ? 'Request Sent!' : 'Withdraw to M-Pesa'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsPhoneModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl font-semibold text-sm text-zinc-200 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="truncate">{payoutPhone ? `M-Pesa: ${payoutPhone}` : 'Set M-Pesa Number'}</span>
-              </button>
-            </div>
-
-            {availableBalance < MINIMUM_CREATOR_PAYOUT_KES && (
-              <p className="text-center sm:text-left text-xs text-zinc-500 -mt-2">
-                Withdrawals are available once your balance reaches KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
-              </p>
-            )}
-
-            {/* Live Support Concierge Banner */}
-            <div className="pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="relative shrink-0">
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80"
-                    alt="Amina"
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-rose-500/30"
-                  />
-                  <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#0E0F15]" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-white">Questions about withdrawal schedule?</div>
-                  <div className="text-[11px] text-zinc-400">Admin reviews and disburses to M-Pesa daily.</div>
+              <div>
+                <CardDescription className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                  Available to Withdraw <span className="normal-case font-normal">(Net after 30% platform fee)</span>
+                </CardDescription>
+                <div className="flex items-baseline gap-2.5 mt-1.5">
+                  <span className="text-muted-foreground font-bold text-2xl sm:text-3xl tracking-normal">KES</span>
+                  <CardTitle className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-foreground tabular-nums">
+                    {availableBalance.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
+                  </CardTitle>
                 </div>
               </div>
+            </CardHeader>
 
-              <button
-                type="button"
-                onClick={() => {
-                  window.dispatchEvent(
-                    new CustomEvent('open_creator_support', {
-                      detail: { prompt: 'How many hours does it take to receive my payout?' },
-                    })
-                  );
-                }}
-                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-3.5 py-2 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                <span>Ask Live Support</span>
-              </button>
-            </div>
+            <CardContent className="px-6 sm:px-8 pt-0 pb-6 space-y-6">
+              {/* 4-Metric Accounting Matrix */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+                {/* Gross Activity */}
+                <Card className="bg-muted/30 hover:bg-muted/50 border border-border/70 rounded-2xl p-3.5 sm:p-4 transition-colors shadow-none">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Gross Activity</div>
+                  <div className="text-base sm:text-lg font-bold text-foreground mt-1 tabular-nums">
+                    KES {totalGrossEarned.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/80 mt-0.5">Total fan volume</div>
+                </Card>
+
+                {/* 30% Platform Fee */}
+                <Card className="bg-muted/30 hover:bg-muted/50 border border-border/70 rounded-2xl p-3.5 sm:p-4 transition-colors shadow-none">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                    <span>Platform Fee</span>
+                    <Badge variant="rose" className="text-[10px] px-1.5 py-0 rounded font-semibold border-rose-500/20">30%</Badge>
+                  </div>
+                  <div className="text-base sm:text-lg font-bold text-foreground mt-1 tabular-nums">
+                    - KES {totalPlatformFees.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/80 mt-0.5">Infra & hosting fee</div>
+                </Card>
+
+                {/* Net 70% */}
+                <Card className="bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 sm:p-4 transition-colors shadow-none">
+                  <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Net Earned</span>
+                    <Badge variant="success" className="text-[10px] px-1.5 py-0 rounded font-semibold border-emerald-500/20">70%</Badge>
+                  </div>
+                  <div className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">
+                    KES {totalNetEarned.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/80 mt-0.5">Your earnings to date</div>
+                </Card>
+
+                {/* Total Paid Out */}
+                <Card className="bg-muted/30 hover:bg-muted/50 border border-border/70 rounded-2xl p-3.5 sm:p-4 transition-colors shadow-none">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Paid Out</div>
+                  <div className="text-base sm:text-lg font-bold text-foreground mt-1 tabular-nums">
+                    KES {totalWithdrawn.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/80 mt-0.5">Completed M-Pesa</div>
+                </Card>
+              </div>
+
+              {/* Primary Actions - Fully Responsive Stacking */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                <Button
+                  onClick={openWithdrawModal}
+                  disabled={withdrawStatus === 'pending' || availableBalance < MINIMUM_CREATOR_PAYOUT_KES}
+                  className="flex-1 py-3 px-6 rounded-xl font-bold text-sm shadow-md active:scale-[0.98] transition-all cursor-pointer min-h-11"
+                >
+                  {withdrawStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                  {withdrawStatus === 'success' && <CheckCircle className="w-4 h-4 text-emerald-300 shrink-0" />}
+                  {withdrawStatus === 'idle' && <ArrowUpRight className="w-4 h-4 shrink-0" />}
+                  <span>{withdrawStatus === 'success' ? 'Request Sent!' : 'Withdraw to M-Pesa'}</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPhoneModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-semibold text-sm border-border/80 active:scale-[0.98] transition-all min-h-11 cursor-pointer"
+                >
+                  <Smartphone className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="truncate">{payoutPhone ? `M-Pesa: ${payoutPhone}` : 'Set M-Pesa Number'}</span>
+                </Button>
+              </div>
+
+              {availableBalance < MINIMUM_CREATOR_PAYOUT_KES && (
+                <p className="text-center sm:text-left text-xs text-muted-foreground -mt-2">
+                  Withdrawals are available once your balance reaches KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
+                </p>
+              )}
+            </CardContent>
           </div>
-        </div>
+
+          <CardFooter className="px-6 sm:px-8 py-4 border-t border-border/60 bg-muted/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <img
+                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80"
+                  alt="Amina"
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-primary/20"
+                />
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-card" />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-foreground">Questions about withdrawal schedule?</div>
+                <div className="text-[11px] text-muted-foreground">Admin reviews and disburses to M-Pesa daily.</div>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('open_creator_support', {
+                    detail: { prompt: 'How many hours does it take to receive my payout?' },
+                  })
+                );
+              }}
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-primary hover:text-primary bg-primary/10 hover:bg-primary/15 border border-primary/20 px-3.5 rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Ask Live Support</span>
+            </Button>
+          </CardFooter>
+        </Card>
 
         {/* Sidebar Status & Destination Cards */}
         <div className="flex flex-col gap-6">
           {/* Pending Admin Approval Card */}
-          <div className={`rounded-3xl p-6 border transition-all ${
+          <Card className={`rounded-2xl sm:rounded-3xl p-6 border transition-all ${
             pendingBalance > 0
-              ? 'bg-amber-950/20 border-amber-500/30 shadow-[0_8px_30px_rgba(245,158,11,0.1)]'
-              : 'bg-[#0E0F15] border-white/[0.08]'
+              ? 'bg-amber-500/10 border-amber-500/30 shadow-[0_8px_30px_rgba(245,158,11,0.08)]'
+              : 'bg-card border-border/80'
           }`}>
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
-                <Clock className={`w-4 h-4 ${pendingBalance > 0 ? 'text-amber-400 animate-pulse' : 'text-zinc-500'}`} />
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <Clock className={`w-4 h-4 ${pendingBalance > 0 ? 'text-amber-500 animate-pulse' : 'text-muted-foreground'}`} />
                 <span>Pending Clearance</span>
               </div>
               {pendingBalance > 0 && (
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <Badge variant="outline" className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30">
                   In Review
-                </span>
+                </Badge>
               )}
             </div>
             <div className="flex items-baseline gap-1.5 my-1">
-              <span className="text-zinc-500 font-semibold text-sm">KES</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 tabular-nums">
+              <span className="text-muted-foreground font-semibold text-sm">KES</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">
                 {pendingBalance.toLocaleString()}
               </div>
             </div>
-            <p className="text-xs text-zinc-400 leading-relaxed mt-2">
+            <p className="text-xs text-muted-foreground leading-relaxed mt-2">
               {pendingBalance > 0
                 ? 'Withdrawal requested. Admin has been notified to send your funds via Safaricom M-Pesa B2C.'
                 : 'No pending requests. Payouts move here immediately after submission.'}
             </p>
-          </div>
+          </Card>
 
           {/* Default Payout Destination Card */}
-          <div className="rounded-3xl p-6 bg-[#0E0F15] border border-white/[0.08] flex-1 flex flex-col justify-between gap-4">
+          <Card className="rounded-2xl sm:rounded-3xl p-6 bg-card border-border/80 flex-1 flex flex-col justify-between gap-4">
             <div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  <Smartphone className="w-4 h-4 text-emerald-400" />
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <Smartphone className="w-4 h-4 text-emerald-500" />
                   <span>Payout Destination</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsPhoneModalOpen(true)}
-                  className="text-xs font-semibold text-rose-400 hover:text-rose-300 underline underline-offset-4 cursor-pointer"
+                  className="text-xs font-semibold text-primary hover:underline underline-offset-4 cursor-pointer"
                 >
                   {payoutPhone ? 'Change' : 'Set Number'}
                 </button>
               </div>
 
-              <div className="flex items-center gap-3.5 mt-4 bg-white/[0.03] p-3.5 rounded-2xl border border-white/[0.06]">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-xs shrink-0">
+              <div className="flex items-center gap-3.5 mt-4 bg-muted/40 p-3.5 rounded-2xl border border-border/70">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-black text-xs shrink-0">
                   M
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <span>Safaricom M-Pesa</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="text-xs text-zinc-400 font-mono mt-0.5 truncate">
+                  <div className="text-xs text-muted-foreground font-mono mt-0.5 truncate">
                     {payoutPhone || 'No phone set yet'}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="text-[11px] text-zinc-500 leading-relaxed border-t border-white/[0.06] pt-3">
+            <div className="text-[11px] text-muted-foreground leading-relaxed border-t border-border/60 pt-3">
               Disbursements are sent in Kenyan Shillings (KES) directly to this registered line.
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
