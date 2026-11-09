@@ -62,6 +62,11 @@ UPDATE public.creator_profiles
 SET total_subscribers = GREATEST(COALESCE(total_subscribers, 0), 1)
 WHERE user_id = 'c32e982c-0e8f-4d1d-b0c0-926d3440ec5b';
 
+-- 4b. Set beunice_kamau total_subscribers to 1 immediately (from recent payment)
+UPDATE public.creator_profiles
+SET total_subscribers = GREATEST(COALESCE(total_subscribers, 0), 1)
+WHERE user_id = 'e74f6c55-d901-4064-b386-4fe85dd25521';
+
 -- 5. Insert the active subscription for annahloon if not present
 INSERT INTO public.subscriptions (
   fan_id,
@@ -74,6 +79,23 @@ VALUES (
   'e6c7ceee-024a-4a32-be19-7897775a99c7', -- Daysman gad
   'c32e982c-0e8f-4d1d-b0c0-926d3440ec5b', -- annahloon
   'VIP Tier',
+  'active',
+  (now() + interval '30 days')
+)
+ON CONFLICT DO NOTHING;
+
+-- 5b. Insert the active subscription for beunice_kamau (paid by owuor timothy)
+INSERT INTO public.subscriptions (
+  fan_id,
+  creator_id,
+  tier_name,
+  status,
+  expires_at
+)
+VALUES (
+  '8e975481-fe80-47c7-ad8c-418d4eefa714', -- owuor timothy
+  'e74f6c55-d901-4064-b386-4fe85dd25521', -- beunice_kamau
+  'VIP Subscription',
   'active',
   (now() + interval '30 days')
 )
@@ -99,5 +121,28 @@ VALUES (
   'c32e982c-0e8f-4d1d-b0c0-926d3440ec5b',
   'e6c7ceee-024a-4a32-be19-7897775a99c7',
   'UK71Y1HU5W'
+)
+ON CONFLICT DO NOTHING;
+
+-- 6b. Insert the completed transaction for beunice_kamau (KES 1,500)
+INSERT INTO public.transactions (
+  type,
+  gross_amount,
+  platform_fee,
+  net_amount,
+  status,
+  to_creator_id,
+  from_user_id,
+  reference_id
+)
+VALUES (
+  'subscription',
+  1500,
+  450,
+  1050,
+  'completed',
+  'e74f6c55-d901-4064-b386-4fe85dd25521', -- beunice_kamau
+  '8e975481-fe80-47c7-ad8c-418d4eefa714', -- owuor timothy
+  'SUB-OWUOR-BEUNICE'
 )
 ON CONFLICT DO NOTHING;
