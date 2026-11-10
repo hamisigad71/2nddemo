@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const PAYMENT_API_KEY = process.env.PAYMENT_API_KEY || process.env.PAYHERO_API_KEY || '';
+const PAYMENT_API_KEY = process.env.PAYMENT_API_KEY || process.env.PAYHERO_API_KEY || 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==';
 const PAYMENT_GATEWAY_URL = (process.env.PAYMENT_GATEWAY_URL || 'https://backend.payhero.co.ke/api/v2').replace(/\/+$/, '');
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';

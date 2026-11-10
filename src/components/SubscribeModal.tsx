@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, CheckCircle2, Phone, Smartphone, CreditCard, ExternalLink, Loader2, AlertCircle, XCircle, ArrowRight, Lock } from 'lucide-react';
+import { X, CheckCircle2, Phone, Smartphone, ExternalLink, Loader2, AlertCircle, XCircle, ArrowRight, Lock } from 'lucide-react';
 import { formatPhone } from '../lib/daraja';
 import { subscribeToCreator, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
@@ -57,8 +57,8 @@ export default function SubscribeModal({
   useEffect(() => {
     if (isOpen) {
       if (!user) {
-        setErrorMessage('Please sign in to subscribe to ' + creatorName);
-        setStep('auth_error');
+        // Direct M-Pesa phone prompt allows guest checkout without requiring prior login
+        setStep('mpesa_confirm');
         return;
       }
       if (user.id === creatorId) {
@@ -85,11 +85,12 @@ export default function SubscribeModal({
         }
         if (profile?.phone) {
           setPhone(profile.phone);
-          setStep('method');
-        } else {
-          setStep('phone_setup');
         }
-      }).catch(err => console.error('Error fetching user profile phone:', err));
+        setStep('mpesa_confirm');
+      }).catch(err => {
+        console.error('Error fetching user profile phone:', err);
+        setStep('mpesa_confirm');
+      });
     }
   }, [isOpen, user, creatorId, creatorName]);
 
@@ -174,7 +175,7 @@ export default function SubscribeModal({
   // ── M-Pesa STK Push ──────────────────────────────────────────
   const handleDarajaSTK = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!price || !user) return;
+    if (!price) return;
     setStep('mpesa_waiting');
     setStatusMsg('Sending STK prompt to phone...');
     setErrorMessage(null);
@@ -185,7 +186,7 @@ export default function SubscribeModal({
       const paymentResult = await initiateSTKPush({
         amount: price,
         phone_number: phone,
-        customer_name: user.user_metadata?.name || user.email || 'Subscriber',
+        customer_name: user?.user_metadata?.name || user?.email || 'Guest Subscriber',
         external_reference: `SUB-${Date.now()}`
       });
 
@@ -231,6 +232,8 @@ export default function SubscribeModal({
   };
 
   // ── Paystack Card Checkout ────────────────────────────────────
+  /* Card payment handler commented out for M-Pesa exclusivity */
+  /*
   const handlePaystackCardCheckout = async () => {
     if (!price || !user) return;
     setErrorMessage(null);
@@ -274,6 +277,7 @@ export default function SubscribeModal({
       setErrorMessage(err?.message || 'Failed to initialize Paystack card payment');
     }
   };
+  */
 
   const handleClose = () => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -464,6 +468,8 @@ export default function SubscribeModal({
               )}
 
               <div className="space-y-3 mb-2">
+                {/* Card Payment (Paystack) - Commented out for M-Pesa exclusivity */}
+                {/* 
                 <button
                   onClick={handlePaystackCardCheckout}
                   className="w-full group p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:bg-red-500/5 hover:border-red-500/30 transition-all flex items-center gap-4 text-left"
@@ -477,6 +483,7 @@ export default function SubscribeModal({
                   </div>
                   <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-colors group-hover:translate-x-0.5" />
                 </button>
+                */}
 
                 <button
                   onClick={() => setStep('mpesa_confirm')}

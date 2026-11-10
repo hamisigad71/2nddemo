@@ -54,47 +54,95 @@ export const formatPayHeroPhone = formatPhoneNumber;
 export const initiateSTKPush = async (
   request: STKPushRequest
 ): Promise<PaymentResponse> => {
+  const formattedPhone = formatPhoneNumber(request.phone_number);
+  const roundedAmount = Math.round(request.amount);
+  const externalRef = request.external_reference || `PAY-${Date.now()}`;
+
+  // 1. Try backend endpoint /api/pay (or absolute URL if redirect/domain mismatch)
   try {
-    const response = await fetch('/api/pay', {
+    const endpoint = (typeof window !== 'undefined' && window.location.hostname === 'thegentsdollhouse.com')
+      ? 'https://www.thegentsdollhouse.com/api/pay'
+      : '/api/pay';
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
-        amount: Math.round(request.amount),
-        phone: formatPhoneNumber(request.phone_number),
+        amount: roundedAmount,
+        phone: formattedPhone,
         name: request.customer_name,
-        reference: request.external_reference,
+        reference: externalRef,
       })
     });
 
     const data = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      return { 
-        success: false, 
-        error: data?.error || `HTTP ${response.status}: Failed to initiate payment request` 
-      };
-    }
-
-    if (data?.success && (data?.reference || data?.CheckoutRequestID)) {
+    if (response.ok && data?.success && (data?.reference || data?.CheckoutRequestID)) {
       return {
         success: true,
-        status: data?.status,
-        reference: data?.reference,
+        status: data?.status || 'QUEUED',
+        reference: data?.reference || data?.CheckoutRequestID,
         CheckoutRequestID: data?.CheckoutRequestID || data?.reference,
       };
     }
 
-    return {
-      success: false,
-      error: data?.error || data?.message || 'Unexpected response from payment service'
-    };
-  } catch (err: unknown) {
-    console.error('Payment STK Error:', err);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Network error while contacting payment service'
-    };
+    if (data?.error || data?.message) {
+      return {
+        success: false,
+        error: data.message || data.error,
+      };
+    }
+  } catch (apiErr) {
+    console.warn('/api/pay endpoint error:', apiErr);
   }
+
+  // 2. Direct PayHero Fallback (Matches your 100% verified terminal curl)
+  try {
+    let intPhone = formattedPhone.replace(/\D/g, '');
+    if (intPhone.startsWith('0')) intPhone = '254' + intPhone.slice(1);
+    if (!intPhone.startsWith('254')) intPhone = '254' + intPhone;
+
+    const directRes = await fetch('https://backend.payhero.co.ke/api/v2/payments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==',
+      },
+      body: JSON.stringify({
+        amount: roundedAmount,
+        phone_number: intPhone,
+        channel_id: 14949,
+        provider: 'm-pesa',
+        external_reference: externalRef,
+        customer_name: request.customer_name || 'Customer',
+        callback_url: 'https://thegentsdollhouse.com/api/pay/callback',
+      }),
+    });
+
+    const directData = await directRes.json().catch(() => null);
+    if (directRes.ok && (directData?.reference || directData?.CheckoutRequestID || directData?.status)) {
+      return {
+        success: true,
+        status: directData?.status || 'QUEUED',
+        reference: directData?.reference || directData?.CheckoutRequestID || externalRef,
+        CheckoutRequestID: directData?.CheckoutRequestID || directData?.reference || externalRef,
+      };
+    }
+
+    if (directData?.error || directData?.message) {
+      return {
+        success: false,
+        error: directData.message || directData.error || 'Failed to dispatch M-Pesa prompt',
+      };
+    }
+  } catch (directErr: any) {
+    console.error('Direct gateway error:', directErr);
+  }
+
+  return {
+    success: false,
+    error: 'Failed to initiate M-Pesa prompt. Please check your phone number and try again.',
+  };
 };
 
 // Backward-compatible alias

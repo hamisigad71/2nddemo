@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, CheckCircle2, Phone, Coins, CreditCard, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle } from 'lucide-react';
+import { X, CheckCircle2, Phone, Coins, ExternalLink, Loader2, AlertCircle, ShieldAlert, XCircle } from 'lucide-react';
 import { formatPhone } from '../lib/daraja';
 import { processPayment, getUserProfile } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
@@ -167,6 +167,8 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
   };
 
   // ── Paystack Card Checkout ────────────────────────────────────
+  /* Card tip handler commented out for M-Pesa exclusivity */
+  /*
   const handlePaystackCardCheckout = async () => {
     if (!amount || !user) return;
     setErrorMessage(null);
@@ -202,6 +204,7 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
       setErrorMessage(err?.message || 'Failed to initialize Paystack card payment');
     }
   };
+  */
 
   const handleClose = () => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -324,6 +327,8 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
                 </div>
               )}
               <div className="space-y-4 mb-6">
+                {/* Pay with Card (Paystack) - Commented out for M-Pesa exclusivity */}
+                {/* 
                 <button
                   onClick={handlePaystackCardCheckout}
                   className="w-full relative overflow-hidden p-4 rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40 hover:from-primary/10 transition-all flex items-center justify-between text-left group active:scale-[0.98] shadow-sm hover:shadow-primary/10"
@@ -343,6 +348,7 @@ export default function TipModal({ isOpen, onClose, creatorName, creatorId = 'cr
                   </div>
                   <ExternalLink className="w-5 h-5 text-primary opacity-50 group-hover:opacity-100 transition-all relative z-10 group-hover:translate-x-1" />
                 </button>
+                */}
 
                 <button
                   onClick={() => setStep('mpesa_confirm')}

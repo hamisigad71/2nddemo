@@ -166,13 +166,16 @@ const AdminSettings = () => {
               </div>
               <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">Active</span>
             </div>
-            <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl">
+            {/* Card Payments - Disabled for M-Pesa exclusivity */}
+            {/* 
+            <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl opacity-60">
               <div>
                 <div className="text-sm font-bold text-white">Card Payments (Visa / Mastercard)</div>
                 <div className="text-xs text-zinc-500 mt-0.5">Paystack Secure Checkout Gateway</div>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">Active</span>
+              <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 rounded-full">Disabled</span>
             </div>
+            */}
           </div>
         </Section>
 

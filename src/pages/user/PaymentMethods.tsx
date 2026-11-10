@@ -432,7 +432,7 @@ export default function PaymentMethods() {
             </div>
             <h3 className="font-bold text-lg text-foreground mb-1">No payment methods linked</h3>
             <p className="text-xs text-muted-foreground max-w-sm mx-auto mb-6">
-              Add your M-Pesa phone number or credit/debit card to quickly unlock creator content and subscribe with 1-click.
+              Link your Safaricom M-Pesa phone number to quickly unlock creator content and subscribe with 1-click.
             </p>
             <button
               onClick={handleOpenModal}
@@ -567,22 +567,21 @@ export default function PaymentMethods() {
             </div>
 
             {/* Tab Switcher */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 rounded-xl mb-6">
+            {/* Tab Selection: M-Pesa Exclusive */}
+            <div className="grid grid-cols-1 gap-2 p-1 bg-muted/40 rounded-xl mb-6">
               <button
                 type="button"
                 onClick={() => {
                   setActiveTab('mpesa');
                   setFormError(null);
                 }}
-                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-black transition-all ${
-                  activeTab === 'mpesa'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-black bg-background text-foreground shadow-sm transition-all"
               >
                 <Smartphone className="w-4 h-4 text-emerald-500" />
-                <span>M-Pesa</span>
+                <span>M-Pesa Safaricom</span>
               </button>
+              {/* Debit / Credit Card tab commented out for M-Pesa exclusivity */}
+              {/* 
               <button
                 type="button"
                 onClick={() => {
@@ -598,6 +597,7 @@ export default function PaymentMethods() {
                 <CardIcon className="w-4 h-4 text-primary" />
                 <span>Debit / Credit Card</span>
               </button>
+              */}
             </div>
 
             {/* Error Message */}

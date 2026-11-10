@@ -1,6 +1,12 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import path from 'path'
+import dns from 'dns'
+
+// Ensure Node DNS resolves IPv4 first so backend.payhero.co.ke resolves reliably
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {}
 
 function paymentDevPlugin(): Plugin {
   return {
@@ -11,9 +17,9 @@ function paymentDevPlugin(): Plugin {
         const url = new URL(rawUrl, 'http://localhost');
 
         const env = loadEnv(server.config.mode, process.cwd(), '');
-        const apiKey = (env.PAYMENT_API_KEY || env.PAYHERO_API_KEY || '').trim();
+        const apiKey = (env.PAYMENT_API_KEY || env.PAYHERO_API_KEY || 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==').trim();
         const authHeader = apiKey ? (apiKey.startsWith('Basic ') ? apiKey : `Basic ${apiKey}`) : '';
-        const channelId = Number(env.PAYMENT_CHANNEL_ID || env.PAYHERO_CHANNEL_ID || env.VITE_PAYHERO_CHANNEL_ID || 13942);
+        const channelId = Number(env.PAYMENT_CHANNEL_ID || env.PAYHERO_CHANNEL_ID || env.VITE_PAYHERO_CHANNEL_ID || 14949);
         const gatewayUrl = (env.PAYMENT_GATEWAY_URL || env.PAYHERO_GATEWAY_URL || 'https://backend.payhero.co.ke/api/v2').replace(/\/+$/, '');
 
         // 1. POST /api/pay
@@ -77,13 +83,16 @@ function paymentDevPlugin(): Plugin {
                 data = null;
               }
 
+              console.log('[PayHero Debug] Status:', payResponse.status, 'Response:', rawText);
+
               if (!payResponse.ok) {
                 res.statusCode = payResponse.status;
                 res.setHeader('Content-Type', 'application/json');
+                const errorDetail = data?.message || data?.error || data?.detail || (rawText && rawText.length < 150 ? rawText : 'Failed to initiate payment');
                 return res.end(
                   JSON.stringify({
                     success: false,
-                    error: data?.message || data?.error || data?.detail || 'Failed to initiate payment',
+                    error: errorDetail,
                     reference: externalRef,
                   })
                 );
@@ -105,9 +114,15 @@ function paymentDevPlugin(): Plugin {
                 })
               );
             } catch (err: any) {
-              res.statusCode = 500;
+              console.error('M-Pesa payment dev proxy error:', err);
+              res.statusCode = 502;
               res.setHeader('Content-Type', 'application/json');
-              return res.end(JSON.stringify({ success: false, error: err.message || 'Internal server error' }));
+              return res.end(
+                JSON.stringify({
+                  success: false,
+                  error: err?.message || 'Failed to connect to payment gateway',
+                })
+              );
             }
           });
           return;
@@ -172,6 +187,22 @@ function paymentDevPlugin(): Plugin {
               })
             );
           } catch (err: any) {
+            console.error('M-Pesa status check dev error:', err);
+            // If checking a simulated reference or network blip during dev, auto-confirm
+            if (ref.startsWith('SIM-')) {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  success: true,
+                  reference: ref,
+                  paid: true,
+                  pending: false,
+                  failed: false,
+                  status: 'SUCCESS',
+                })
+              );
+            }
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
             return res.end(JSON.stringify({ success: false, error: err.message || 'Internal server error' }));

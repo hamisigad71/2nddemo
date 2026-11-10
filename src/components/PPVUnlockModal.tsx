@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Lock, CheckCircle2, Phone, Crown, CreditCard } from 'lucide-react';
+import { X, Lock, CheckCircle2, Phone, Crown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getUserProfile, processPayment } from '../lib/db';
 import { toast } from '../context/ToastContext';
@@ -164,6 +164,8 @@ export default function PPVUnlockModal({
     }
   };
 
+  /* Card handler commented out for M-Pesa exclusivity */
+  /*
   const handlePaystackUnlock = async () => {
     if (!user) {
       setErrorMessage('Sign in to unlock this content.');
@@ -207,6 +209,7 @@ export default function PPVUnlockModal({
       setStep('failed');
     }
   };
+  */
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
@@ -279,7 +282,8 @@ export default function PPVUnlockModal({
               </div>
             </div>
 
-            {/* Option 2: Unlock with Card (Paystack) */}
+            {/* Option 2: Unlock with Card (Paystack) - Commented out for M-Pesa exclusivity */}
+            {/* 
             <div
               onClick={handlePaystackUnlock}
               className="p-4 rounded-2xl bg-black border border-white/15 hover:border-red-500/60 transition-all cursor-pointer group shadow-lg"
@@ -303,6 +307,7 @@ export default function PPVUnlockModal({
                 <span>Instant Card Checkout</span> →
               </div>
             </div>
+            */}
 
             {/* Option 2: Monthly VIP Subscription */}
             <div

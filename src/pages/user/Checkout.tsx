@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, ShieldCheck, CreditCard, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldCheck, ArrowRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -109,6 +109,8 @@ const Checkout = () => {
     }
   };
 
+  /* Card checkout handlers commented out for M-Pesa exclusivity */
+  /*
   const [cardLoading, setCardLoading] = useState(false);
 
   const handleCardPay = async () => {
@@ -166,6 +168,7 @@ const Checkout = () => {
       setCardLoading(false);
     }
   };
+  */
 
   return (
     <div className="min-h-screen bg-background text-foreground lg:flex">
@@ -245,7 +248,8 @@ const Checkout = () => {
             </div>
           </button>
 
-          {/* Card Option */}
+          {/* Card Option - Commented out for M-Pesa exclusivity */}
+          {/* 
           <button
             type="button"
             onClick={() => setMethod('card')}
@@ -271,6 +275,7 @@ const Checkout = () => {
               {method === 'card' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
             </div>
           </button>
+          */}
         </div>
 
         {method === 'mpesa' && (
@@ -312,6 +317,8 @@ const Checkout = () => {
           </form>
         )}
 
+        {/* Card Checkout Section - Commented out for M-Pesa exclusivity */}
+        {/* 
         {method === 'card' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-4">
             <div className="bg-input/10 border border-border rounded-2xl p-5">
@@ -341,6 +348,7 @@ const Checkout = () => {
             </button>
           </div>
         )}
+        */}
       </div>
     </div>
   );
