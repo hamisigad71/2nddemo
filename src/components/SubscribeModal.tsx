@@ -467,24 +467,8 @@ export default function SubscribeModal({
                 </div>
               )}
 
+              {/* Redundant intermediate method selector removed for 1-click M-Pesa exclusivity */}
               <div className="space-y-3 mb-2">
-                {/* Card Payment (Paystack) - Commented out for M-Pesa exclusivity */}
-                {/* 
-                <button
-                  onClick={handlePaystackCardCheckout}
-                  className="w-full group p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:bg-red-500/5 hover:border-red-500/30 transition-all flex items-center gap-4 text-left"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-black text-zinc-400 group-hover:text-red-500 border border-white/10 group-hover:border-red-500/40 flex items-center justify-center transition-colors shrink-0">
-                    <CreditCard className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-bold text-[15px] text-white tracking-tight group-hover:text-red-500 transition-colors">Credit / Debit Card</div>
-                    <div className="text-[13px] text-zinc-400 mt-0.5">Instant Card Payment via Paystack</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-colors group-hover:translate-x-0.5" />
-                </button>
-                */}
-
                 <button
                   onClick={() => setStep('mpesa_confirm')}
                   className="w-full group p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:bg-red-500/5 hover:border-red-500/30 transition-all flex items-center gap-4 text-left"
