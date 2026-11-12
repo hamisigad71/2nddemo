@@ -10,6 +10,7 @@ import PageLoader from "./components/PageLoader";
 import Landing from "./pages/public/Landing";
 import InstallAppPrompt from "./components/InstallAppPrompt";
 import CreatorSupportChat from "./components/CreatorSupportChat";
+import AgeVerificationModal from "./components/AgeVerificationModal";
 
 // Keep the landing page in the initial bundle; load all other route screens on demand.
 const Discover = lazy(() => import("./pages/public/Discover"));
@@ -87,6 +88,7 @@ const AppRoutes = () => {
         <PageLoader onComplete={handleLoaderComplete} />
       )}
       <div className="min-h-screen bg-background text-foreground font-sans">
+        <AgeVerificationModal />
         <InstallAppPrompt />
         <CreatorSupportChat />
         <ErrorBoundary>
