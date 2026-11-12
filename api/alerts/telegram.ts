@@ -89,8 +89,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    const data = await response.json();
-    if (!response.ok || !data.ok) {
+    const data: any = await response.json();
+    if (!response.ok || !data?.ok) {
       console.error('Telegram API error:', data);
       return res.status(502).json({ error: 'Failed to send Telegram message', details: data });
     }
