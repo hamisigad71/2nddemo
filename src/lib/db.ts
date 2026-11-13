@@ -2896,6 +2896,56 @@ export const checkUserSubscription = async (
   }
 };
 
+/**
+ * Checks whether a user has unlocked an escort's contact & chat (Fee: KES 1,300)
+ */
+export const checkEscortContactUnlocked = async (
+  userId: string | null | undefined,
+  escortId: string
+): Promise<boolean> => {
+  if (!escortId) return false;
+
+  // 1. Check LocalStorage global / user unlock records
+  try {
+    const globalUnlocked = localStorage.getItem("tgd_escort_unlocks_global");
+    if (globalUnlocked) {
+      const list = JSON.parse(globalUnlocked);
+      if (Array.isArray(list) && list.includes(escortId)) return true;
+    }
+
+    if (userId) {
+      const userUnlocked = localStorage.getItem(`tgd_escort_unlock_${userId}_${escortId}`);
+      if (userUnlocked === "true" || userUnlocked === "unlocked") return true;
+    }
+  } catch (err) {
+    console.warn("Error reading local escort unlocks:", err);
+  }
+
+  // 2. Query Supabase escort_contact_unlocks table
+  if (userId) {
+    try {
+      const { data, error } = await supabase
+        .from("escort_contact_unlocks")
+        .select("id")
+        .eq("client_id", userId)
+        .eq("escort_id", escortId)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        // Cache to local storage
+        try {
+          localStorage.setItem(`tgd_escort_unlock_${userId}_${escortId}`, "true");
+        } catch {}
+        return true;
+      }
+    } catch (dbErr) {
+      console.warn("Error checking escort_contact_unlocks table:", dbErr);
+    }
+  }
+
+  return false;
+};
+
 export const cancelSubscription = async (subId: string) => {
   const { error } = await supabase
     .from("subscriptions")
@@ -7290,7 +7340,8 @@ export const deleteNotification = async (
     const { error } = await supabase
       .from("notifications")
       .delete()
-      .eq("id", notificationId);
+      .eq("id", notificationId)
+      .eq("user_id", ownerId);
     if (error) {
       console.warn(`Supabase notification delete warning: ${error.message}`);
     }

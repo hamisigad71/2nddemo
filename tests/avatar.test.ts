@@ -15,10 +15,9 @@ describe("Avatar Resolution & Fallback (avatar)", () => {
     assert.strictEqual(resolveUserAvatar("", ""), DEFAULT_AVATAR);
   });
 
-  it("generates an initials badge when a valid user name is provided without a photo", () => {
+  it("returns default luxury avatar when photo is absent, avoiding raw initials badges", () => {
     const avatar = resolveUserAvatar(null, "Vincent Ochieng");
-    assert.match(avatar, /ui-avatars\.com\/api/);
-    assert.match(avatar, /name=Vincent%20Ochieng/);
+    assert.strictEqual(avatar, DEFAULT_AVATAR);
   });
 
   it('avoids creating initials badges for generic dummy names ("user", "creator", "unknown")', () => {
@@ -40,7 +39,7 @@ describe("Avatar Resolution & Fallback (avatar)", () => {
     const blobUrl = "blob:http://localhost:5173/3f98c92a-1234";
     const resolved = resolveUserAvatar(blobUrl, "Joy Mwangi");
     assert.doesNotMatch(resolved, /^blob:/);
-    assert.match(resolved, /ui-avatars\.com/);
+    assert.strictEqual(resolved, DEFAULT_AVATAR);
   });
 
   it("preserves valid external https photo URLs", () => {

@@ -33,6 +33,7 @@ import {
   getCreatorProfile,
   getPostsByCreator,
   checkUserSubscription,
+  checkEscortContactUnlocked,
   deletePost,
   getUserProfile,
   getCreatorSubscriberCount,
@@ -44,6 +45,7 @@ import SubscribeModal from "../../components/SubscribeModal";
 import PPVUnlockModal, {
   type PPVMediaItem,
 } from "../../components/PPVUnlockModal";
+import EscortBookingFlowModal from "../../components/EscortBookingFlowModal";
 import { toast } from "../../context/ToastContext";
 import "./CreatorProfile.css";
 
@@ -76,6 +78,7 @@ export default function CreatorProfile() {
   // Modals
   const [isTipOpen, setIsTipOpen] = useState(false);
   const [isSubscribeOpen, setIsSubscribeOpen] = useState(false);
+  const [isEscortBookingOpen, setIsEscortBookingOpen] = useState(false);
   const [subscribePrice, setSubscribePrice] = useState(1000);
   const [subscribeDuration, setSubscribeDuration] = useState(30);
   const [subscribeTierName, setSubscribeTierName] = useState("VIP Monthly");
@@ -158,6 +161,13 @@ export default function CreatorProfile() {
           );
         }
 
+        // Check escort contact unlock regardless of login
+        const isEscortUnlocked = await checkEscortContactUnlocked(user?.id, id);
+        if (isMounted && isEscortUnlocked) {
+          setIsSubscribed(true);
+          setSubscriptionTier("VIP Escort Access");
+        }
+
         // Check current user profile & role
         if (user?.id) {
           try {
@@ -170,10 +180,11 @@ export default function CreatorProfile() {
           }
 
           const sub = await checkUserSubscription(user.id, id);
-          if (isMounted && sub) {
+          const isEscortUnlocked = await checkEscortContactUnlocked(user.id, id);
+          if (isMounted && (sub || isEscortUnlocked)) {
             setIsSubscribed(true);
-            setSubscriptionTier(sub.tier_name || "VIP Tier");
-            if (sub.expires_at) {
+            setSubscriptionTier(isEscortUnlocked ? "VIP Escort Access" : (sub?.tier_name || "VIP Tier"));
+            if (sub?.expires_at) {
               setSubscriptionExpiresAt(sub.expires_at);
             }
           }
@@ -278,11 +289,25 @@ export default function CreatorProfile() {
 
   const creatorPrice = creator.price_hr || 1000;
 
+  // Check if this is an escort profile (demo escort or registered companion)
+  const isEscortCompanion = Boolean(
+    creator?.isEscort ||
+    String(creator?.id || "").startsWith("escort-") ||
+    String(id || "").startsWith("escort-") ||
+    (Array.isArray(creator?.services) && creator?.services.some((s: string) => /escort|companion|dinner date/i.test(s)))
+  );
+
   const handleMessageClick = () => {
     if (!creator) return;
 
     if (isSubscribed) {
       navigate(`/user/messages?creator=${id}`);
+      return;
+    }
+
+    // If companion, prompt to unlock contact & chat (1300 KES)
+    if (isEscortCompanion) {
+      setIsEscortBookingOpen(true);
       return;
     }
 
@@ -1717,6 +1742,34 @@ export default function CreatorProfile() {
             setIsSubscribeOpen(true);
           }}
         />
+
+        {/* Escort Unlock & Escrow Booking Modal */}
+        {isEscortBookingOpen && (
+          <EscortBookingFlowModal
+            isOpen={isEscortBookingOpen}
+            onClose={() => setIsEscortBookingOpen(false)}
+            escort={{
+              id: creator.id,
+              name: creator.name,
+              avatar: creator.avatar,
+              cover_image: creator.cover_image,
+              bio: creator.bio,
+              location: creator.location,
+              rating: creator.rating || 5.0,
+              isVerified: Boolean(creator.isVerified),
+              isOnline: Boolean(creator.isOnline),
+              price_hr: creator.price_hr || 5000,
+              phone: creator.phone || '+254 742 630 973'
+            }}
+            currentUser={user ? { id: user.id, email: user.email, name: user.user_metadata?.name, phone: user.user_metadata?.phone } : null}
+            onUnlockedSuccess={() => {
+              setIsSubscribed(true);
+              setSubscriptionTier("VIP Escort Access");
+              setIsEscortBookingOpen(false);
+              navigate(`/user/messages?creator=${creator.id}`);
+            }}
+          />
+        )}
 
         {/* Fullscreen Media Viewer Lightbox */}
         {activeLightbox && (

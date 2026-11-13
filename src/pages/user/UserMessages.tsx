@@ -23,6 +23,7 @@ import {
   getChatMessages, 
   sendChatMessage, 
   checkUserSubscription, 
+  checkEscortContactUnlocked,
   getCreatorProfile,
   unlockChatMessagePPV 
 } from '../../lib/db';
@@ -86,6 +87,8 @@ const UserMessages = () => {
             const profile = await getCreatorProfile(queryCreatorId);
             const pAny = profile as any;
             const sub = await checkUserSubscription(user.id, queryCreatorId);
+            const isEscortUnlocked = await checkEscortContactUnlocked(user.id, queryCreatorId);
+            const hasChatAccess = !!sub || isEscortUnlocked;
             const newEntry: ChatParticipant = {
               id: queryCreatorId,
               name: profile?.name || 'Creator',
@@ -93,10 +96,10 @@ const UserMessages = () => {
               handle: pAny?.handle || `@${(profile?.name || 'creator').toLowerCase().replace(/\s+/g, '')}`,
               role: 'creator',
               isOnline: true,
-              isSubscribed: !!sub,
-              subscriptionTier: sub?.tier_name,
+              isSubscribed: hasChatAccess,
+              subscriptionTier: isEscortUnlocked ? 'Direct VIP Escort Access' : sub?.tier_name,
               monthly_price: pAny?.monthly_price || 1000,
-              lastMessage: sub ? 'Start your conversation' : 'Subscribe to start chatting',
+              lastMessage: hasChatAccess ? 'Start your conversation' : 'Subscribe to start chatting',
             };
             list.unshift(newEntry);
           }
@@ -135,12 +138,17 @@ const UserMessages = () => {
       setLoadingMessages(true);
 
       try {
-        // Check active subscription
+        // Check active subscription or escort contact unlock
         const sub = await checkUserSubscription(user.id, selectedCreator.id);
+        const isEscortUnlocked = await checkEscortContactUnlocked(user.id, selectedCreator.id);
         if (isMounted) {
-          const active = !!sub;
+          const active = !!sub || isEscortUnlocked;
           setIsSubscribed(active);
-          if (sub?.tier_name) setSubscriptionTier(sub.tier_name);
+          if (isEscortUnlocked) {
+            setSubscriptionTier('Direct VIP Escort Access');
+          } else if (sub?.tier_name) {
+            setSubscriptionTier(sub.tier_name);
+          }
         }
 
         // Fetch thread messages
