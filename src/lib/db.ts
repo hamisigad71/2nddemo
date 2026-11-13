@@ -4256,12 +4256,24 @@ export const getAdminOverviewStats = async () => {
       }
     });
 
+    // Query active subscriptions count to reflect true platform subscriber relationships
+    let activeSubsCount = 0;
+    try {
+      const { count: subsCount } = await supabase
+        .from("subscriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active");
+      activeSubsCount = subsCount || 0;
+    } catch {}
+
     return {
       totalUsers: usersCount || 0,
       totalCreators: creatorsCount || 0,
       totalFans:
-        fansCount ||
-        (usersCount ? Math.max(0, usersCount - (creatorsCount || 0)) : 0),
+        activeSubsCount > 0
+          ? activeSubsCount
+          : (fansCount ||
+            (usersCount ? Math.max(0, usersCount - (creatorsCount || 0)) : 0)),
       totalRevenue: totalRevenue,
       platformFees: platformFees,
       pendingReviews: (pendingEscortApps || 0) + pendingKycCount,
@@ -4443,6 +4455,45 @@ export const getAdminCreators = async () => {
 
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
+    // Query live subscriptions per creator from Supabase subscriptions table
+    const subsCountByCreator = new Map<string, number>();
+    try {
+      const { data: creatorSubs } = await supabase
+        .from("subscriptions")
+        .select("creator_id")
+        .eq("status", "active");
+      (creatorSubs || []).forEach((s) => {
+        if (s.creator_id) {
+          subsCountByCreator.set(
+            s.creator_id,
+            (subsCountByCreator.get(s.creator_id) || 0) + 1,
+          );
+        }
+      });
+    } catch (err) {
+      console.warn("Could not query subscriptions count for getAdminCreators:", err);
+    }
+
+    // Query live completed revenue per creator from Supabase transactions table
+    const revenueByCreator = new Map<string, number>();
+    try {
+      const { data: creatorTxs } = await supabase
+        .from("transactions")
+        .select("to_creator_id, gross_amount, status, type")
+        .eq("status", "completed")
+        .neq("type", "payout");
+      (creatorTxs || []).forEach((t) => {
+        if (t.to_creator_id) {
+          revenueByCreator.set(
+            t.to_creator_id,
+            (revenueByCreator.get(t.to_creator_id) || 0) + (Number(t.gross_amount) || 0),
+          );
+        }
+      });
+    } catch (err) {
+      console.warn("Could not query transactions revenue for getAdminCreators:", err);
+    }
+
     return creatorUsers.map((u) => {
       const p = profileMap.get(u.uid);
       const local = getStoredCreatorProfile(u.uid);
@@ -4562,8 +4613,12 @@ export const getAdminCreators = async () => {
         coverUrl,
         category:
           p?.niche || local?.category || (p?.tags && p.tags[0]) || "Various",
-        subs: p?.total_subscribers || local?.total_subscribers || 0,
-        revenue: `KES ${(p?.total_earnings || 0).toLocaleString()}`,
+        subs: subsCountByCreator.has(u.uid)
+          ? (subsCountByCreator.get(u.uid) || 0)
+          : (p?.total_subscribers || local?.total_subscribers || 0),
+        revenue: `KES ${(revenueByCreator.has(u.uid)
+          ? (revenueByCreator.get(u.uid) || 0)
+          : (p?.total_earnings || 0)).toLocaleString()}`,
         status,
         joined: u.created_at
           ? new Date(u.created_at).toLocaleDateString("en-KE", {
