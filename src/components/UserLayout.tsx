@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftOpen, Megaphone, Download } from 'lucide-react';
+import { Home, MessageCircle, FolderHeart, CreditCard, Wallet, Settings, Menu, X, LogOut, Search, Sun, Moon, ChevronRight, ChevronLeft, Flame, Crown, Bell, PanelLeftOpen, Megaphone, Download, Compass, Users } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -19,6 +19,7 @@ const navGroups = [
     name: 'Discover',
     items: [
       { name: 'Feed', path: '/user', icon: Home, badge: 'Live' },
+      { name: 'View Creators', path: '/discover', icon: Compass },
       { name: 'VIP Perks & Deals', path: '/user/ads', icon: Megaphone, badge: 'New' },
       { name: 'Escorts', path: '/user/escorts', icon: Flame, badge: 'New' },
     ],
