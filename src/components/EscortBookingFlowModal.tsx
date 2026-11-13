@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   X, 
   Lock, 
@@ -9,10 +9,11 @@ import {
   Loader2, 
   CheckCircle2, 
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { formatPhone } from '../lib/daraja';
-import { initiateSTKPush } from '../lib/payments';
+import { initiateSTKPush, checkPaymentStatus } from '../lib/payments';
 import { supabase } from '../lib/supabase';
 import { toast } from '../context/ToastContext';
 
@@ -75,10 +76,146 @@ export default function EscortBookingFlowModal({
   // Status & loading
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  if (!isOpen) return null;
+  const [statusMsg, setStatusMsg] = useState('Waiting for M-Pesa PIN confirmation...');
+  const [checkingManual, setCheckingManual] = useState(false);
+  const pollRef = useRef<any>(null);
 
   const totalBookingCost = escort.price_hr * durationHours;
+
+  const confirmUnlockPaymentSuccess = useCallback(async () => {
+    try {
+      if (currentUser?.id) {
+        await supabase.from('escort_contact_unlocks').insert({
+          client_id: currentUser.id,
+          escort_id: escort.id,
+          amount_paid: UNLOCK_FEE,
+          mpesa_reference: unlockMpesaRef
+        });
+      }
+    } catch (dbErr) {
+      console.warn('Could not record contact unlock in table:', dbErr);
+    }
+
+    try {
+      const globalStored = localStorage.getItem("tgd_escort_unlocks_global");
+      const globalList: string[] = globalStored ? JSON.parse(globalStored) : [];
+      if (!globalList.includes(escort.id)) {
+        globalList.push(escort.id);
+        localStorage.setItem("tgd_escort_unlocks_global", JSON.stringify(globalList));
+      }
+      if (currentUser?.id) {
+        localStorage.setItem(`tgd_escort_unlock_${currentUser.id}_${escort.id}`, "true");
+      }
+    } catch (storageErr) {
+      console.warn("Storage save error:", storageErr);
+    }
+
+    setUnlockedEscortPhone(escort.phone || '+254 742 630 973');
+    toast.success(`Payment verified! Direct contact & chat unlocked for ${escort.name}!`);
+    if (onUnlockedSuccess) onUnlockedSuccess();
+    setStep('booking_form');
+  }, [currentUser?.id, escort.id, escort.name, escort.phone, onUnlockedSuccess, unlockMpesaRef]);
+
+  // Polling for Contact Unlock Payment Status
+  useEffect(() => {
+    if (step !== 'unlock_waiting' || !unlockMpesaRef) return;
+
+    let count = 0;
+    const maxPolls = 30; // ~90 seconds
+
+    pollRef.current = setInterval(async () => {
+      count++;
+      setStatusMsg(`Waiting for M-Pesa PIN on your phone... (${count}/${maxPolls})`);
+
+      try {
+        const res = await checkPaymentStatus(unlockMpesaRef);
+        if (res.paid) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          await confirmUnlockPaymentSuccess();
+          return;
+        } else if (res.failed) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setErrorMessage(res.error || 'Payment was cancelled or rejected on phone.');
+          setStep('unlock_contact');
+          return;
+        }
+      } catch (err) {
+        console.warn('Poll error:', err);
+      }
+
+      if (count >= maxPolls) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setStatusMsg('Awaiting confirmation. If you entered your PIN, tap "Verify Payment" below.');
+      }
+    }, 3000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [step, unlockMpesaRef, confirmUnlockPaymentSuccess]);
+
+  // Polling for Escrow Deposit Payment Status
+  useEffect(() => {
+    if (step !== 'escrow_waiting' || !escrowMpesaRef) return;
+
+    let count = 0;
+    const maxPolls = 30; // ~90 seconds
+
+    pollRef.current = setInterval(async () => {
+      count++;
+      setStatusMsg(`Waiting for M-Pesa PIN on your phone... (${count}/${maxPolls})`);
+
+      try {
+        const res = await checkPaymentStatus(escrowMpesaRef);
+        if (res.paid) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          
+          if (currentUser?.id) {
+            const platformCut = Math.round(totalBookingCost * 0.30);
+            const escortShare = totalBookingCost - platformCut;
+
+            await supabase.from('escort_bookings').insert({
+              client_id: currentUser.id,
+              escort_id: escort.id,
+              booking_date: bookingDate,
+              start_time: bookingTime,
+              duration_hours: durationHours,
+              location: locationStr,
+              meeting_type: meetingType,
+              special_notes: specialNotes,
+              total_amount: totalBookingCost,
+              platform_fee: platformCut,
+              escort_earnings: escortShare,
+              mpesa_reference: escrowMpesaRef,
+              status: 'escrow_funded'
+            });
+          }
+          toast.success('Escrow Payment Confirmed! Funds safely locked.');
+          if (onBookingSuccess) onBookingSuccess(escrowMpesaRef);
+          setStep('completed');
+          return;
+        } else if (res.failed) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setErrorMessage(res.error || 'Escrow payment was cancelled or rejected.');
+          setStep('booking_form');
+          return;
+        }
+      } catch (err) {
+        console.warn('Escrow poll error:', err);
+      }
+
+      if (count >= maxPolls) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setStatusMsg('Awaiting confirmation. If you entered your PIN, tap "Verify Payment" below.');
+      }
+    }, 3000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [step, escrowMpesaRef, totalBookingCost, currentUser?.id, escort.id, bookingDate, bookingTime, durationHours, locationStr, meetingType, specialNotes, onBookingSuccess]);
+
+  if (!isOpen) return null;
 
   // 1. Pay-to-Unlock Direct Contact & Chat (KES 1,300)
   const handleUnlockContact = async (e: React.FormEvent) => {
@@ -91,6 +228,7 @@ export default function EscortBookingFlowModal({
     setLoading(true);
     setErrorMessage(null);
     setStep('unlock_waiting');
+    setStatusMsg('Sending M-Pesa STK push to your phone...');
 
     try {
       const externalRef = `UNLOCK-${Date.now()}`;
@@ -107,43 +245,9 @@ export default function EscortBookingFlowModal({
         return;
       }
 
-      setUnlockMpesaRef(res.reference || res.CheckoutRequestID || externalRef);
-
-      // Record contact unlock in DB or localStorage
-      try {
-        if (currentUser?.id) {
-          await supabase.from('escort_contact_unlocks').insert({
-            client_id: currentUser.id,
-            escort_id: escort.id,
-            amount_paid: UNLOCK_FEE,
-            mpesa_reference: res.reference || externalRef
-          });
-        }
-      } catch (dbErr) {
-        console.warn('Could not record contact unlock in table:', dbErr);
-      }
-
-      // Mark locally as unlocked and provide access
-      try {
-        const globalStored = localStorage.getItem("tgd_escort_unlocks_global");
-        const globalList: string[] = globalStored ? JSON.parse(globalStored) : [];
-        if (!globalList.includes(escort.id)) {
-          globalList.push(escort.id);
-          localStorage.setItem("tgd_escort_unlocks_global", JSON.stringify(globalList));
-        }
-        if (currentUser?.id) {
-          localStorage.setItem(`tgd_escort_unlock_${currentUser.id}_${escort.id}`, "true");
-        }
-      } catch (storageErr) {
-        console.warn("Storage save error:", storageErr);
-      }
-
-      setUnlockedEscortPhone(escort.phone || '+254 742 630 973');
-      toast.success(`Direct contact & chat unlocked for ${escort.name}!`);
-      if (onUnlockedSuccess) onUnlockedSuccess();
-      
-      // Proceed directly to the Escrow Booking step
-      setStep('booking_form');
+      const assignedRef = res.reference || res.CheckoutRequestID || externalRef;
+      setUnlockMpesaRef(assignedRef);
+      setStatusMsg('Prompt sent! Please check your phone and enter your M-Pesa PIN.');
     } catch (err: any) {
       console.error('Contact unlock error:', err);
       setErrorMessage(err?.message || 'Error initiating M-Pesa STK push.');
@@ -168,6 +272,7 @@ export default function EscortBookingFlowModal({
     setLoading(true);
     setErrorMessage(null);
     setStep('escrow_waiting');
+    setStatusMsg('Sending Escrow M-Pesa STK push to your phone...');
 
     try {
       const externalRef = `ESCROW-${Date.now()}`;
@@ -186,36 +291,7 @@ export default function EscortBookingFlowModal({
 
       const assignedRef = res.reference || res.CheckoutRequestID || externalRef;
       setEscrowMpesaRef(assignedRef);
-
-      // Record booking in Supabase
-      try {
-        if (currentUser?.id) {
-          const platformCut = Math.round(totalBookingCost * 0.30);
-          const escortShare = totalBookingCost - platformCut;
-
-          await supabase.from('escort_bookings').insert({
-            client_id: currentUser.id,
-            escort_id: escort.id,
-            booking_date: bookingDate,
-            start_time: bookingTime,
-            duration_hours: durationHours,
-            location: locationStr,
-            meeting_type: meetingType,
-            special_notes: specialNotes,
-            total_amount: totalBookingCost,
-            platform_fee: platformCut,
-            escort_earnings: escortShare,
-            mpesa_reference: assignedRef,
-            status: 'escrow_funded'
-          });
-        }
-      } catch (dbErr) {
-        console.warn('Could not record escrow booking:', dbErr);
-      }
-
-      toast.success('Escrow Payment Received! Booking dispatched to companion.');
-      if (onBookingSuccess) onBookingSuccess(assignedRef);
-      setStep('completed');
+      setStatusMsg('Prompt sent! Please enter your PIN on your phone to fund escrow.');
     } catch (err: any) {
       console.error('Escrow booking error:', err);
       setErrorMessage(err?.message || 'Error processing Escrow payment.');
@@ -324,11 +400,40 @@ export default function EscortBookingFlowModal({
           <div className="py-8 flex flex-col items-center justify-center text-center animate-in fade-in">
             <Loader2 className="w-10 h-10 text-red-500 animate-spin mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">Check Your Phone</h3>
-            <p className="text-zinc-400 text-sm max-w-sm mb-6">
+            <p className="text-zinc-400 text-sm max-w-sm mb-3">
               An M-Pesa prompt for <span className="text-white font-bold">KES {UNLOCK_FEE}</span> has been sent to{' '}
-              <span className="text-red-400 font-mono">{formatPhone(phoneForUnlock)}</span>. Enter your PIN to complete.
+              <span className="text-red-400 font-mono">{formatPhone(phoneForUnlock)}</span>.
             </p>
-            <div className="text-xs text-zinc-500">Ref: {unlockMpesaRef}</div>
+            <p className="text-xs text-amber-300/90 mb-5 font-medium">{statusMsg}</p>
+            <div className="text-xs text-zinc-500 mb-6 font-mono">Ref: {unlockMpesaRef}</div>
+
+            <button
+              type="button"
+              disabled={checkingManual}
+              onClick={async () => {
+                if (!unlockMpesaRef) return;
+                setCheckingManual(true);
+                try {
+                  const res = await checkPaymentStatus(unlockMpesaRef);
+                  if (res.paid) {
+                    await confirmUnlockPaymentSuccess();
+                  } else if (res.failed) {
+                    setErrorMessage(res.error || 'Payment failed or cancelled.');
+                    setStep('unlock_contact');
+                  } else {
+                    toast.info('Transaction is still pending on M-Pesa. Please enter PIN.');
+                  }
+                } catch {
+                  toast.error('Could not verify status. Please wait a moment.');
+                } finally {
+                  setCheckingManual(false);
+                }
+              }}
+              className="py-2.5 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs border border-white/10 flex items-center gap-2 cursor-pointer transition-colors active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${checkingManual ? 'animate-spin' : ''}`} />
+              <span>Verify Payment Status</span>
+            </button>
           </div>
         )}
 
@@ -485,11 +590,61 @@ export default function EscortBookingFlowModal({
           <div className="py-8 flex flex-col items-center justify-center text-center animate-in fade-in">
             <Loader2 className="w-10 h-10 text-red-500 animate-spin mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">Authorizing Escrow Deposit</h3>
-            <p className="text-zinc-400 text-sm max-w-sm mb-6">
+            <p className="text-zinc-400 text-sm max-w-sm mb-3">
               Enter your M-Pesa PIN on your phone to lock{' '}
               <span className="text-white font-bold">KES {totalBookingCost.toLocaleString()}</span> in platform escrow.
             </p>
-            <div className="text-xs text-zinc-500">Ref: {escrowMpesaRef}</div>
+            <p className="text-xs text-amber-300/90 mb-5 font-medium">{statusMsg}</p>
+            <div className="text-xs text-zinc-500 mb-6 font-mono">Ref: {escrowMpesaRef}</div>
+
+            <button
+              type="button"
+              disabled={checkingManual}
+              onClick={async () => {
+                if (!escrowMpesaRef) return;
+                setCheckingManual(true);
+                try {
+                  const res = await checkPaymentStatus(escrowMpesaRef);
+                  if (res.paid) {
+                    if (currentUser?.id) {
+                      const platformCut = Math.round(totalBookingCost * 0.30);
+                      const escortShare = totalBookingCost - platformCut;
+                      await supabase.from('escort_bookings').insert({
+                        client_id: currentUser.id,
+                        escort_id: escort.id,
+                        booking_date: bookingDate,
+                        start_time: bookingTime,
+                        duration_hours: durationHours,
+                        location: locationStr,
+                        meeting_type: meetingType,
+                        special_notes: specialNotes,
+                        total_amount: totalBookingCost,
+                        platform_fee: platformCut,
+                        escort_earnings: escortShare,
+                        mpesa_reference: escrowMpesaRef,
+                        status: 'escrow_funded'
+                      });
+                    }
+                    toast.success('Escrow Payment Confirmed! Funds safely locked.');
+                    if (onBookingSuccess) onBookingSuccess(escrowMpesaRef);
+                    setStep('completed');
+                  } else if (res.failed) {
+                    setErrorMessage(res.error || 'Escrow deposit failed or was cancelled.');
+                    setStep('booking_form');
+                  } else {
+                    toast.info('Escrow transaction is still pending on M-Pesa. Please enter PIN.');
+                  }
+                } catch {
+                  toast.error('Could not verify status. Please wait a moment.');
+                } finally {
+                  setCheckingManual(false);
+                }
+              }}
+              className="py-2.5 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs border border-white/10 flex items-center gap-2 cursor-pointer transition-colors active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${checkingManual ? 'animate-spin' : ''}`} />
+              <span>Verify Escrow Deposit</span>
+            </button>
           </div>
         )}
 

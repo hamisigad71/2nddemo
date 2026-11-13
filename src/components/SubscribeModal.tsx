@@ -424,41 +424,7 @@ export default function SubscribeModal({
                 )}
               </p>
               
-              {creatorId.startsWith('creator-') && (
-                <div className="mb-4 space-y-2">
-                  <div className="p-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs rounded-xl flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                    <span className="leading-snug">
-                      <strong className="text-amber-200">Demo Account:</strong> This is a sample creator profile for preview. You can simulate instant subscription without real billing.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!user) {
-                        setErrorMessage('Please sign in to test demo subscription.');
-                        setStep('auth_error');
-                        return;
-                      }
-                      try {
-                        const sub = await subscribeToCreator(user.id, creatorId, tierName, price, durationDays, `DEMO-${Date.now()}`);
-                        onSuccess?.({
-                          tierName,
-                          durationDays,
-                          expiresAt: sub.expiresAt
-                        });
-                        setStep('success');
-                      } catch (e) {
-                        console.error('Demo sub error:', e);
-                        setStep('success');
-                      }
-                    }}
-                    className="w-full py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs uppercase tracking-wider border border-amber-500/40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    ⚡ Instant Demo Subscribe (Free Simulation)
-                  </button>
-                </div>
-              )}
+              {/* Demo accounts use normal M-Pesa push like real creators */}
 
               {errorMessage && (
                 <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl flex items-start gap-3">
