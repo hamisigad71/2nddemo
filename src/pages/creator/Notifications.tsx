@@ -201,13 +201,13 @@ const Notifications = () => {
       <div className="max-w-4xl mx-auto space-y-6 pb-16">
         
         {/* Editorial Header */}
-        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-border">
           <div className="space-y-2 max-w-xl">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
                 <Bell className="w-4 h-4" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Creator Dispatches
               </h1>
               {unreadCount > 0 ? (
@@ -215,12 +215,12 @@ const Notifications = () => {
                   {unreadCount} new
                 </span>
               ) : (
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/[0.04] text-zinc-400 border border-white/[0.08]">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
                   All caught up
                 </span>
               )}
             </div>
-            <p className="text-xs sm:text-sm text-zinc-400 font-normal leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-relaxed">
               Real-time feed of new subscriber memberships, M-Pesa cash tips, and private PPV unlocks.
             </p>
           </div>
@@ -228,7 +228,7 @@ const Notifications = () => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="self-start sm:self-auto inline-flex items-center gap-2 text-xs font-semibold text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] px-3.5 py-2 rounded-xl transition-all active:scale-95"
+              className="self-start sm:self-auto inline-flex items-center gap-2 text-xs font-semibold text-foreground/80 hover:text-white bg-muted hover:bg-white/[0.08] border border-border px-3.5 py-2 rounded-xl transition-all active:scale-95"
             >
               <CheckCheck className="w-3.5 h-3.5 text-rose-400" />
               <span>Mark all as read</span>
@@ -237,7 +237,7 @@ const Notifications = () => {
         </header>
 
         {/* Low-profile Segment Navigation */}
-        <nav aria-label="Notification filters" className="flex items-center gap-1.5 p-1 bg-zinc-950/70 border border-white/[0.08] rounded-xl overflow-x-auto scrollbar-hide">
+        <nav aria-label="Notification filters" className="flex items-center gap-1.5 p-1 bg-muted/60 border border-border rounded-xl overflow-x-auto scrollbar-hide">
           {['All', 'Subscribers', 'Tips', 'PPV', 'Comments', 'Likes'].map((tab) => {
             const isActive = activeFilter === tab;
             const count = tabCounts[tab] || 0;
@@ -248,13 +248,13 @@ const Notifications = () => {
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 ${
                   isActive 
                     ? 'bg-white text-zinc-950 font-semibold shadow-sm' 
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+                    : 'text-muted-foreground hover:text-foreground/90 hover:bg-muted'
                 }`}
               >
                 <span>{tab}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums font-semibold ${
-                    isActive ? 'bg-zinc-950/15 text-zinc-950' : 'bg-white/[0.06] text-zinc-400'
+                    isActive ? 'bg-zinc-950/15 text-zinc-950' : 'bg-white/[0.06] text-muted-foreground'
                   }`}
                 >
                   {count}
@@ -267,17 +267,17 @@ const Notifications = () => {
         {/* Notifications Stream */}
         <main className="space-y-3">
           {loading ? (
-            <div className="p-16 flex flex-col items-center justify-center text-zinc-500 gap-3 bg-[#111217] rounded-2xl border border-white/[0.06]">
+            <div className="p-16 flex flex-col items-center justify-center text-muted-foreground gap-3 bg-card rounded-2xl border border-border">
               <Loader2 className="w-5 h-5 animate-spin text-rose-500" />
-              <p className="text-xs font-medium text-zinc-400">Loading dispatches...</p>
+              <p className="text-xs font-medium text-muted-foreground">Loading dispatches...</p>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="p-14 text-center text-zinc-500 bg-[#111217] rounded-2xl border border-white/[0.06] flex flex-col items-center justify-center">
-              <div className="w-11 h-11 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center mb-3.5 text-zinc-400">
+            <div className="p-14 text-center text-muted-foreground bg-card rounded-2xl border border-border flex flex-col items-center justify-center">
+              <div className="w-11 h-11 rounded-2xl bg-muted border border-border flex items-center justify-center mb-3.5 text-muted-foreground">
                 <Inbox className="w-5 h-5" />
               </div>
-              <h2 className="font-semibold text-sm text-zinc-200">No dispatches in this category</h2>
-              <p className="text-xs text-zinc-400 mt-1 max-w-sm leading-relaxed">
+              <h2 className="font-semibold text-sm text-foreground/90">No dispatches in this category</h2>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
                 When fans subscribe to your VIP tier, tip you via M-Pesa, or purchase Pay-Per-View items, events will appear here instantly.
               </p>
             </div>
@@ -315,16 +315,14 @@ const Notifications = () => {
                 <article
                   key={item.id} 
                   className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-start gap-4 group ${
-                    isUnread 
-                      ? 'bg-gradient-to-r from-rose-500/[0.04] via-[#151620] to-[#101117] border-rose-500/30 shadow-[0_4px_24px_-8px_rgba(225,29,72,0.15)]'
-                      : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
+                    isUnread ? 'bg-rose-500/[0.04] dark:bg-gradient-to-r dark:from-rose-500/[0.04] dark:via-[#151620] dark:to-[#101117] border-rose-500/30 shadow-sm' : 'bg-card border-border hover:border-primary/30 hover:bg-muted/30'
                   }`}
                 >
                   <button
                     type="button"
                     aria-label="Delete notification"
                     onClick={() => handleDeleteNotification(item.id)}
-                    className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.08] bg-black/20 text-zinc-400 transition hover:border-rose-500/40 hover:text-rose-300"
+                    className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition hover:border-rose-500/40 hover:text-rose-500 cursor-pointer"
                   >
                     <span className="text-lg leading-none">×</span>
                   </button>
@@ -354,7 +352,7 @@ const Notifications = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-muted border border-border text-white">
                         <IconComponent className={`w-5 h-5 ${meta.iconColor}`} strokeWidth={1.8} />
                       </div>
                     )}
@@ -375,20 +373,20 @@ const Notifications = () => {
                       )}
 
                       <h2 className={`text-sm font-semibold tracking-tight transition-colors ${
-                        isUnread ? 'text-white' : 'text-zinc-200'
+                        isUnread ? 'text-foreground' : 'text-foreground/90'
                       }`}>
                         {item.title}
                       </h2>
 
                       <time
                         dateTime={item.created_at}
-                        className="text-zinc-500 text-xs tabular-nums sm:ml-auto"
+                        className="text-muted-foreground text-xs tabular-nums sm:ml-auto"
                       >
                         {formatTimeAgo(item.created_at)}
                       </time>
                     </div>
 
-                    <p className="text-xs sm:text-[13px] text-zinc-400 font-normal leading-relaxed max-w-2xl">
+                    <p className="text-xs sm:text-[13px] text-muted-foreground font-normal leading-relaxed max-w-2xl">
                       {item.message}
                     </p>
 
@@ -400,10 +398,10 @@ const Notifications = () => {
                           onClick={() => {
                             if (isUnread) handleItemRead(item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-rose-500/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground bg-muted hover:bg-muted/80 border border-border hover:border-primary/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
                         >
                           <span>{targetLabel}</span>
-                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-rose-400" />
+                          <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-rose-400" />
                         </Link>
                       )}
 
@@ -411,9 +409,9 @@ const Notifications = () => {
                         <button
                           type="button"
                           onClick={() => handleItemRead(item.id)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground/90 transition-colors py-1 cursor-pointer"
                         >
-                          <Check className="w-3.5 h-3.5 text-zinc-500" />
+                          <Check className="w-3.5 h-3.5 text-muted-foreground" />
                           <span>Mark as read</span>
                         </button>
                       )}

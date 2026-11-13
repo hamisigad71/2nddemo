@@ -189,22 +189,22 @@ const UserNotifications = () => {
       <div className="max-w-4xl mx-auto space-y-6 pb-16">
         
         {/* Editorial Header */}
-        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-border">
           <div className="space-y-2 max-w-xl">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+              <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
                 <Bell className="w-4 h-4" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Notifications
               </h1>
               {unreadCount > 0 && (
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 tabular-nums">
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 tabular-nums">
                   {unreadCount} new
                 </span>
               )}
             </div>
-            <p className="text-xs sm:text-sm text-zinc-400 font-normal leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-relaxed">
               Real-time updates from creators you follow, new talent arrivals, and M-Pesa statements.
             </p>
           </div>
@@ -212,16 +212,16 @@ const UserNotifications = () => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="self-start sm:self-auto inline-flex items-center gap-2 text-xs font-semibold text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] px-3.5 py-2 rounded-xl transition-all active:scale-95"
+              className="self-start sm:self-auto inline-flex items-center gap-2 text-xs font-semibold text-foreground/80 hover:text-foreground bg-muted hover:bg-muted/80 border border-border px-3.5 py-2 rounded-xl transition-all active:scale-95 cursor-pointer"
             >
-              <CheckCheck className="w-3.5 h-3.5 text-rose-400" />
+              <CheckCheck className="w-3.5 h-3.5 text-rose-500" />
               <span>Mark all as read</span>
             </button>
           )}
         </header>
 
         {/* Low-profile Segment Navigation */}
-        <nav aria-label="Notification categories" className="flex items-center gap-1.5 p-1 bg-zinc-950/70 border border-white/[0.08] rounded-xl overflow-x-auto scrollbar-hide">
+        <nav aria-label="Notification categories" className="flex items-center gap-1.5 p-1 bg-muted/60 border border-border rounded-xl overflow-x-auto scrollbar-hide">
           {[
             { id: 'all', label: 'All activity', count: tabCounts.all },
             { id: 'creator', label: 'Creators & posts', count: tabCounts.creator },
@@ -233,16 +233,16 @@ const UserNotifications = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 cursor-pointer ${
                   isActive
-                    ? 'bg-white text-zinc-950 font-semibold shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
+                    ? 'bg-background text-foreground font-semibold shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums font-semibold ${
-                    isActive ? 'bg-zinc-950/15 text-zinc-950' : 'bg-white/[0.06] text-zinc-400'
+                    isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {tab.count}
@@ -255,24 +255,24 @@ const UserNotifications = () => {
         {/* Stream */}
         <main className="space-y-3">
           {loading ? (
-            <div className="p-16 flex flex-col items-center justify-center text-zinc-500 gap-3 bg-[#111217] rounded-2xl border border-white/[0.06]">
+            <div className="p-16 flex flex-col items-center justify-center text-muted-foreground gap-3 bg-card rounded-2xl border border-border">
               <Loader2 className="w-5 h-5 animate-spin text-rose-500" />
-              <p className="text-xs font-medium text-zinc-400">Loading notifications...</p>
+              <p className="text-xs font-medium text-muted-foreground">Loading notifications...</p>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="p-14 text-center text-zinc-500 bg-[#111217] rounded-2xl border border-white/[0.06] flex flex-col items-center justify-center">
-              <div className="w-11 h-11 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center mb-3.5 text-zinc-400">
+            <div className="p-14 text-center text-muted-foreground bg-card rounded-2xl border border-border flex flex-col items-center justify-center">
+              <div className="w-11 h-11 rounded-2xl bg-muted border border-border flex items-center justify-center mb-3.5 text-muted-foreground">
                 <Inbox className="w-5 h-5" />
               </div>
-              <h2 className="font-semibold text-sm text-zinc-200">No dispatches in this category</h2>
-              <p className="text-xs text-zinc-400 mt-1 max-w-sm leading-relaxed">
+              <h2 className="font-semibold text-sm text-foreground">No dispatches in this category</h2>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
                 When creators you follow publish new media or new talent debuts on The Gents DollHouse, your alerts will arrive here in real time.
               </p>
               <Link
                 to="/user"
-                className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-zinc-200 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] px-3.5 py-1.5 rounded-lg transition-all"
+                className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-foreground bg-muted hover:bg-muted/80 border border-border px-3.5 py-1.5 rounded-lg transition-all"
               >
-                <Compass className="w-3.5 h-3.5 text-rose-400" />
+                <Compass className="w-3.5 h-3.5 text-rose-500" />
                 <span>Explore creator feed</span>
               </Link>
             </div>
@@ -295,11 +295,11 @@ const UserNotifications = () => {
                     : (item.badge || meta.label);
 
               const badgePillClass = isNewCreator
-                ? 'bg-rose-500/10 text-rose-300 border-rose-500/25'
+                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/25'
                 : isLive
-                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/30'
                   : isVideo
-                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/25'
+                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/25'
                     : meta.badgeBg;
 
               // Action link and label
@@ -311,15 +311,15 @@ const UserNotifications = () => {
                   key={item.id}
                   className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-start gap-4 group ${
                     isUnread
-                      ? 'bg-gradient-to-r from-rose-500/[0.04] via-[#151620] to-[#101117] border-rose-500/30 shadow-[0_4px_24px_-8px_rgba(225,29,72,0.15)]'
-                      : 'bg-[#101116]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#13141c]'
+                      ? 'bg-rose-500/[0.04] dark:bg-gradient-to-r dark:from-rose-500/[0.04] dark:via-[#151620] dark:to-[#101117] border-rose-500/30 shadow-[0_4px_24px_-8px_rgba(225,29,72,0.15)]'
+                      : 'bg-card border-border hover:border-primary/30 hover:bg-muted/30'
                   }`}
                 >
                   <button
                     type="button"
                     aria-label="Delete notification"
                     onClick={() => handleDeleteNotification(item.id)}
-                    className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.08] bg-black/20 text-zinc-400 transition hover:border-rose-500/40 hover:text-rose-300"
+                    className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition hover:border-rose-500/40 hover:text-rose-500 cursor-pointer"
                   >
                     <span className="text-lg leading-none">×</span>
                   </button>
@@ -331,10 +331,10 @@ const UserNotifications = () => {
                         <img
                           src={item.avatar}
                           alt=""
-                          className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
+                          className="w-12 h-12 rounded-full object-cover ring-2 ring-border shadow-sm"
                         />
-                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-0.5 rounded-full ring-1 ring-white/10 flex items-center justify-center">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-rose-400 fill-rose-500/20" />
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-background p-0.5 rounded-full ring-1 ring-border flex items-center justify-center">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" />
                         </div>
                       </div>
                     ) : isNewCreator ? (
@@ -342,14 +342,14 @@ const UserNotifications = () => {
                         <img
                           src="/default-avatar.jpg"
                           alt="Creator"
-                          className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 shadow-sm"
+                          className="w-12 h-12 rounded-full object-cover ring-2 ring-border shadow-sm"
                         />
-                        <div className="absolute -bottom-0.5 -right-0.5 bg-[#0e0e12] p-1 rounded-full ring-1 ring-rose-500/30 flex items-center justify-center">
-                          <Star className="w-3 h-3 text-rose-400 fill-rose-400/20" />
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-background p-1 rounded-full ring-1 ring-rose-500/30 flex items-center justify-center">
+                          <Star className="w-3 h-3 text-rose-500 fill-rose-500/20" />
                         </div>
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-muted border border-border text-foreground">
                         <IconComponent className={`w-5 h-5 ${meta.iconColor}`} strokeWidth={1.8} />
                       </div>
                     )}
@@ -370,7 +370,7 @@ const UserNotifications = () => {
                       )}
 
                       <h2 className={`text-sm font-semibold tracking-tight transition-colors ${
-                        isUnread ? 'text-white' : 'text-zinc-200'
+                        isUnread ? 'text-foreground' : 'text-foreground/90'
                       }`}>
                         {item.title}
                       </h2>
@@ -378,13 +378,13 @@ const UserNotifications = () => {
                       <time
                         dateTime={item.created_at}
                         title={formatFullDate(item.created_at)}
-                        className="text-zinc-500 text-xs tabular-nums sm:ml-auto"
+                        className="text-muted-foreground text-xs tabular-nums sm:ml-auto"
                       >
                         {formatNotificationTime(item.created_at)}
                       </time>
                     </div>
 
-                    <p className="text-xs sm:text-[13px] text-zinc-400 font-normal leading-relaxed max-w-2xl">
+                    <p className="text-xs sm:text-[13px] text-muted-foreground font-normal leading-relaxed max-w-2xl">
                       {item.message}
                     </p>
 
@@ -397,9 +397,9 @@ const UserNotifications = () => {
                             if (isUnread) handleMarkAsRead(item.id);
                             window.dispatchEvent(new CustomEvent('open_verified_creator_notice'));
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-200 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm cursor-pointer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-200 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm cursor-pointer"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-white fill-blue-500" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 fill-blue-500/20" />
                           <span>View Trust & Verification Notice</span>
                         </button>
                       ) : targetUrl ? (
@@ -408,10 +408,10 @@ const UserNotifications = () => {
                           onClick={() => {
                             if (isUnread) handleMarkAsRead(item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-100 bg-white/[0.06] hover:bg-white/[0.12] hover:text-white border border-white/[0.12] hover:border-rose-500/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground bg-muted hover:bg-muted/80 border border-border hover:border-primary/40 px-3.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
                         >
                           <span>{targetLabel}</span>
-                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-rose-400" />
+                          <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
                         </Link>
                       ) : null}
 
@@ -419,9 +419,9 @@ const UserNotifications = () => {
                         <button
                           type="button"
                           onClick={() => handleMarkAsRead(item.id)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors py-1 cursor-pointer"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
                         >
-                          <Check className="w-3.5 h-3.5 text-zinc-500" />
+                          <Check className="w-3.5 h-3.5 text-muted-foreground" />
                           <span>Mark as read</span>
                         </button>
                       )}
