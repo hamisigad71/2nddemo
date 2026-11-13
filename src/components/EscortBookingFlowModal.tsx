@@ -303,35 +303,35 @@ export default function EscortBookingFlowModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-zinc-950 border border-white/10 rounded-3xl p-6 sm:p-7 shadow-[0_0_50px_rgba(220,38,38,0.2)] relative max-h-[92vh] overflow-y-auto">
+      <div className="w-full max-w-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl dark:shadow-[0_0_50px_rgba(220,38,38,0.2)] text-zinc-900 dark:text-white relative max-h-[92vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Companion Brief Banner */}
-        <div className="flex items-center gap-3.5 mb-6 pb-5 border-b border-white/10">
+        <div className="flex items-center gap-3.5 mb-6 pb-5 border-b border-zinc-200 dark:border-white/10">
           <img
             src={escort.avatar}
             alt={escort.name}
-            className="w-14 h-14 rounded-2xl object-cover border border-white/10 shadow-md"
+            className="w-14 h-14 rounded-2xl object-cover border border-zinc-200 dark:border-white/10 shadow-md"
           />
           <div>
             <div className="flex items-center gap-1.5">
-              <h3 className="font-extrabold text-white text-lg tracking-tight">{escort.name}</h3>
+              <h3 className="font-extrabold text-zinc-900 dark:text-white text-lg tracking-tight">{escort.name}</h3>
               <ShieldCheck className="w-4 h-4 text-blue-500" />
             </div>
-            <p className="text-zinc-400 text-xs mt-0.5">
-              {escort.location} · <span className="text-red-500 font-bold">KES {escort.price_hr.toLocaleString()}/hr</span>
+            <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">
+              {escort.location} · <span className="text-red-600 dark:text-red-500 font-bold">KES {escort.price_hr.toLocaleString()}/hr</span>
             </p>
           </div>
         </div>
 
         {errorMessage && (
-          <div className="mb-5 p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl flex items-start gap-2.5">
+          <div className="mb-5 p-3.5 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs rounded-xl flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span className="leading-relaxed">{errorMessage}</span>
           </div>
@@ -340,37 +340,37 @@ export default function EscortBookingFlowModal({
         {/* STEP 1: Pay-to-Unlock Direct Contact & Chat (KES 1,300) */}
         {step === 'unlock_contact' && (
           <div className="animate-in fade-in duration-300">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/10 border border-red-600/30 text-red-500 text-xs font-bold uppercase tracking-wider mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/10 border border-red-600/30 text-red-600 dark:text-red-500 text-xs font-bold uppercase tracking-wider mb-3">
               <Lock className="w-3.5 h-3.5" />
               <span>Step 1: Unlock Direct Contact & Chat</span>
             </div>
-            <h2 className="text-2xl font-black text-white tracking-tight mb-2">
+            <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">
               Private Contact Access
             </h2>
-            <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mb-6">
               To prevent spam and ensure verified, serious inquiries, a one-time fee of{' '}
-              <span className="text-red-500 font-bold">KES {UNLOCK_FEE.toLocaleString()}</span> is required to unlock{' '}
-              <span className="text-white font-semibold">{escort.name}’s</span> direct phone number, WhatsApp, and private messaging before booking.
+              <span className="text-red-600 dark:text-red-500 font-bold">KES {UNLOCK_FEE.toLocaleString()}</span> is required to unlock{' '}
+              <span className="text-zinc-900 dark:text-white font-semibold">{escort.name}’s</span> direct phone number, WhatsApp, and private messaging before booking.
             </p>
 
-            <div className="bg-zinc-900/60 border border-white/10 rounded-2xl p-4 mb-6 space-y-3">
-              <div className="flex items-center gap-3 text-sm text-zinc-300">
-                <Phone className="w-4 h-4 text-red-500" />
+            <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/10 rounded-2xl p-4 mb-6 space-y-3">
+              <div className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+                <Phone className="w-4 h-4 text-red-600 dark:text-red-500" />
                 <span>Instant Phone & WhatsApp Access</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-zinc-300">
-                <MessageCircle className="w-4 h-4 text-red-500" />
+              <div className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+                <MessageCircle className="w-4 h-4 text-red-600 dark:text-red-500" />
                 <span>Direct 1-on-1 Encrypted Chat</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-zinc-300">
-                <Calendar className="w-4 h-4 text-red-500" />
+              <div className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+                <Calendar className="w-4 h-4 text-red-600 dark:text-red-500" />
                 <span>Enables Escrow Protected Booking</span>
               </div>
             </div>
 
             <form onSubmit={handleUnlockContact} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-2">
                   M-Pesa Phone Number
                 </label>
                 <input
@@ -379,7 +379,7 @@ export default function EscortBookingFlowModal({
                   placeholder="07XXXXXXXX or 01XXXXXXXX"
                   value={phoneForUnlock}
                   onChange={(e) => setPhoneForUnlock(e.target.value)}
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-all font-mono"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-900 dark:text-white text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 transition-all font-mono"
                 />
               </div>
 
@@ -399,12 +399,12 @@ export default function EscortBookingFlowModal({
         {step === 'unlock_waiting' && (
           <div className="py-8 flex flex-col items-center justify-center text-center animate-in fade-in">
             <Loader2 className="w-10 h-10 text-red-500 animate-spin mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Check Your Phone</h3>
-            <p className="text-zinc-400 text-sm max-w-sm mb-3">
-              An M-Pesa prompt for <span className="text-white font-bold">KES {UNLOCK_FEE}</span> has been sent to{' '}
-              <span className="text-red-400 font-mono">{formatPhone(phoneForUnlock)}</span>.
+            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Check Your Phone</h3>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm max-w-sm mb-3">
+              An M-Pesa prompt for <span className="text-zinc-900 dark:text-white font-bold">KES {UNLOCK_FEE}</span> has been sent to{' '}
+              <span className="text-red-600 dark:text-red-400 font-mono">{formatPhone(phoneForUnlock)}</span>.
             </p>
-            <p className="text-xs text-amber-300/90 mb-5 font-medium">{statusMsg}</p>
+            <p className="text-xs text-amber-600 dark:text-amber-300/90 mb-5 font-medium">{statusMsg}</p>
             <div className="text-xs text-zinc-500 mb-6 font-mono">Ref: {unlockMpesaRef}</div>
 
             <button
@@ -429,7 +429,7 @@ export default function EscortBookingFlowModal({
                   setCheckingManual(false);
                 }
               }}
-              className="py-2.5 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs border border-white/10 flex items-center gap-2 cursor-pointer transition-colors active:scale-95 disabled:opacity-50"
+              className="py-2.5 px-5 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white font-bold text-xs border border-zinc-300 dark:border-white/10 flex items-center gap-2 cursor-pointer transition-colors active:scale-95 disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${checkingManual ? 'animate-spin' : ''}`} />
               <span>Verify Payment Status</span>
@@ -440,16 +440,16 @@ export default function EscortBookingFlowModal({
         {/* STEP 2: Escrow Protected Booking Form */}
         {step === 'booking_form' && (
           <form onSubmit={handleEscrowBooking} className="animate-in fade-in duration-300 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-600/10 border border-emerald-600/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-600/10 border border-emerald-600/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Step 2: Escrow Protected Booking</span>
             </div>
 
             {/* Direct Contact Reveal Card */}
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
               <div>
-                <span className="font-bold block text-white">{escort.name}'s Unlocked Phone:</span>
-                <span className="font-mono text-emerald-400 font-bold text-sm">{unlockedEscortPhone}</span>
+                <span className="font-bold block text-zinc-900 dark:text-white">{escort.name}'s Unlocked Phone:</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-sm">{unlockedEscortPhone}</span>
               </div>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-emerald-500/20 rounded-md">
                 Verified
@@ -458,7 +458,7 @@ export default function EscortBookingFlowModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                   Date
                 </label>
                 <input
@@ -467,12 +467,12 @@ export default function EscortBookingFlowModal({
                   min={new Date().toISOString().split('T')[0]}
                   value={bookingDate}
                   onChange={(e) => setBookingDate(e.target.value)}
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl px-3 py-2.5 text-zinc-900 dark:text-white text-xs focus:border-red-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                   Start Time
                 </label>
                 <input
@@ -480,20 +480,20 @@ export default function EscortBookingFlowModal({
                   required
                   value={bookingTime}
                   onChange={(e) => setBookingTime(e.target.value)}
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl px-3 py-2.5 text-zinc-900 dark:text-white text-xs focus:border-red-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                   Duration (Hours)
                 </label>
                 <select
                   value={durationHours}
                   onChange={(e) => setDurationHours(Number(e.target.value))}
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:border-red-500 focus:outline-none cursor-pointer"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl px-3 py-2.5 text-zinc-900 dark:text-white text-xs focus:border-red-500 focus:outline-none cursor-pointer"
                 >
                   <option value={1}>1 Hour</option>
                   <option value={2}>2 Hours</option>
@@ -505,13 +505,13 @@ export default function EscortBookingFlowModal({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                   Meeting Type
                 </label>
                 <select
                   value={meetingType}
                   onChange={(e) => setMeetingType(e.target.value as any)}
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:border-red-500 focus:outline-none cursor-pointer"
+                  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl px-3 py-2.5 text-zinc-900 dark:text-white text-xs focus:border-red-500 focus:outline-none cursor-pointer"
                 >
                   <option value="outcall">Outcall (Client's Place/Hotel)</option>
                   <option value="incall">Incall (Companion's Place)</option>
@@ -522,7 +522,7 @@ export default function EscortBookingFlowModal({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                 Meeting Location / Area
               </label>
               <input
@@ -531,12 +531,12 @@ export default function EscortBookingFlowModal({
                 placeholder="e.g. Westlands, Kilimani, Hotel Name..."
                 value={locationStr}
                 onChange={(e) => setLocationStr(e.target.value)}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:border-red-500 focus:outline-none"
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl px-3 py-2.5 text-zinc-900 dark:text-white text-xs focus:border-red-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                 Special Requests or Notes (Optional)
               </label>
               <textarea
@@ -544,24 +544,24 @@ export default function EscortBookingFlowModal({
                 placeholder="Dress code, private preferences..."
                 value={specialNotes}
                 onChange={(e) => setSpecialNotes(e.target.value)}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white text-xs focus:border-red-500 focus:outline-none resize-none"
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl p-3 text-zinc-900 dark:text-white text-xs focus:border-red-500 focus:outline-none resize-none"
               />
             </div>
 
             {/* Escrow Protection Guarantee Card */}
-            <div className="bg-red-950/20 border border-red-500/20 rounded-2xl p-4">
-              <div className="flex justify-between items-center text-sm font-bold text-white mb-1">
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-500/20 rounded-2xl p-4">
+              <div className="flex justify-between items-center text-sm font-bold text-zinc-900 dark:text-white mb-1">
                 <span>Total Escrow Deposit:</span>
-                <span className="text-red-500 text-lg">KES {totalBookingCost.toLocaleString()}</span>
+                <span className="text-red-600 dark:text-red-500 text-lg">KES {totalBookingCost.toLocaleString()}</span>
               </div>
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 inline mr-1" />
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 inline mr-1" />
                 Your funds are held securely in escrow by The Gents Dollhouse and are only released after the date is confirmed completed.
               </p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                 M-Pesa Phone Number for Escrow
               </label>
               <input
@@ -570,7 +570,7 @@ export default function EscortBookingFlowModal({
                 placeholder="07XXXXXXXX or 01XXXXXXXX"
                 value={phoneForEscrow || phoneForUnlock}
                 onChange={(e) => setPhoneForEscrow(e.target.value)}
-                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-500 focus:outline-none font-mono"
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-zinc-900 dark:text-white text-sm focus:border-red-500 focus:outline-none font-mono"
               />
             </div>
 
@@ -589,12 +589,12 @@ export default function EscortBookingFlowModal({
         {step === 'escrow_waiting' && (
           <div className="py-8 flex flex-col items-center justify-center text-center animate-in fade-in">
             <Loader2 className="w-10 h-10 text-red-500 animate-spin mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Authorizing Escrow Deposit</h3>
-            <p className="text-zinc-400 text-sm max-w-sm mb-3">
+            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Authorizing Escrow Deposit</h3>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm max-w-sm mb-3">
               Enter your M-Pesa PIN on your phone to lock{' '}
-              <span className="text-white font-bold">KES {totalBookingCost.toLocaleString()}</span> in platform escrow.
+              <span className="text-zinc-900 dark:text-white font-bold">KES {totalBookingCost.toLocaleString()}</span> in platform escrow.
             </p>
-            <p className="text-xs text-amber-300/90 mb-5 font-medium">{statusMsg}</p>
+            <p className="text-xs text-amber-600 dark:text-amber-300/90 mb-5 font-medium">{statusMsg}</p>
             <div className="text-xs text-zinc-500 mb-6 font-mono">Ref: {escrowMpesaRef}</div>
 
             <button
@@ -640,7 +640,7 @@ export default function EscortBookingFlowModal({
                   setCheckingManual(false);
                 }
               }}
-              className="py-2.5 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs border border-white/10 flex items-center gap-2 cursor-pointer transition-colors active:scale-95 disabled:opacity-50"
+              className="py-2.5 px-5 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white font-bold text-xs border border-zinc-300 dark:border-white/10 flex items-center gap-2 cursor-pointer transition-colors active:scale-95 disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${checkingManual ? 'animate-spin' : ''}`} />
               <span>Verify Escrow Deposit</span>
@@ -651,16 +651,16 @@ export default function EscortBookingFlowModal({
         {/* STEP 3: Completed */}
         {step === 'completed' && (
           <div className="py-6 flex flex-col items-center justify-center text-center animate-in fade-in">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400 flex items-center justify-center mb-4">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-black text-white mb-2">Booking Confirmed!</h2>
-            <p className="text-zinc-400 text-sm max-w-sm mb-6 leading-relaxed">
-              Your escrow deposit is locked and <span className="text-white font-bold">{escort.name}</span> has been notified to confirm the meeting. You can coordinate directly via their unlocked contact.
+            <h2 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">Booking Confirmed!</h2>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm max-w-sm mb-6 leading-relaxed">
+              Your escrow deposit is locked and <span className="text-zinc-900 dark:text-white font-bold">{escort.name}</span> has been notified to confirm the meeting. You can coordinate directly via their unlocked contact.
             </p>
             <button
               onClick={onClose}
-              className="w-full py-3 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-sm transition-all border border-white/10"
+              className="w-full py-3 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white font-bold text-sm transition-all border border-zinc-300 dark:border-white/10"
             >
               Close
             </button>

@@ -213,18 +213,18 @@ export default function PPVUnlockModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md bg-[#0D0E12] border border-white/15 rounded-3xl p-6 shadow-2xl text-white animate-emil-modal">
+      <div className="relative w-full max-w-md bg-white dark:bg-[#0D0E12] border border-zinc-200 dark:border-white/15 rounded-3xl p-6 shadow-2xl text-zinc-900 dark:text-white animate-emil-modal">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header Preview */}
-        <div className="flex items-center gap-3.5 mb-5 pb-4 border-b border-white/10">
-          <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 overflow-hidden relative shrink-0">
+        <div className="flex items-center gap-3.5 mb-5 pb-4 border-b border-zinc-200 dark:border-white/10">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 overflow-hidden relative shrink-0">
             {mediaItem.type === 'video' || mediaItem.url?.match(/\.(mp4|webm|mov|m4v)(\?.*)?$/i) ? (
               <video
                 src={mediaItem.url}
@@ -241,11 +241,11 @@ export default function PPVUnlockModal({
             </div>
           </div>
           <div>
-            <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+            <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 dark:border-red-500/30">
               {mediaItem.type === 'video' ? `Video · ${mediaItem.duration || 'Full'}` : `Photoset · ${mediaItem.photoCount || 1} photos`}
             </span>
-            <h3 className="font-bold text-base text-white mt-1 leading-tight">{mediaItem.title}</h3>
-            <p className="text-xs text-zinc-400">by {creatorName}</p>
+            <h3 className="font-bold text-base text-zinc-900 dark:text-white mt-1 leading-tight">{mediaItem.title}</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">by {creatorName}</p>
           </div>
         </div>
 
@@ -253,7 +253,7 @@ export default function PPVUnlockModal({
         {step === 'choose' && (
           <div className="space-y-4">
             <div className="text-center py-1">
-              <p className="text-sm text-zinc-300">
+              <p className="text-sm text-zinc-600 dark:text-zinc-300">
                 Choose how you would like to unlock this exclusive content:
               </p>
             </div>
@@ -261,53 +261,26 @@ export default function PPVUnlockModal({
             {/* Option 1: Unlock with M-Pesa */}
             <div
               onClick={handleStartUnlock}
-              className="p-4 rounded-2xl bg-black border border-white/15 hover:border-red-500/60 transition-all cursor-pointer group shadow-lg"
+              className="p-4 rounded-2xl bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/15 hover:border-red-500/60 dark:hover:border-red-500/60 transition-all cursor-pointer group shadow-sm hover:shadow-md"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">📱</span>
-                  <span className="font-extrabold text-sm text-white group-hover:text-red-400 transition-colors">
+                  <span className="font-extrabold text-sm text-zinc-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                     Unlock with M-Pesa
                   </span>
                 </div>
-                <span className="font-black text-red-500 text-base">
+                <span className="font-black text-red-600 dark:text-red-500 text-base">
                   KES {mediaItem.price.toLocaleString()}
                 </span>
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed">
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                 Pay instantly via M-Pesa STK Push prompt to your phone.
               </p>
-              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-red-400">
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-red-600 dark:text-red-400">
                 <span>Instant M-Pesa STK</span> →
               </div>
             </div>
-
-            {/* Option 2: Unlock with Card (Paystack) - Commented out for M-Pesa exclusivity */}
-            {/* 
-            <div
-              onClick={handlePaystackUnlock}
-              className="p-4 rounded-2xl bg-black border border-white/15 hover:border-red-500/60 transition-all cursor-pointer group shadow-lg"
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-primary" />
-                  <span className="font-extrabold text-sm text-white group-hover:text-red-400 transition-colors">
-                    Unlock with Card
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase">Paystack</span>
-                </div>
-                <span className="font-black text-red-500 text-base">
-                  KES {mediaItem.price.toLocaleString()}
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Pay securely with Visa, Mastercard, or Verve card.
-              </p>
-              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-red-400">
-                <span>Instant Card Checkout</span> →
-              </div>
-            </div>
-            */}
 
             {/* Option 2: Monthly VIP Subscription */}
             <div
@@ -315,23 +288,23 @@ export default function PPVUnlockModal({
                 onClose();
                 onSubscribeClick();
               }}
-              className="p-4 rounded-2xl bg-gradient-to-br from-red-950/40 via-black to-zinc-950 border border-red-500/30 hover:border-red-500/70 transition-all cursor-pointer group shadow-xl"
+              className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-red-500/5 to-zinc-100 dark:from-red-950/40 dark:via-black dark:to-zinc-950 border border-amber-500/30 dark:border-red-500/30 hover:border-amber-500/60 dark:hover:border-red-500/70 transition-all cursor-pointer group shadow-md hover:shadow-xl"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-amber-400" />
-                  <span className="font-extrabold text-sm text-white">
+                  <Crown className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                  <span className="font-extrabold text-sm text-zinc-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
                     Unlock ALL Content (VIP Access)
                   </span>
                 </div>
-                <span className="font-black text-white text-base">
-                  KES {monthlyPrice.toLocaleString()}<span className="text-xs text-zinc-400">/mo</span>
+                <span className="font-black text-zinc-900 dark:text-white text-base">
+                  KES {monthlyPrice.toLocaleString()}<span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">/mo</span>
                 </span>
               </div>
-              <p className="text-xs text-zinc-300 leading-relaxed">
+              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                 Unlock all 200+ exclusive videos, photos, and direct messaging with {creatorName}.
               </p>
-              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-amber-400">
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
                 <span>Best Value · VIP Monthly Pass</span> →
               </div>
             </div>
@@ -342,30 +315,30 @@ export default function PPVUnlockModal({
         {step === 'phone' && (
           <form onSubmit={handleSendSTK} className="space-y-4">
             <div className="text-center">
-              <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">
+              <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">
                 Unlock for KES {mediaItem.price.toLocaleString()}
               </p>
-              <h4 className="font-black text-lg text-white">Enter M-Pesa Phone Number</h4>
+              <h4 className="font-black text-lg text-zinc-900 dark:text-white">Enter M-Pesa Phone Number</h4>
             </div>
 
             {errorMessage && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 font-medium text-center">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400 font-medium text-center">
                 {errorMessage}
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-bold text-zinc-300 mb-1.5">
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 M-Pesa Mobile Number
               </label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="0712 345 678"
-                  className="w-full pl-10 pr-4 py-3 bg-black border border-white/15 focus:border-red-500 rounded-xl text-white text-sm outline-none transition-all placeholder:text-zinc-600 font-medium"
+                  className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/15 focus:border-red-500 rounded-xl text-zinc-900 dark:text-white text-sm outline-none transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600 font-medium"
                 />
               </div>
             </div>
@@ -380,7 +353,7 @@ export default function PPVUnlockModal({
             <button
               type="button"
               onClick={() => setStep('choose')}
-              className="w-full py-2 text-xs font-bold text-zinc-400 hover:text-white transition-colors"
+              className="w-full py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
             >
               ← Back to options
             </button>
@@ -394,18 +367,18 @@ export default function PPVUnlockModal({
               <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center animate-pulse">
                 <Phone className="w-8 h-8 text-red-500" />
               </div>
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black animate-ping" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-black animate-ping" />
             </div>
 
             <div>
-              <h4 className="text-lg font-black text-white mb-1">Check Your Phone</h4>
-              <p className="text-sm text-zinc-300">{statusMsg}</p>
+              <h4 className="text-lg font-black text-zinc-900 dark:text-white mb-1">Check Your Phone</h4>
+              <p className="text-sm text-zinc-600 dark:text-zinc-300">{statusMsg}</p>
               <p className="text-xs text-zinc-500 mt-2">
-                Sent prompt for <strong className="text-white">KES {mediaItem.price}</strong> to <strong className="text-white">{phone}</strong>
+                Sent prompt for <strong className="text-zinc-900 dark:text-white">KES {mediaItem.price}</strong> to <strong className="text-zinc-900 dark:text-white">{phone}</strong>
               </p>
             </div>
 
-            <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full bg-zinc-200 dark:bg-zinc-900 h-1.5 rounded-full overflow-hidden">
               <div
                 className="bg-red-500 h-full transition-all duration-500"
                 style={{ width: `${Math.min(100, (pollCount / 12) * 100)}%` }}
@@ -419,7 +392,7 @@ export default function PPVUnlockModal({
                   if (pollRef.current) clearInterval(pollRef.current);
                   setStep('phone');
                 }}
-                className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 ← Change Number
               </button>
@@ -430,18 +403,18 @@ export default function PPVUnlockModal({
         {/* Step: Success */}
         {step === 'success' && (
           <div className="py-6 flex flex-col items-center justify-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-emerald-400">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-emerald-500 dark:text-emerald-400">
               <CheckCircle2 className="w-9 h-9" />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 mb-2 inline-block">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 mb-2 inline-block">
                 Specific Card Unlocked
               </span>
-              <h4 className="text-xl font-black text-white mb-1">Payment Successful!</h4>
-              <p className="text-sm text-zinc-300 font-medium">
+              <h4 className="text-xl font-black text-zinc-900 dark:text-white mb-1">Payment Successful!</h4>
+              <p className="text-sm text-zinc-600 dark:text-zinc-300 font-medium">
                 "{mediaItem.title}" is now unlocked for your account.
               </p>
-              <p className="text-xs text-zinc-400 mt-2 max-w-xs mx-auto leading-relaxed">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 max-w-xs mx-auto leading-relaxed">
                 Only this specific card has been unlocked. All other exclusive media remains locked unless subscribed for KES {monthlyPrice.toLocaleString()}/mo.
               </p>
             </div>
@@ -462,12 +435,12 @@ export default function PPVUnlockModal({
         {/* Step: Failed */}
         {step === 'failed' && (
           <div className="py-4 text-center space-y-4">
-            <div className="w-14 h-14 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 mx-auto">
+            <div className="w-14 h-14 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-600 dark:text-red-400 mx-auto">
               <X className="w-8 h-8" />
             </div>
             <div>
-              <h4 className="text-lg font-bold text-white mb-1">Payment Failed</h4>
-              <p className="text-xs text-zinc-400">{errorMessage || 'Unable to complete M-Pesa transaction.'}</p>
+              <h4 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">Payment Failed</h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{errorMessage || 'Unable to complete M-Pesa transaction.'}</p>
             </div>
             <button
               onClick={() => setStep('phone')}

@@ -300,13 +300,13 @@ export default function SubscribeModal({
       />
 
       {/* Modal */}
-      <div className={`relative bg-black border border-white/10 rounded-[28px] w-full ${step === 'pesapal_iframe' ? 'max-w-xl' : 'max-w-[380px]'} overflow-hidden shadow-[0_32px_64px_-12px_rgba(0,0,0,1)] animate-emil-modal`}>
+      <div className={`relative bg-white dark:bg-black border border-zinc-200 dark:border-white/10 rounded-[28px] w-full ${step === 'pesapal_iframe' ? 'max-w-xl' : 'max-w-[380px]'} overflow-hidden shadow-2xl dark:shadow-[0_32px_64px_-12px_rgba(0,0,0,1)] text-zinc-900 dark:text-white animate-emil-modal`}>
         {/* Top edge red glow highlight */}
         <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent" />
 
         <button
           onClick={handleClose}
-          className="absolute right-5 top-5 p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
+          className="absolute right-5 top-5 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors z-10"
         >
           <X className="w-4 h-4" />
         </button>
@@ -319,8 +319,8 @@ export default function SubscribeModal({
               <div className="w-12 h-12 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
                 <Lock className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-white tracking-tight mb-2">VIP Profile Locked</h2>
-              <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">VIP Profile Locked</h2>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6 leading-relaxed">
                 {errorMessage || `Subscribe to ${creatorName} to unlock full access to their profile, exclusive posts, and private messaging. Please sign in or create an account to continue.`}
               </p>
               <div className="space-y-2.5">
@@ -340,14 +340,14 @@ export default function SubscribeModal({
                     handleClose();
                     navigate('/signup', { state: { returnUrl: `/creator/${creatorId}` } });
                   }}
-                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/10 font-semibold tracking-wide py-3 px-4 rounded-xl transition-all block text-center text-sm cursor-pointer"
+                  className="w-full bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-white/10 font-semibold tracking-wide py-3 px-4 rounded-xl transition-all block text-center text-sm cursor-pointer"
                 >
                   Create an Account
                 </button>
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="w-full text-zinc-500 hover:text-zinc-300 font-medium text-xs py-2 text-center transition-colors cursor-pointer"
+                  className="w-full text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 font-medium text-xs py-2 text-center transition-colors cursor-pointer"
                 >
                   Dismiss
                 </button>
@@ -358,12 +358,12 @@ export default function SubscribeModal({
           {/* Phone Setup */}
           {step === 'phone_setup' && (
             <div className="animate-in slide-in-from-right-4 duration-500 fade-in pb-2">
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Connect Phone</h2>
-              <p className="text-zinc-400 text-sm mb-8 leading-relaxed">
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">Connect Phone</h2>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-8 leading-relaxed">
                 Provide your Safaricom number to enable seamless subscriptions.
               </p>
               {errorMessage && (
-                <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl flex items-start gap-3">
+                <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span className="leading-snug">{errorMessage}</span>
                 </div>
@@ -376,7 +376,7 @@ export default function SubscribeModal({
                   <input
                     type="tel" required placeholder="07XX XXX XXX"
                     value={phone} onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-red-500/60 text-white text-sm focus:ring-1 focus:ring-red-500/60 transition-all tracking-wide"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-red-500/60 text-zinc-900 dark:text-white text-sm focus:ring-1 focus:ring-red-500/60 transition-all tracking-wide"
                   />
                 </div>
                 <button type="submit" className="w-full bg-red-600 hover:bg-red-500 text-white font-bold tracking-wide py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] hover:scale-[1.02] active:scale-[0.98]">
@@ -390,36 +390,36 @@ export default function SubscribeModal({
           {step === 'method' && (
             <div className="animate-in slide-in-from-right-4 duration-500 fade-in pb-2">
               {creatorAvatar && (
-                <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-zinc-950 border border-white/10 mb-4 shadow-inner">
+                <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 mb-4 shadow-sm dark:shadow-inner">
                   <div className="relative shrink-0">
                     <img
                       src={creatorAvatar}
                       alt={creatorName}
-                      className="w-12 h-12 rounded-full object-cover border border-white/10"
+                      className="w-12 h-12 rounded-full object-cover border border-zinc-200 dark:border-white/10"
                     />
                     <div className="absolute -bottom-1 -right-1 bg-red-600 rounded-full p-1 text-white shadow-md">
                       <Lock className="w-2.5 h-2.5" />
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
                       <span>{creatorName}</span>
                     </h4>
-                    <span className="text-[11px] text-zinc-400 block truncate font-medium">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block truncate font-medium">
                       VIP Locked Profile
                     </span>
                   </div>
                 </div>
               )}
 
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-1">
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1">
                 {tierName}
               </h2>
-              <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6 leading-relaxed">
                 {subtitle || (
                   <>
-                    Subscribe to <span className="text-white font-semibold">{creatorName}</span> for{' '}
-                    <span className="text-red-500 font-extrabold">KES {price}</span> ({durationDays} days access) to unlock their profile, posts & private chat.
+                    Subscribe to <span className="text-zinc-900 dark:text-white font-semibold">{creatorName}</span> for{' '}
+                    <span className="text-red-600 dark:text-red-500 font-extrabold">KES {price}</span> ({durationDays} days access) to unlock their profile, posts & private chat.
                   </>
                 )}
               </p>
@@ -427,7 +427,7 @@ export default function SubscribeModal({
               {/* Demo accounts use normal M-Pesa push like real creators */}
 
               {errorMessage && (
-                <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl flex items-start gap-3">
+                <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span className="leading-snug">{errorMessage}</span>
                 </div>
@@ -437,16 +437,16 @@ export default function SubscribeModal({
               <div className="space-y-3 mb-2">
                 <button
                   onClick={() => setStep('mpesa_confirm')}
-                  className="w-full group p-4 rounded-2xl border border-white/10 bg-zinc-950 hover:bg-red-500/5 hover:border-red-500/30 transition-all flex items-center gap-4 text-left"
+                  className="w-full group p-4 rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-950 hover:bg-red-500/5 hover:border-red-500/30 transition-all flex items-center gap-4 text-left shadow-sm hover:shadow-md"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-black text-zinc-400 group-hover:text-red-500 border border-white/10 group-hover:border-red-500/40 flex items-center justify-center transition-colors shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-black text-zinc-500 dark:text-zinc-400 group-hover:text-red-600 dark:group-hover:text-red-500 border border-zinc-200 dark:border-white/10 group-hover:border-red-500/40 flex items-center justify-center transition-colors shrink-0 shadow-sm">
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-bold text-[15px] text-white tracking-tight group-hover:text-red-500 transition-colors">Instant M-Pesa Prompt</div>
-                    <div className="text-[13px] text-zinc-400 mt-0.5">to {formatPhone(phone) || 'number'}</div>
+                    <div className="font-bold text-[15px] text-zinc-900 dark:text-white tracking-tight group-hover:text-red-600 dark:group-hover:text-red-500 transition-colors">Instant M-Pesa Prompt</div>
+                    <div className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5">to {formatPhone(phone) || 'number'}</div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-colors group-hover:translate-x-0.5" />
+                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-red-600 dark:group-hover:text-red-500 transition-colors group-hover:translate-x-0.5" />
                 </button>
               </div>
             </div>
@@ -457,17 +457,31 @@ export default function SubscribeModal({
             <div className="animate-in slide-in-from-right-4 duration-500 fade-in pb-2">
               <button 
                 onClick={() => { setStep('method'); setErrorMessage(null); }} 
-                className="text-zinc-400 hover:text-white text-sm mb-5 -ml-1 inline-flex items-center gap-1 transition-colors"
+                className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm mb-5 -ml-1 inline-flex items-center gap-1 transition-colors"
               >
                  ← Back
               </button>
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Confirm Payment</h2>
-              <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
-                A prompt for <span className="text-red-500 font-bold">KES {price}</span> ({durationDays} days access) will be sent to the number below.
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">Confirm Payment</h2>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6 leading-relaxed">
+                A prompt for <span className="text-red-600 dark:text-red-500 font-bold">KES {price}</span> ({durationDays} days access) will be sent to the number below.
               </p>
               <form onSubmit={handleDarajaSTK}>
                 <div className="mb-6 relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-red-500">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="tel" required placeholder="07XX XXX XXX"
+                    value={phone} onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-red-500/60 text-zinc-900 dark:text-white text-sm focus:ring-1 focus:ring-red-500/60 transition-all font-mono tracking-wide"
+                  />
+                </div>
+                <button type="submit" className="w-full bg-red-600 hover:bg-red-500 text-white font-bold tracking-wide py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] hover:scale-[1.02] active:scale-[0.98]">
+                  Send Prompt
+                </button>
+              </form>
+            </div>
+          )}
                     <Smartphone className="w-4 h-4" />
                   </div>
                   <input
@@ -487,14 +501,14 @@ export default function SubscribeModal({
           {step === 'mpesa_waiting' && (
             <div className="flex flex-col items-center justify-center py-6 animate-in fade-in duration-700">
               <div className="relative w-16 h-16 mb-6">
-                <div className="absolute inset-0 rounded-full border border-white/10" />
+                <div className="absolute inset-0 rounded-full border border-zinc-200 dark:border-white/10" />
                 <div className="absolute inset-0 rounded-full border border-t-red-600 animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Smartphone className="w-6 h-6 text-red-500" />
                 </div>
               </div>
-              <h3 className="text-base font-bold mb-2 text-white">Awaiting Confirmation</h3>
-              <p className="text-zinc-400 text-sm text-center max-w-[240px] mb-8 leading-relaxed">
+              <h3 className="text-base font-bold mb-2 text-zinc-900 dark:text-white">Awaiting Confirmation</h3>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center max-w-[240px] mb-8 leading-relaxed">
                 {statusMsg}
               </p>
               {pollCount > 0 && (
@@ -502,7 +516,7 @@ export default function SubscribeModal({
                   {Array.from({ length: 12 }).map((_, i) => (
                     <div
                       key={i}
-                      className={`w-1 h-1 rounded-full transition-all ${i < (pollCount % 12) ? 'bg-red-500 scale-125' : 'bg-white/10'}`}
+                      className={`w-1 h-1 rounded-full transition-all ${i < (pollCount % 12) ? 'bg-red-500 scale-125' : 'bg-zinc-200 dark:bg-white/10'}`}
                     />
                   ))}
                 </div>
@@ -519,7 +533,7 @@ export default function SubscribeModal({
                 </button>
                 <button
                    onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep('method'); }}
-                  className="text-xs text-zinc-400 hover:text-white transition-colors py-1 cursor-pointer"
+                  className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors py-1 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -531,28 +545,28 @@ export default function SubscribeModal({
           {step === 'pesapal_loading' && (
             <div className="flex flex-col items-center justify-center py-10 animate-in fade-in duration-700">
               <Loader2 className="w-8 h-8 text-red-500 animate-spin mb-6" />
-              <h3 className="text-base font-bold mb-2 text-white">Initializing Checkout</h3>
-              <p className="text-zinc-400 text-sm text-center">Preparing secure payment channel for KES {price}.</p>
+              <h3 className="text-base font-bold mb-2 text-zinc-900 dark:text-white">Initializing Checkout</h3>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">Preparing secure payment channel for KES {price}.</p>
             </div>
           )}
 
           {/* Pesapal Iframe */}
           {step === 'pesapal_iframe' && pesapalUrl && (
             <div className="animate-in slide-in-from-bottom-4 duration-500 fade-in">
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10 pr-8">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-zinc-200 dark:border-white/10 pr-8">
                 <div>
-                  <h3 className="font-bold text-lg text-white tracking-tight">Secure Checkout</h3>
-                  <p className="text-sm text-zinc-400 mt-1">Complete your <span className="text-red-500 font-bold">KES {price}</span> subscription.</p>
+                  <h3 className="font-bold text-lg text-zinc-900 dark:text-white tracking-tight">Secure Checkout</h3>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Complete your <span className="text-red-600 dark:text-red-500 font-bold">KES {price}</span> subscription.</p>
                 </div>
               </div>
-              <div className="w-full h-[520px] rounded-xl overflow-hidden bg-zinc-950 border border-white/10">
+              <div className="w-full h-[520px] rounded-xl overflow-hidden bg-zinc-950 border border-zinc-200 dark:border-white/10">
                 <iframe src={pesapalUrl} className="w-full h-full border-0 bg-white" title="Pesapal Checkout" />
               </div>
               <div className="mt-5 flex justify-between items-center">
                 <button onClick={() => setStep('success')} className="bg-red-600 hover:bg-red-500 text-white text-sm font-bold tracking-wide px-5 py-2.5 rounded-xl transition-all shadow-sm relative z-20">
                   I have paid
                 </button>
-                <a href={pesapalUrl} target="_blank" rel="noreferrer" className="text-red-400 hover:text-red-300 text-sm flex items-center gap-1.5 transition-colors relative z-20 font-semibold">
+                <a href={pesapalUrl} target="_blank" rel="noreferrer" className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 text-sm flex items-center gap-1.5 transition-colors relative z-20 font-semibold">
                   Open in new tab <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -565,8 +579,8 @@ export default function SubscribeModal({
               <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
                 <XCircle className="w-8 h-8" />
               </div>
-              <h3 className="text-base font-bold tracking-tight text-white mb-2">Payment Notice</h3>
-              <p className="text-zinc-400 text-sm mb-6 text-center max-w-[260px] leading-relaxed">
+              <h3 className="text-base font-bold tracking-tight text-zinc-900 dark:text-white mb-2">Payment Notice</h3>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6 text-center max-w-[260px] leading-relaxed">
                 {errorMessage || 'Payment was not confirmed yet.'}
               </p>
               <div className="space-y-2.5 w-full">
@@ -587,7 +601,7 @@ export default function SubscribeModal({
                 <button
                   type="button"
                   onClick={() => { setStep('method'); setErrorMessage(null); }}
-                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white font-bold py-3 px-4 rounded-xl transition-all border border-white/10 text-xs uppercase tracking-wider cursor-pointer"
+                  className="w-full bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-bold py-3 px-4 rounded-xl transition-all border border-zinc-200 dark:border-white/10 text-xs uppercase tracking-wider cursor-pointer"
                 >
                   Try Again
                 </button>
@@ -601,8 +615,8 @@ export default function SubscribeModal({
               <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(239,68,68,0.25)]">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-extrabold tracking-tight text-white mb-2">Subscribed!</h3>
-              <p className="text-zinc-400 text-sm mb-8 text-center max-w-[240px] leading-relaxed">
+              <h3 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-2">Subscribed!</h3>
+              <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-8 text-center max-w-[240px] leading-relaxed">
                 Profile unlocked! You now hold VIP access to {creatorName}.
               </p>
               <button 

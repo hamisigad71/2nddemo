@@ -62,15 +62,15 @@ export const CreatorAvatarPromptModal: React.FC<CreatorAvatarPromptModalProps> =
       />
 
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-md bg-[#0e0f14] border border-red-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-red-500/15 text-white z-10 overflow-hidden animate-in zoom-in-95 duration-200 text-center">
+      <div className="relative w-full max-w-md bg-white dark:bg-[#0e0f14] border border-zinc-200 dark:border-red-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl dark:shadow-red-500/15 text-zinc-900 dark:text-white z-10 overflow-hidden animate-in zoom-in-95 duration-200 text-center">
         {/* Top ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-28 bg-red-600/20 blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-28 bg-red-600/10 dark:bg-red-600/20 blur-3xl pointer-events-none rounded-full" />
 
         {/* Dismiss Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors border border-white/10 cursor-pointer"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-colors border border-zinc-200 dark:border-white/10 cursor-pointer"
           aria-label="Close notice"
         >
           <X className="w-4 h-4" />
@@ -83,27 +83,27 @@ export const CreatorAvatarPromptModal: React.FC<CreatorAvatarPromptModalProps> =
               <img
                 src={DEFAULT_AVATAR}
                 alt="Default Avatar"
-                className="w-full h-full rounded-full object-cover bg-black"
+                className="w-full h-full rounded-full object-cover bg-zinc-100 dark:bg-black"
               />
             </div>
             {/* Camera Floating Action Icon */}
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-red-600 border-2 border-[#0e0f14] flex items-center justify-center text-white shadow-lg animate-bounce">
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-red-600 border-2 border-white dark:border-[#0e0f14] flex items-center justify-center text-white shadow-lg animate-bounce">
               <Camera className="w-4 h-4" />
             </div>
           </div>
 
-          <span className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/30">
+          <span className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-red-500/10 dark:bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/20 dark:border-red-500/30">
             <Sparkles className="w-3.5 h-3.5" />
             Profile Action Needed
           </span>
         </div>
 
         {/* Text Content */}
-        <h2 id="avatar-prompt-title" className="text-xl sm:text-2xl font-black text-white tracking-tight mb-2">
+        <h2 id="avatar-prompt-title" className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">
           Upload Your Profile Photo
         </h2>
-        <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6">
-          Hey <strong className="text-white">{creatorName}</strong>! Your creator account is currently using the default placeholder icon. Upload your real photo to get discovered by fans, boost subscribers, and build trust.
+        <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
+          Hey <strong className="text-zinc-900 dark:text-white">{creatorName}</strong>! Your creator account is currently using the default placeholder icon. Upload your real photo to get discovered by fans, boost subscribers, and build trust.
         </p>
 
         {/* Action Buttons */}
@@ -119,7 +119,7 @@ export const CreatorAvatarPromptModal: React.FC<CreatorAvatarPromptModalProps> =
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            className="w-full py-2.5 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
           >
             I'll do this later
           </button>
