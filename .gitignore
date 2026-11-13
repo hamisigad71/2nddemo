@@ -26,3 +26,6 @@ dist-ssr
 *.sln
 *.sw?
 storage_backup/
+
+cypress/screenshots/
+cypress/videos/
