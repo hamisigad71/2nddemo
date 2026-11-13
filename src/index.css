@@ -406,6 +406,16 @@ html.light, .light {
     color: hsl(0 85% 40%) !important;
   }
 
+  /* Emerald badge/tinted backgrounds on light mode */
+  [class*="bg-emerald-950/"] {
+    background-color: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+    color: #047857 !important;
+  }
+  [class*="bg-emerald-950/"] * {
+    color: #047857 !important;
+  }
+
   /* When hovering an outline/tinted delete or action button into solid red, turn text crisp white */
   button[class*="bg-red-"]:hover,
   button[class*="hover:bg-red-600"]:hover,

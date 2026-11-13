@@ -335,8 +335,8 @@ const Landing = () => {
                       </span>
                     </div>
                     {/* Badge */}
-                    <div className="inline-flex items-center gap-1 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-emerald-950/30 border border-emerald-500/30 text-[8px] sm:text-xs font-bold text-emerald-400">
-                      <CheckCircle className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+                    <div className="inline-flex items-center gap-1 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 text-[8px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <span className="truncate flex-1 min-w-0"><span className="hidden sm:inline">Based on </span>KES 500<span className="hidden sm:inline"> sub price</span></span>
                     </div>
                   </div>
@@ -465,7 +465,7 @@ const Landing = () => {
                 <div className="absolute -top-4 right-6 w-8 h-8 rounded-full bg-emerald-500 text-black font-black text-xs flex items-center justify-center border-2 border-[#07080a]">
                   3
                 </div>
-                <div className="w-16 h-16 bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 rounded-2xl flex items-center justify-center mb-6">
+                <div className="w-16 h-16 bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-6">
                   <TrendingUp className="w-8 h-8" />
                 </div>
                 <h3 className="text-lg font-black text-white mb-2">Get Paid Instantly</h3>
