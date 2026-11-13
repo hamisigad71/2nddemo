@@ -106,12 +106,12 @@ export const initiateSTKPush = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Basic bWd6dlNnZ0FyRHJZcU9hb3JuWEc6cXJlT3lmbzJvNGxaSzRCQkF5QzdQSkFvRVJNZTE2clJvc1RIUGdNWQ==',
+        'Authorization': 'Basic NGlSUnVhUFJKeklUNGpORm1BVTI6Tk1LMTFRNkdFVjZyQTJvWnpNUHBodDFHcURteG1SNnNpNXNGVDl6Mw==',
       },
       body: JSON.stringify({
         amount: roundedAmount,
         phone_number: intPhone,
-        channel_id: 14949,
+        channel_id: 13942,
         provider: 'm-pesa',
         external_reference: externalRef,
         customer_name: request.customer_name || 'Customer',

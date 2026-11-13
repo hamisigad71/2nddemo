@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "node --import tsx --test 'tests/**/*.test.ts'",
+    "audit:workflows": "node --import tsx scripts/workflow-auditor.ts",
     "preview": "vite preview"
   },
   "dependencies": {
