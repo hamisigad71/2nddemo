@@ -647,10 +647,7 @@ const Discover = () => {
                           <div className="flex items-center gap-1 font-medium truncate text-muted-foreground/80">
                             <span className="font-semibold text-foreground/85">
                               {(() => {
-                                const count = Math.max(
-                                  creator.subscribersCount || 0,
-                                  isSubscribed ? 1 : 0
-                                );
+                                const count = creator.subscribersCount || 0;
                                 return `${count} ${count === 1 ? "subscriber" : "subscribers"}`;
                               })()}
                             </span>

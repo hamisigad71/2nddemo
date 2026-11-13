@@ -3287,8 +3287,6 @@ export const getCreatorSubscriberCount = async (
 ): Promise<number> => {
   if (!creatorId) return 0;
 
-  const baselineSubs = getKnownCreatorSubscribers(creatorId);
-
   // 1. Query Supabase subscriptions table for active subscriptions
   try {
     const { count, error } = await supabase
@@ -3298,7 +3296,7 @@ export const getCreatorSubscriberCount = async (
       .eq("status", "active");
 
     if (!error && typeof count === "number") {
-      return Math.max(count, baselineSubs);
+      return count;
     }
   } catch (err) {
     console.warn("Error querying subscriptions table for count:", err);
@@ -3314,36 +3312,34 @@ export const getCreatorSubscriberCount = async (
 
     if (
       data?.total_subscribers !== undefined &&
-      data?.total_subscribers !== null &&
-      Number(data.total_subscribers) > 0
+      data?.total_subscribers !== null
     ) {
-      return Math.max(Number(data.total_subscribers), baselineSubs);
+      return Math.max(0, Number(data.total_subscribers));
     }
   } catch {}
 
   // 3. Fallback to local storage cached creator profile & subscriber records
   try {
-    const storedCountKey = `tgd_creator_sub_count_${creatorId}`;
-    const storedCount = Number(localStorage.getItem(storedCountKey) || "0");
-    if (storedCount > 0) return Math.max(storedCount, baselineSubs);
-
     const creatorSubListKey = `tgd_creator_subs_${creatorId}`;
     const creatorSubList = JSON.parse(localStorage.getItem(creatorSubListKey) || "[]");
     if (Array.isArray(creatorSubList) && creatorSubList.length > 0) {
-      return Math.max(creatorSubList.length, baselineSubs);
+      return creatorSubList.length;
     }
 
     const local = getStoredCreatorProfile(creatorId);
     if (
       local?.total_subscribers !== undefined &&
-      local?.total_subscribers !== null &&
-      Number(local.total_subscribers) > 0
+      local?.total_subscribers !== null
     ) {
-      return Math.max(Number(local.total_subscribers), baselineSubs);
+      return Math.max(0, Number(local.total_subscribers));
     }
+
+    const storedCountKey = `tgd_creator_sub_count_${creatorId}`;
+    const storedCount = Number(localStorage.getItem(storedCountKey) || "0");
+    if (storedCount > 0) return storedCount;
   } catch {}
 
-  return baselineSubs;
+  return getKnownCreatorSubscribers(creatorId);
 };
 
 export const HARDCODED_DISCOVER_CREATORS = [
@@ -3987,37 +3983,48 @@ export const getDiscoverCreators = async (forceRefresh = false) => {
           }
         }
 
-        const localSubCount = Number(
-          (typeof window !== "undefined" &&
-            (localStorage.getItem(`tgd_creator_sub_count_${creatorUid}`) ||
-             localStorage.getItem(`tgd_creator_sub_count_${u.uid}`))) || "0"
-        );
-        const creatorSubList = (typeof window !== "undefined" &&
-          JSON.parse(
-            localStorage.getItem(`tgd_creator_subs_${creatorUid}`) ||
-            localStorage.getItem(`tgd_creator_subs_${u.uid}`) ||
-            "[]"
-          )) || [];
-        const localListCount = Array.isArray(creatorSubList) ? creatorSubList.length : 0;
-        const profileSubCount = Number(p?.total_subscribers || local?.total_subscribers || 0);
-
-        const knownBaseline = Math.max(
-          getKnownCreatorSubscribers(creatorUid),
-          getKnownCreatorSubscribers(u.uid),
-          getKnownCreatorSubscribers(creatorName),
-          getKnownCreatorSubscribers((u as any).email),
-          getKnownCreatorSubscribers(p?.handle),
+        // Determine true verified active subscriber count:
+        // Prioritize actual active payment records from subscriptions table
+        const dbSubs = Math.max(
+          creatorSubCounts.get(creatorUid) ?? -1,
+          creatorSubCounts.get(u.uid) ?? -1
         );
 
-        const realSubs = Math.max(
-          creatorSubCounts.get(creatorUid) || 0,
-          creatorSubCounts.get(u.uid) || 0,
-          localSubCount,
-          localListCount,
-          profileSubCount,
-          knownBaseline,
-          0
-        );
+        let realSubs = 0;
+        if (dbSubs >= 0) {
+          // If we queried the database subscriptions, that is the single source of truth
+          realSubs = dbSubs;
+        } else {
+          // Otherwise check profile count or local fallback
+          const localSubCount = Number(
+            (typeof window !== "undefined" &&
+              (localStorage.getItem(`tgd_creator_sub_count_${creatorUid}`) ||
+               localStorage.getItem(`tgd_creator_sub_count_${u.uid}`))) || "0"
+          );
+          const creatorSubList = (typeof window !== "undefined" &&
+            JSON.parse(
+              localStorage.getItem(`tgd_creator_subs_${creatorUid}`) ||
+              localStorage.getItem(`tgd_creator_subs_${u.uid}`) ||
+              "[]"
+            )) || [];
+          const localListCount = Array.isArray(creatorSubList) ? creatorSubList.length : 0;
+          const profileSubCount = Number(p?.total_subscribers || local?.total_subscribers || 0);
+          const knownBaseline = Math.max(
+            getKnownCreatorSubscribers(creatorUid),
+            getKnownCreatorSubscribers(u.uid),
+            getKnownCreatorSubscribers(creatorName),
+            getKnownCreatorSubscribers((u as any).email),
+            getKnownCreatorSubscribers(p?.handle),
+          );
+
+          realSubs = Math.max(
+            localListCount,
+            profileSubCount,
+            localSubCount,
+            knownBaseline,
+            0
+          );
+        }
         const profileDob = u.dob || p?.dob || local?.dob;
         const profileAge = profileDob ? calculateAge(String(profileDob)) : null;
         const rawGender = u.gender || p?.gender || local?.gender;

@@ -137,19 +137,15 @@ export default function CreatorProfile() {
         setCreator(profile);
         setSubscribePrice(profile.price_hr || 1000);
 
-        // Fetch real active subscriber count
+        // Fetch real active subscriber count directly from source of truth
         try {
-          let count = await getCreatorSubscriberCount(id);
-          // If viewer is actively subscribed to this creator, count must be at least 1
-          if (isSubscribed && count < 1) {
-            count = 1;
-          }
+          const count = await getCreatorSubscriberCount(id);
           if (isMounted) {
             setSubscriberCount(count);
           }
         } catch {
           if (isMounted) {
-            setSubscriberCount(isSubscribed ? Math.max(1, (profile as any).total_subscribers || 0) : ((profile as any).total_subscribers || 0));
+            setSubscriberCount((profile as any).total_subscribers || 0);
           }
         }
 
@@ -729,8 +725,8 @@ export default function CreatorProfile() {
                 </span>
                 <span>•</span>
                 <span className="text-zinc-300 font-semibold">
-                  {Math.max(subscriberCount, isSubscribed ? 1 : 0).toLocaleString()}{" "}
-                  {Math.max(subscriberCount, isSubscribed ? 1 : 0) === 1 ? "subscriber" : "subscribers"}
+                  {subscriberCount.toLocaleString()}{" "}
+                  {subscriberCount === 1 ? "subscriber" : "subscribers"}
                 </span>
               </div>
             </div>
