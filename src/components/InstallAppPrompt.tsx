@@ -95,7 +95,8 @@ export const InstallAppPrompt: React.FC = () => {
   if (isStandalone || !showPrompt) return null;
 
   return (
-    <aside 
+    <div 
+      role="region"
       aria-label="Install mobile application"
       className="fixed top-3 left-3 right-3 sm:left-auto sm:right-6 sm:top-5 z-50 sm:max-w-md animate-in fade-in slide-in-from-top-4 duration-300"
     >
@@ -128,10 +129,11 @@ export const InstallAppPrompt: React.FC = () => {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleInstallClick}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-white !text-white bg-primary hover:bg-primary/90 px-3.5 py-2 rounded-xl transition-all active:scale-95 shadow-md shadow-primary/25 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-extrabold !text-white bg-red-600 hover:bg-red-500 active:bg-red-700 px-3.5 py-2 rounded-xl transition-all active:scale-95 shadow-md shadow-red-600/30 cursor-pointer"
+              style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
             >
-              <Download className="w-3.5 h-3.5 !text-white" />
-              <span className="!text-white">Install</span>
+              <Download className="w-3.5 h-3.5 !text-white stroke-[2.5]" style={{ color: '#ffffff' }} />
+              <span className="!text-white font-extrabold tracking-wide" style={{ color: '#ffffff' }}>Install</span>
             </button>
 
             <button
@@ -165,7 +167,7 @@ export const InstallAppPrompt: React.FC = () => {
         )}
 
       </div>
-    </aside>
+    </div>
   );
 };
 
