@@ -482,20 +482,6 @@ export default function SubscribeModal({
               </form>
             </div>
           )}
-                    <Smartphone className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="tel" required placeholder="07XX XXX XXX"
-                    value={phone} onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-red-500/60 text-white text-sm focus:ring-1 focus:ring-red-500/60 transition-all font-mono tracking-wide"
-                  />
-                </div>
-                <button type="submit" className="w-full bg-red-600 hover:bg-red-500 text-white font-bold tracking-wide py-3 px-4 rounded-xl transition-all shadow-[0_4px_16px_rgba(220,38,38,0.35)] hover:scale-[1.02] active:scale-[0.98]">
-                  Send Prompt
-                </button>
-              </form>
-            </div>
-          )}
 
           {/* M-Pesa Waiting / Polling Screen */}
           {step === 'mpesa_waiting' && (
