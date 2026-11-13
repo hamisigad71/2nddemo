@@ -99,7 +99,7 @@ export const InstallAppPrompt: React.FC = () => {
       aria-label="Install mobile application"
       className="fixed top-3 left-3 right-3 sm:left-auto sm:right-6 sm:top-5 z-50 sm:max-w-md animate-in fade-in slide-in-from-top-4 duration-300"
     >
-      <div className="bg-[#111218]/95 backdrop-blur-xl border border-white/[0.12] rounded-2xl p-4 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col gap-3">
+      <div className="bg-card/95 backdrop-blur-xl border border-border rounded-2xl p-4 shadow-xl shadow-black/10 dark:shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col gap-3">
         
         {/* Main Row */}
         <div className="flex items-center gap-3">
@@ -107,20 +107,20 @@ export const InstallAppPrompt: React.FC = () => {
             <img 
               src="/icon-192.png" 
               alt="The Gents Dollhouse" 
-              className="w-12 h-12 rounded-xl object-cover ring-2 ring-white/10 shadow-md"
+              className="w-12 h-12 rounded-xl object-cover ring-2 ring-border shadow-md"
             />
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-rose-600 flex items-center justify-center text-white ring-1 ring-[#111218]">
+            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-rose-600 flex items-center justify-center text-white ring-1 ring-card">
               <Download className="w-2.5 h-2.5" />
             </span>
           </div>
 
           <div className="flex-1 min-w-0 pr-1">
             <div className="flex items-center gap-1.5">
-              <h3 className="text-sm font-bold text-white tracking-tight truncate">
+              <h3 className="text-sm font-bold text-foreground tracking-tight truncate">
                 Install The Gents Dollhouse
               </h3>
             </div>
-            <p className="text-[11px] text-zinc-400 leading-tight mt-0.5 truncate">
+            <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
               Add to Home Screen for 1-tap private access
             </p>
           </div>
@@ -128,15 +128,15 @@ export const InstallAppPrompt: React.FC = () => {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleInstallClick}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 px-3.5 py-2 rounded-xl transition-all active:scale-95 shadow-md shadow-rose-950/40"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white !text-white bg-primary hover:bg-primary/90 px-3.5 py-2 rounded-xl transition-all active:scale-95 shadow-md shadow-primary/25 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Install</span>
+              <Download className="w-3.5 h-3.5 !text-white" />
+              <span className="!text-white">Install</span>
             </button>
 
             <button
               onClick={handleDismiss}
-              className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/[0.06] rounded-lg transition-colors"
+              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 rounded-lg transition-colors cursor-pointer"
               title="Dismiss"
             >
               <X className="w-4 h-4" />
@@ -146,19 +146,19 @@ export const InstallAppPrompt: React.FC = () => {
 
         {/* iOS Step-by-Step Helper (if on iPhone/Safari) */}
         {showIOSInstructions && (
-          <div className="pt-3 border-t border-white/[0.08] text-xs text-zinc-300 space-y-2 animate-in fade-in duration-200">
-            <div className="text-[11px] font-semibold text-rose-300 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-rose-400" />
+          <div className="pt-3 border-t border-border text-xs text-foreground/80 space-y-2 animate-in fade-in duration-200">
+            <div className="text-[11px] font-semibold text-rose-600 dark:text-rose-300 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
               <span>How to add on iPhone:</span>
             </div>
-            <ol className="text-[11px] text-zinc-400 space-y-1 pl-1">
+            <ol className="text-[11px] text-muted-foreground space-y-1 pl-1">
               <li className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full bg-white/[0.08] flex items-center justify-center text-[10px] text-white shrink-0">1</span>
-                <span>Tap the Safari <strong className="text-white">Share</strong> button <Share className="w-3 h-3 inline mx-0.5 text-rose-400" /> at bottom of screen.</span>
+                <span className="w-4 h-4 rounded-full bg-muted border border-border flex items-center justify-center text-[10px] text-foreground shrink-0">1</span>
+                <span>Tap the Safari <strong className="text-foreground">Share</strong> button <Share className="w-3 h-3 inline mx-0.5 text-rose-500" /> at bottom of screen.</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full bg-white/[0.08] flex items-center justify-center text-[10px] text-white shrink-0">2</span>
-                <span>Scroll down and tap <strong className="text-white">"Add to Home Screen"</strong> <PlusSquare className="w-3 h-3 inline mx-0.5 text-rose-400" />.</span>
+                <span className="w-4 h-4 rounded-full bg-muted border border-border flex items-center justify-center text-[10px] text-foreground shrink-0">2</span>
+                <span>Scroll down and tap <strong className="text-foreground">"Add to Home Screen"</strong> <PlusSquare className="w-3 h-3 inline mx-0.5 text-rose-500" />.</span>
               </li>
             </ol>
           </div>
