@@ -672,14 +672,14 @@ export default function CreatorProfile() {
                     creator.name,
                   );
                 }}
-                className="creator-profile-avatar w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-[#0A0A0C] object-cover bg-zinc-900 shadow-2xl ring-2 ring-red-500/40"
+                className="creator-profile-avatar w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-background object-cover bg-muted shadow-2xl ring-2 ring-red-500/40"
               />
-              <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0A0A0C] shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
+              <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
             </div>
 
             <div className="creator-profile-details pb-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-black text-white flex items-center gap-2">
+                <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-2">
                   {creator.name}
                   {creator.isVerified && (
                     <CheckCircle2 className="w-5 h-5 text-white fill-blue-500 shrink-0" />
@@ -706,14 +706,14 @@ export default function CreatorProfile() {
                   </span>
                 )}
               </div>
-              <p className="text-zinc-400 font-medium text-sm md:text-base">
+              <p className="text-muted-foreground font-medium text-sm md:text-base">
                 @{creator.name.replace(/\s+/g, "").toLowerCase()}
                 <span className="text-xs text-emerald-400 font-semibold ml-2 inline-flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   Active now
                 </span>
               </p>
-              <div className="text-xs text-zinc-500 mt-1 flex items-center gap-2 flex-wrap">
+              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                 {creator.age && (
                   <>
                     <span>{creator.age} yrs</span>
@@ -724,7 +724,7 @@ export default function CreatorProfile() {
                   <MapPin className="w-3 h-3 text-red-500" /> {creator.location}
                 </span>
                 <span>•</span>
-                <span className="text-zinc-300 font-semibold">
+                <span className="text-foreground/90 font-semibold">
                   {subscriberCount.toLocaleString()}{" "}
                   {subscriberCount === 1 ? "subscriber" : "subscribers"}
                 </span>
@@ -743,13 +743,13 @@ export default function CreatorProfile() {
               </Link>
               <Link
                 to="/dashboard"
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-card hover:bg-muted border border-border text-foreground font-bold px-4 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer shadow-sm"
               >
                 <LayoutDashboard className="w-4 h-4 text-red-500" /> Dashboard
               </Link>
               <Link
                 to="/edit-profile"
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-300 hover:text-white font-bold px-3 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-card hover:bg-muted border border-border text-foreground font-bold px-3 py-2.5 rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer shadow-sm"
                 title="Edit Profile"
               >
                 <Edit3 className="w-4 h-4 text-zinc-400" /> Edit Profile
@@ -790,7 +790,7 @@ export default function CreatorProfile() {
 
         {/* ── Creator Owner Management Section (Boss Request: View Dashboard & Upload Content) ── */}
         {isOwnerActive ? (
-          <div className="creator-profile-surface bg-gradient-to-b from-zinc-900/90 via-[#111115]/95 to-black border border-red-500/30 rounded-3xl p-5 md:p-6 mb-8 shadow-2xl relative overflow-hidden">
+          <div className="creator-profile-surface bg-card border border-border rounded-3xl p-5 md:p-6 mb-8 shadow-sm relative overflow-hidden">
             {/* Ambient accent glow */}
             <div className="absolute top-0 right-0 w-72 h-72 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -800,7 +800,7 @@ export default function CreatorProfile() {
                 <span className="p-1.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30">
                   <Crown className="w-4 h-4" />
                 </span>
-                <span className="text-xs font-black uppercase tracking-wider text-white">
+                <span className="text-xs font-black uppercase tracking-wider text-foreground">
                   Creator Control Hub
                 </span>
                 <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20 uppercase tracking-wider">
@@ -810,7 +810,7 @@ export default function CreatorProfile() {
               <button
                 type="button"
                 onClick={() => setPreviewAsFan(true)}
-                className="text-[11px] text-zinc-300 hover:text-white flex items-center gap-1.5 font-bold bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-xl border border-white/15 transition-colors cursor-pointer"
+                className="text-[11px] text-foreground hover:text-foreground/80 flex items-center gap-1.5 font-bold bg-muted hover:bg-muted/80 px-3 py-1.5 rounded-xl border border-border transition-colors cursor-pointer shadow-sm"
               >
                 <Eye className="w-3.5 h-3.5 text-emerald-400" /> View as
                 Subscriber
@@ -845,33 +845,33 @@ export default function CreatorProfile() {
               {/* 2. View Dashboard Button / Card */}
               <Link
                 to="/dashboard"
-                className="group p-4 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800/80 border border-white/10 hover:border-white/25 transition-all flex items-center justify-between cursor-pointer active:scale-[0.99]"
+                className="group p-4 rounded-2xl bg-muted/40 hover:bg-muted/80 border border-border transition-all flex items-center justify-between cursor-pointer active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-zinc-800 border border-white/10 flex items-center justify-center text-white shadow group-hover:scale-105 transition-transform shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center text-foreground shadow-sm group-hover:scale-105 transition-transform shrink-0">
                     <LayoutDashboard className="w-6 h-6 text-red-500" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-white group-hover:text-zinc-200 transition-colors flex items-center gap-1.5">
+                    <h4 className="text-sm font-black text-foreground transition-colors flex items-center gap-1.5">
                       View Dashboard
                     </h4>
-                    <p className="text-xs text-zinc-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Earnings, subscribers & analytics
                     </p>
                   </div>
                 </div>
-                <span className="text-xs font-extrabold text-zinc-300 group-hover:translate-x-1 transition-transform px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                <span className="text-xs font-extrabold text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-transform px-3 py-1.5 rounded-xl bg-muted border border-border">
                   Open →
                 </span>
               </Link>
             </div>
 
             {/* Secondary Toolbar: Edit Profile, Vault, Go Live */}
-            <div className="flex items-center justify-between pt-3 border-t border-white/10 flex-wrap gap-2 text-xs">
-              <div className="flex items-center gap-2 text-zinc-400 text-[11px] flex-wrap">
+            <div className="flex items-center justify-between pt-3 border-t border-border flex-wrap gap-2 text-xs">
+              <div className="flex items-center gap-2 text-muted-foreground text-[11px] flex-wrap">
                 <span>
                   Fan Price:{" "}
-                  <strong className="text-white font-bold">
+                  <strong className="text-foreground font-bold">
                     KES {creatorPrice.toLocaleString()}/mo
                   </strong>
                 </span>
@@ -882,7 +882,7 @@ export default function CreatorProfile() {
                 </span>
                 <span>•</span>
                 <span>
-                  <strong className="text-white font-bold">
+                  <strong className="text-foreground font-bold">
                     {subscriberCount.toLocaleString()}
                   </strong>{" "}
                   {subscriberCount === 1 ? "Subscriber" : "Subscribers"}
@@ -891,20 +891,20 @@ export default function CreatorProfile() {
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
                   to="/edit-profile"
-                  className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-foreground hover:text-foreground/80 font-bold text-[11px] px-3 py-1.5 rounded-xl bg-muted hover:bg-muted/80 border border-border transition-colors shadow-sm"
                 >
                   <Edit3 className="w-3.5 h-3.5 text-red-500" /> Edit Profile &
                   Pricing
                 </Link>
                 <Link
                   to="/vault"
-                  className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-foreground hover:text-foreground/80 font-bold text-[11px] px-3 py-1.5 rounded-xl bg-muted hover:bg-muted/80 border border-border transition-colors shadow-sm"
                 >
                   <FolderHeart className="w-3.5 h-3.5 text-pink-400" /> Vault
                 </Link>
                 <Link
                   to="/creator/live"
-                  className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-bold text-[11px] px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-foreground hover:text-foreground/80 font-bold text-[11px] px-3 py-1.5 rounded-xl bg-muted hover:bg-muted/80 border border-border transition-colors shadow-sm"
                 >
                   <Radio className="w-3.5 h-3.5 text-red-500" /> Go Live{" "}
                   <span className="text-[9px] text-amber-400 font-black uppercase tracking-wider bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
@@ -915,8 +915,8 @@ export default function CreatorProfile() {
             </div>
 
             {/* Fan preview explanation */}
-            <div className="mt-3 pt-2 text-center border-t border-white/5">
-              <p className="text-[11px] text-zinc-500">
+            <div className="mt-3 pt-2 text-center border-t border-border/60">
+              <p className="text-[11px] text-muted-foreground">
                 Notice: Visitors and fans see your subscription offer (KES{" "}
                 {creatorPrice.toLocaleString()} / 30 days) and tip options in
                 this space.
