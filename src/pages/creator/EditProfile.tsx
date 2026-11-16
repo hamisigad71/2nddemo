@@ -155,77 +155,72 @@ const EditProfile = () => {
 
     // 2. Fetch latest from Supabase
     getUserProfile(user.id).then(async (profile) => {
-      if (profile) {
-        setPayoutKycRequired(Boolean(profile.payout_kyc_required));
-        if (profile.kyc_status) {
-          setKycStatus(profile.kyc_status);
-        }
-        if (
-          profile.legal_name ||
-          profile.national_id_number ||
-          profile.dob ||
-          profile.kyc_id_url ||
-          profile.kyc_selfie_url
-        ) {
-          setKycData((prev) => ({
-            ...prev,
-            legalName: profile.legal_name || prev.legalName,
-            nationalId: profile.national_id_number || prev.nationalId,
-            dob: profile.dob || prev.dob,
-            idDocumentPreview: profile.kyc_id_url || prev.idDocumentPreview,
-            selfiePreview: profile.kyc_selfie_url || prev.selfiePreview,
-          }));
-        }
-        if (profile.phone) {
-          const raw = profile.phone.replace(/^\+254/, "").replace(/^0/, "");
-          setPayoutData((prev) => ({ ...prev, phoneNumber: raw }));
-        }
-        if (profile.avatar) {
-          setAvatarPreview(profile.avatar);
-        }
-        setProfileData((prev) => ({
-          ...prev,
-          displayName:
-            profile.name ||
-            user.user_metadata?.full_name ||
-            user.user_metadata?.name ||
-            prev.displayName,
-          bio: profile.bio || prev.bio,
-          avatarUrl: profile.avatar || prev.avatarUrl,
-          gender: profile.gender || prev.gender,
-          genderDescription:
-            profile.gender_description || prev.genderDescription,
-        }));
-      }
       try {
         const { data: creatorMeta } = await supabase
           .from("creator_profiles")
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
-        if (creatorMeta) {
-          if (creatorMeta.cover_image) {
-            setBannerPreview(creatorMeta.cover_image);
-          }
-          if (creatorMeta.avatar_url || creatorMeta.avatar) {
-            setAvatarPreview(
-              (prev) => prev || creatorMeta.avatar_url || creatorMeta.avatar,
-            );
-          }
-          setProfileData((prev) => ({
-            ...prev,
-            bio: creatorMeta.bio || prev.bio,
-            monthlyPrice: creatorMeta.monthly_price || prev.monthlyPrice,
-            location: creatorMeta.location || prev.location,
-            coverImage: creatorMeta.cover_image || prev.coverImage,
-            gender: creatorMeta.gender || prev.gender,
-            genderDescription:
-              creatorMeta.gender_description || prev.genderDescription,
-            tags: creatorMeta.tags || prev.tags,
-            promoDiscount: creatorMeta.promo_discount || prev.promoDiscount,
-            promoActive: creatorMeta.promo_active !== false,
-          }));
+
+        if (creatorMeta?.cover_image) {
+          setBannerPreview(creatorMeta.cover_image);
         }
+        if (creatorMeta?.avatar_url || creatorMeta?.avatar) {
+          setAvatarPreview(
+            (prev) => prev || creatorMeta.avatar_url || creatorMeta.avatar,
+          );
+        }
+
+        if (profile) {
+          setPayoutKycRequired(Boolean(profile.payout_kyc_required));
+          if (profile.kyc_status) {
+            setKycStatus(profile.kyc_status);
+          }
+          if (
+            profile.legal_name ||
+            profile.national_id_number ||
+            profile.dob ||
+            profile.kyc_id_url ||
+            profile.kyc_selfie_url
+          ) {
+            setKycData((prev) => ({
+              ...prev,
+              legalName: profile.legal_name || prev.legalName,
+              nationalId: profile.national_id_number || prev.nationalId,
+              dob: profile.dob || prev.dob,
+              idDocumentPreview: profile.kyc_id_url || prev.idDocumentPreview,
+              selfiePreview: profile.kyc_selfie_url || prev.selfiePreview,
+            }));
+          }
+          if (profile.phone) {
+            const raw = profile.phone.replace(/^\+254/, "").replace(/^0/, "");
+            setPayoutData((prev) => ({ ...prev, phoneNumber: raw }));
+          }
+          if (profile.avatar) {
+            setAvatarPreview(profile.avatar);
+          }
+        }
+
+        setProfileData((prev) => ({
+          ...prev,
+          displayName:
+            creatorMeta?.display_name ||
+            profile?.name ||
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            prev.displayName,
+          bio: creatorMeta?.bio || profile?.bio || prev.bio,
+          avatarUrl: creatorMeta?.avatar_url || creatorMeta?.avatar || profile?.avatar || prev.avatarUrl,
+          coverImage: creatorMeta?.cover_image || prev.coverImage,
+          monthlyPrice: creatorMeta?.monthly_price || prev.monthlyPrice,
+          location: creatorMeta?.location || prev.location,
+          tags: creatorMeta?.tags || prev.tags,
+          promoDiscount: creatorMeta?.promo_discount || prev.promoDiscount,
+          promoActive: creatorMeta?.promo_active !== false,
+          gender: creatorMeta?.gender || profile?.gender || prev.gender,
+          genderDescription:
+            creatorMeta?.gender_description || profile?.gender_description || prev.genderDescription,
+        }));
       } catch {
         // non-fatal
       }

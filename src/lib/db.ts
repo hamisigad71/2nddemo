@@ -314,34 +314,41 @@ export const getUserProfile = async (uid: string) => {
       if (userRowById) userRow = userRowById;
     }
 
-    const currentAvatar = userRow?.avatar || userRow?.avatar_url;
+    const { data: creatorMeta } = await supabase
+      .from("creator_profiles")
+      .select("*")
+      .eq("user_id", cleanUid)
+      .maybeSingle();
 
-    // If user's avatar is missing in users table, check creator_profiles
-    if (!currentAvatar) {
-      const { data: creatorMeta } = await supabase
-        .from("creator_profiles")
-        .select("*")
-        .eq("user_id", cleanUid)
-        .maybeSingle();
+    const localProfile = getStoredCreatorProfile(cleanUid);
 
-      if (creatorMeta) {
-        return {
-          ...(userRow || {}),
-          uid: cleanUid,
-          name: userRow?.name || creatorMeta.display_name || "Creator",
-          avatar: creatorMeta.avatar_url || creatorMeta.avatar || null,
-          bio: userRow?.bio || creatorMeta.bio,
-          cover_image: userRow?.cover_image || creatorMeta.cover_image,
-        };
-      }
+    const resolvedName =
+      creatorMeta?.display_name ||
+      userRow?.name ||
+      localProfile?.name ||
+      localProfile?.display_name ||
+      "Creator";
+
+    const currentAvatar =
+      creatorMeta?.avatar_url ||
+      creatorMeta?.avatar ||
+      userRow?.avatar ||
+      userRow?.avatar_url ||
+      localProfile?.avatar ||
+      null;
+
+    if (userRow || creatorMeta || localProfile) {
+      return {
+        ...(userRow || {}),
+        uid: cleanUid,
+        name: resolvedName,
+        avatar: currentAvatar,
+        bio: creatorMeta?.bio || userRow?.bio || localProfile?.bio,
+        cover_image: creatorMeta?.cover_image || userRow?.cover_image || localProfile?.cover_image,
+      };
     }
 
-    return userRow
-      ? {
-          ...userRow,
-          avatar: currentAvatar || null,
-        }
-      : null;
+    return null;
   } catch (err) {
     console.warn("getUserProfile error:", err);
     return null;
@@ -485,10 +492,28 @@ export const updateUserProfile = async (uid: string, data: any) => {
   const cleanUid = uid.replace(/[^a-zA-Z0-9_-]/g, "");
   const rawAvatar = data.avatar || data.avatar_url;
 
-  // Cache immediately in local storage so that UI views immediately reflect user's updated photo
+  // Cache immediately in local storage so that UI views immediately reflect user's updated photo and name
   if (rawAvatar && typeof window !== "undefined") {
     try {
       localStorage.setItem(`tgd_user_avatar_${cleanUid}`, rawAvatar);
+    } catch {}
+  }
+  if (data.name && typeof window !== "undefined") {
+    try {
+      const existingLocal = getStoredCreatorProfile(cleanUid) || {};
+      const updatedLocal = {
+        ...existingLocal,
+        user_id: cleanUid,
+        uid: cleanUid,
+        name: data.name,
+        display_name: data.name,
+        ...(rawAvatar ? { avatar: rawAvatar, avatar_url: rawAvatar } : {}),
+      };
+      localStorage.setItem(
+        `tgd_creator_profile_${cleanUid}`,
+        JSON.stringify(updatedLocal),
+      );
+      localStorage.setItem("creator_profile_data", JSON.stringify(updatedLocal));
     } catch {}
   }
 
@@ -3609,8 +3634,8 @@ export const getDiscoverCreators = async (forceRefresh = false) => {
           if (!creatorUserIds.has(p.user_id)) {
             const matchedUser = fetchedUsersMap.get(p.user_id);
             const resolvedName = resolveCreatorDisplayName(
-              matchedUser?.name,
               p.display_name,
+              matchedUser?.name,
               p.name,
               matchedUser?.email?.split("@")[0],
             );
@@ -3799,8 +3824,8 @@ export const getDiscoverCreators = async (forceRefresh = false) => {
       if (isSuspended) return false;
 
       const creatorName = resolveCreatorDisplayName(
-        u.name,
         p?.display_name,
+        u.name,
         p?.name,
       );
       if (isExcludedDiscoverCreator(creatorName, null, (u as any).email, creatorUid)) {
@@ -3857,11 +3882,11 @@ export const getDiscoverCreators = async (forceRefresh = false) => {
         }
 
         const creatorName = resolveCreatorDisplayName(
-          u.name,
           p?.display_name,
+          u.name,
           p?.name,
-          local?.name,
           local?.display_name,
+          local?.name,
           creatorUid === "b3bdd443-103e-45cb-986b-1d3d32659b3a"
             ? "Joy Mwangi"
             : null,
