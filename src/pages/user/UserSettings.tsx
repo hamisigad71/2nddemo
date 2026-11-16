@@ -45,6 +45,8 @@ const UserSettings = () => {
   });
   const [gender, setGender] = useState('');
   const [genderDescription, setGenderDescription] = useState('');
+  // Snapshot of demographics as loaded from DB, so we only validate/save them when the user edits them
+  const [loadedDemographics, setLoadedDemographics] = useState({ dob: '', gender: '', genderDescription: '' });
   const [kycStatus, setKycStatus] = useState('unverified');
   const [kycSaving, setKycSaving] = useState(false);
   const [idDocumentFile, setIdDocumentFile] = useState<File | null>(null);
@@ -83,9 +85,16 @@ const UserSettings = () => {
         setKycStatus(profile.kyc_status || 'unverified');
         if (profile.legal_name) setKycData(prev => ({ ...prev, legalName: profile.legal_name }));
         if (profile.national_id_number) setKycData(prev => ({ ...prev, nationalId: profile.national_id_number }));
-        if (profile.dob) setKycData(prev => ({ ...prev, dob: profile.dob }));
+        // DB may return dob as a timestamp (e.g. 1995-03-02T00:00:00); the date input and validator need YYYY-MM-DD
+        const normalizedDob = profile.dob ? String(profile.dob).slice(0, 10) : '';
+        if (normalizedDob) setKycData(prev => ({ ...prev, dob: normalizedDob }));
         if (profile.gender) setGender(profile.gender);
         if (profile.gender_description) setGenderDescription(profile.gender_description);
+        setLoadedDemographics({
+          dob: normalizedDob,
+          gender: profile.gender || '',
+          genderDescription: profile.gender_description || '',
+        });
       }
     });
   }, [user]);
@@ -181,7 +190,14 @@ const UserSettings = () => {
     setSaving(true);
     setSaveMsg('');
     try {
-      if (gender) {
+      // Only validate demographics if the user actually changed them in this session.
+      // Previously, accounts with a stored gender but missing/odd-format DOB could never save
+      // ANYTHING (including their profile photo) because this check aborted the whole save.
+      const demographicsChanged =
+        kycData.dob !== loadedDemographics.dob ||
+        gender !== loadedDemographics.gender ||
+        genderDescription !== loadedDemographics.genderDescription;
+      if (demographicsChanged && gender) {
         const demographicsError = validateProfileDemographics({
           dob: kycData.dob,
           gender,
@@ -244,7 +260,7 @@ const UserSettings = () => {
           gender_description: gender === 'self_describe' ? genderDescription.trim() : null,
         } : {}),
       };
-      if (Object.keys(demographicUpdates).length > 0) {
+      if (demographicsChanged && Object.keys(demographicUpdates).length > 0) {
         try {
           await updateProfileDemographics(user.id, demographicUpdates);
         } catch (demoErr) {
@@ -293,9 +309,12 @@ const UserSettings = () => {
       setSaveMsg('Saved successfully!');
       toast.success('Profile and photo updated successfully!');
       setAvatarFile(null);
+      setLoadedDemographics({ dob: kycData.dob, gender, genderDescription });
     } catch (err: any) {
-      setSaveMsg('Failed to save: ' + (err?.message || err));
-      toast.error('Failed to save profile changes');
+      const reason = err?.message || String(err);
+      console.error('Profile save failed:', err);
+      setSaveMsg('Failed to save: ' + reason);
+      toast.error(`Failed to save profile changes: ${reason}`);
     } finally {
       setSaving(false);
       setUploadingAvatar(false);
