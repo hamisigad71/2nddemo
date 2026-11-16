@@ -193,9 +193,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const role = storedRole || metadata.role || 'subscriber';
           const name = metadata.full_name || metadata.name || session.user.email?.split('@')[0] || 'User';
           const phone = metadata.phone || '';
-          const avatar = metadata.avatar_url || metadata.picture || null;
+          const oauthAvatar = metadata.avatar_url || metadata.picture || null;
 
           try {
+            // Check if user already has an avatar in DB before overwriting with OAuth picture
+            const { data: existingUser } = await supabase
+              .from('users')
+              .select('avatar')
+              .eq('uid', session.user.id)
+              .maybeSingle();
+
+            const avatar = existingUser?.avatar || oauthAvatar;
+
             await createUserProfile(session.user.id, {
               name,
               email: session.user.email,

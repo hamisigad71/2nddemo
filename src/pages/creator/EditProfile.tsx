@@ -677,13 +677,22 @@ const EditProfile = () => {
       if (avatarFile) {
         const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `avatars/${user.id}/${Date.now()}_${cleanName}`;
-        const uploaded = await uploadFileToSupabase(
-          avatarFile,
-          "Daysman Gad",
-          path,
-        );
-        if (uploaded && !uploaded.startsWith("blob:")) {
-          finalAvatarUrl = uploaded;
+        try {
+          const uploaded = await uploadFileToSupabase(
+            avatarFile,
+            "Daysman Gad",
+            path,
+          );
+          if (uploaded && !uploaded.startsWith("blob:")) {
+            finalAvatarUrl = uploaded;
+          } else {
+            // Compress to high-efficiency data URL as reliable fallback
+            const comp = await compressAvatarImage(avatarFile, 512, 0.82);
+            finalAvatarUrl = comp.dataUrl;
+          }
+        } catch {
+          const comp = await compressAvatarImage(avatarFile, 512, 0.82);
+          finalAvatarUrl = comp.dataUrl;
         }
       }
 

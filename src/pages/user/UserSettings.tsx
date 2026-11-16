@@ -198,9 +198,17 @@ const UserSettings = () => {
         setUploadingAvatar(true);
         const cleanName = avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const path = `avatars/users/${user.id}/${Date.now()}_${cleanName}`;
-        const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', path);
-        if (uploaded && !uploaded.startsWith('blob:')) {
-          finalAvatarUrl = uploaded;
+        try {
+          const uploaded = await uploadFileToSupabase(avatarFile, 'Daysman Gad', path);
+          if (uploaded && !uploaded.startsWith('blob:')) {
+            finalAvatarUrl = uploaded;
+          } else {
+            const comp = await compressAvatarImage(avatarFile, 512, 0.82);
+            finalAvatarUrl = comp.dataUrl;
+          }
+        } catch {
+          const comp = await compressAvatarImage(avatarFile, 512, 0.82);
+          finalAvatarUrl = comp.dataUrl;
         }
         setUploadingAvatar(false);
       }
@@ -237,7 +245,11 @@ const UserSettings = () => {
         } : {}),
       };
       if (Object.keys(demographicUpdates).length > 0) {
-        await updateProfileDemographics(user.id, demographicUpdates);
+        try {
+          await updateProfileDemographics(user.id, demographicUpdates);
+        } catch (demoErr) {
+          console.warn('Demographics update note:', demoErr);
+        }
       }
 
       // 3. Update Supabase Auth user metadata

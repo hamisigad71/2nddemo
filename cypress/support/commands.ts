@@ -25,6 +25,11 @@ declare global {
        * Seed authenticated admin persona into localStorage
        */
       loginAsAdmin(): Chainable<void>;
+
+      /**
+       * Seed authenticated escort persona into localStorage
+       */
+      loginAsEscort(): Chainable<void>;
     }
   }
 }
@@ -58,15 +63,34 @@ Cypress.Commands.add('mockPaymentSuccess', (reference = 'CYPRESS-MOCK-TX-1001') 
 Cypress.Commands.add('loginAsSubscriber', () => {
   cy.window().then((win) => {
     const mockUser = {
-      id: '8e975481-fe80-47c7-ad8c-418d4eefa714',
-      uid: '8e975481-fe80-47c7-ad8c-418d4eefa714',
-      email: 'subscriber.test@tgd.co.ke',
-      name: 'Owuor Timothy',
+      id: '77793a21-2f0c-4ae7-842b-7aed42593c36',
+      uid: '77793a21-2f0c-4ae7-842b-7aed42593c36',
+      email: 'thegentsplayhouse@gmail.com',
+      name: 'Gents Playhouse',
       role: 'subscriber',
       status: 'active',
+      aud: 'authenticated',
+      app_metadata: { provider: 'email', providers: ['email'] },
+      user_metadata: { name: 'Gents Playhouse', role: 'subscriber' },
+      created_at: new Date().toISOString(),
     };
+
+    const mockSession = {
+      access_token: 'sb_publishable_fqQBtrYzbflSgtEQAj3caA_5nr0dLJq',
+      token_type: 'bearer',
+      expires_in: 3600,
+      refresh_token: 'cypress-mock-sub-refresh',
+      user: mockUser,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    };
+
+    win.localStorage.setItem('tgd_auth_epoch', '2026-10-23_mandatory_kyc_epoch_v1');
     win.localStorage.setItem('tgd_auth_user', JSON.stringify(mockUser));
     win.localStorage.setItem('age_verified', 'true');
+    win.localStorage.setItem('tgd_age_verified_18', 'true');
+    win.localStorage.setItem(`mali_verified_creators_popup_seen_${mockUser.id}`, 'true');
+    win.localStorage.removeItem('show_subscriber_verification_popup');
+    win.localStorage.setItem('sb-gitkzykasegtygoybjhq-auth-token', JSON.stringify(mockSession));
   });
 });
 
@@ -79,9 +103,26 @@ Cypress.Commands.add('loginAsCreator', () => {
       name: 'Beunice Kamau',
       role: 'creator',
       status: 'active',
+      aud: 'authenticated',
+      app_metadata: { provider: 'email', providers: ['email'] },
+      user_metadata: { name: 'Beunice Kamau', role: 'creator' },
+      created_at: new Date().toISOString(),
     };
+
+    const mockSession = {
+      access_token: 'cypress-mock-creator-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      refresh_token: 'cypress-mock-creator-refresh',
+      user: mockCreator,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    };
+
+    win.localStorage.setItem('tgd_auth_epoch', '2026-10-23_mandatory_kyc_epoch_v1');
     win.localStorage.setItem('tgd_auth_user', JSON.stringify(mockCreator));
     win.localStorage.setItem('age_verified', 'true');
+    win.localStorage.setItem('tgd_age_verified_18', 'true');
+    win.localStorage.setItem('sb-gitkzykasegtygoybjhq-auth-token', JSON.stringify(mockSession));
   });
 });
 
@@ -112,6 +153,7 @@ Cypress.Commands.add('loginAsAdmin', () => {
     win.localStorage.setItem('tgd_auth_epoch', '2026-10-23_mandatory_kyc_epoch_v1');
     win.localStorage.setItem('tgd_auth_user', JSON.stringify(mockAdmin));
     win.localStorage.setItem('age_verified', 'true');
+    win.localStorage.setItem('tgd_age_verified_18', 'true');
     win.localStorage.setItem('sb-gitkzykasegtygoybjhq-auth-token', JSON.stringify(mockSession));
 
     // Admin Route Gatekeeper Session Unlock
@@ -124,6 +166,39 @@ Cypress.Commands.add('loginAsAdmin', () => {
         userEmail: mockAdmin.email,
       })
     );
+  });
+});
+
+Cypress.Commands.add('loginAsEscort', () => {
+  cy.window().then((win) => {
+    const mockEscort = {
+      id: 'escort-1',
+      uid: 'escort-1',
+      email: 'valentina.escort@tgd.co.ke',
+      name: 'Valentina',
+      role: 'creator',
+      is_escort: true,
+      status: 'active',
+      aud: 'authenticated',
+      app_metadata: { provider: 'email', providers: ['email'] },
+      user_metadata: { name: 'Valentina', role: 'creator' },
+      created_at: new Date().toISOString(),
+    };
+
+    const mockSession = {
+      access_token: 'cypress-mock-escort-token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      refresh_token: 'cypress-mock-escort-refresh',
+      user: mockEscort,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    };
+
+    win.localStorage.setItem('tgd_auth_epoch', '2026-10-23_mandatory_kyc_epoch_v1');
+    win.localStorage.setItem('tgd_auth_user', JSON.stringify(mockEscort));
+    win.localStorage.setItem('age_verified', 'true');
+    win.localStorage.setItem('tgd_age_verified_18', 'true');
+    win.localStorage.setItem('sb-gitkzykasegtygoybjhq-auth-token', JSON.stringify(mockSession));
   });
 });
 
