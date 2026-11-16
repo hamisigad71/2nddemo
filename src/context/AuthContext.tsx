@@ -196,25 +196,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const oauthAvatar = metadata.avatar_url || metadata.picture || null;
 
           try {
-            // Check if user already has an avatar in DB before overwriting with OAuth picture
+            // Check if the user already has a profile row before writing anything.
+            // IMPORTANT: For existing users we must NOT overwrite their saved profile with
+            // auth/Google metadata. Supabase refreshes user_metadata from the OAuth provider on
+            // every sign-in, so writing it back would reset custom names, and for creators
+            // createUserProfile also upserts creator_profiles with default bio/price/cover/tags.
             const { data: existingUser } = await supabase
               .from('users')
-              .select('avatar')
+              .select('avatar, name, role')
               .eq('uid', session.user.id)
               .maybeSingle();
 
             const avatar = existingUser?.avatar || oauthAvatar;
+            const resolvedName = existingUser?.name || name;
+            const roleChanged = !!(existingUser && storedRole && storedRole !== existingUser.role);
 
-            await createUserProfile(session.user.id, {
-              name,
-              email: session.user.email,
-              avatar,
-              phone,
-              role,
-              gender: metadata.gender,
-              gender_description: metadata.gender_description,
-              dob: metadata.dob,
-            });
+            if (!existingUser || roleChanged) {
+              await createUserProfile(session.user.id, {
+                name: resolvedName,
+                email: session.user.email,
+                avatar,
+                phone,
+                role,
+                ...(existingUser ? {} : {
+                  gender: metadata.gender,
+                  gender_description: metadata.gender_description,
+                  dob: metadata.dob,
+                }),
+              });
+            }
 
             if (avatar && typeof window !== 'undefined') {
               try {
@@ -225,10 +235,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     ...currentLocal,
                     avatar,
                     avatar_url: avatar,
-                    name
+                    name: resolvedName
                   }));
                 }
-                window.dispatchEvent(new CustomEvent('profile_updated', { detail: { avatar, name } }));
+                window.dispatchEvent(new CustomEvent('profile_updated', { detail: { avatar, name: resolvedName } }));
               } catch {}
             }
           } catch (err) {

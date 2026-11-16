@@ -3037,11 +3037,12 @@ export const getCreatorProfile = async (id: string) => {
       if (userPosts && userPosts.length > 0) hasPosts = true;
     } catch {}
 
+    // Database is the source of truth; local cache is only a fallback (it can be stale on other devices)
     const resolvedName =
-      localCreator?.name ||
-      localCreator?.display_name ||
       userRow?.name ||
       creatorMeta?.display_name ||
+      localCreator?.name ||
+      localCreator?.display_name ||
       authMeta?.name ||
       authMeta?.full_name ||
       appMeta?.name ||
