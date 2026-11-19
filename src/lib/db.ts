@@ -24,7 +24,10 @@ import {
   resolveCreatorVerificationPayloads,
 } from "./verification";
 import { calculateAge, getPublicGenderLabel } from "./profileDemographics";
-import { getCreatorPayoutAmountError } from "./creatorPayoutRules";
+import {
+  getCreatorPayoutAmountError,
+  normalizeKenyanMpesaPhone,
+} from "./creatorPayoutRules";
 import {
   buildCreatorSubscriptionMessage,
   buildTransactionPaymentNotification,
@@ -5658,15 +5661,22 @@ export const requestCreatorPayout = async (
     );
   }
 
-  const cleanPhone = phone.trim() || "Not specified";
+  const normalizedPhone = normalizeKenyanMpesaPhone(phone);
+  if (!normalizedPhone) {
+    throw new Error(
+      "Please enter a valid Kenyan Safaricom/Airtel M-Pesa phone number (e.g. 0712 345 678 or +254712345678).",
+    );
+  }
+  const cleanPhone = normalizedPhone;
   const refString = `${method} | ${cleanPhone}`;
 
   let creatorName = "Creator";
   let creatorEmail = "";
+  let creatorLegalName = "";
   const { data: userRow, error: userProfileError } = await supabase
     .from("users")
     .select(
-      "name, email, phone, status, role, payout_kyc_required, kyc_status, kyc_id_url, kyc_selfie_url",
+      "name, legal_name, email, phone, status, role, kyc_status, is_verified, kyc_id_url, kyc_selfie_url",
     )
     .eq("uid", creatorId)
     .maybeSingle();
@@ -5680,18 +5690,23 @@ export const requestCreatorPayout = async (
     throw new Error("Creator account not found. Cannot request payout.");
   }
 
-  // Enforce identity documents before withdrawal for all creators
-  const hasKycProof =
-    userRow.kyc_status === "verified" ||
-    hasPrivateKycEvidence(
-      creatorId,
-      userRow.kyc_id_url,
-      userRow.kyc_selfie_url,
-    );
+  // Enforce approved identity verification before withdrawal for all creators
+  const isKycApproved =
+    userRow.kyc_status === "verified" || userRow.is_verified === true;
+  const hasUploadedDocs = hasPrivateKycEvidence(
+    creatorId,
+    userRow.kyc_id_url,
+    userRow.kyc_selfie_url,
+  );
 
-  if (!hasKycProof) {
+  if (!isKycApproved) {
+    if (userRow.kyc_status === "pending" || hasUploadedDocs) {
+      throw new Error(
+        "Your verification documents are pending admin approval. Withdrawals will unlock once your KYC is approved.",
+      );
+    }
     throw new Error(
-      "Upload your National ID and selfie with ID before requesting a withdrawal.",
+      "Identity verification required: upload your National ID and selfie with ID and await admin approval before requesting a withdrawal.",
     );
   }
 
@@ -5706,6 +5721,7 @@ export const requestCreatorPayout = async (
   }
   if (userRow.name) creatorName = userRow.name;
   if (userRow.email) creatorEmail = userRow.email;
+  if (userRow.legal_name) creatorLegalName = String(userRow.legal_name).trim();
 
   let payoutTx: any = {
     id: `payout_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -5761,13 +5777,13 @@ export const requestCreatorPayout = async (
   // Notify Creator of pending withdrawal
   try {
     await createNotification(creatorId, {
-      title: "Withdrawal Request Submitted ⏳",
-      message: `Your withdrawal request of KES ${amount.toLocaleString()} via ${method} (${cleanPhone}) has been sent to Admin for processing.`,
+      title: "Processing Your M-Pesa Payout ⏳",
+      message: `Your withdrawal request of KES ${amount.toLocaleString()} to M-Pesa (${cleanPhone}) has been received and is being processed by our payout team. Please expect your funds within 48 hours.`,
       type: "system",
       link: "/wallet",
       action_label: "View Wallet",
       action_url: "/wallet",
-      badge: "Payout Pending",
+      badge: "Processing",
     });
   } catch {}
 
@@ -5784,7 +5800,7 @@ export const requestCreatorPayout = async (
     for (const adminId of adminIds) {
       await createNotification(adminId, {
         title: "Creator Withdrawal Request! 💸",
-        message: `${creatorName}${creatorEmail ? ` (${creatorEmail})` : ""} requested to withdraw KES ${amount.toLocaleString()} via ${method} to ${cleanPhone}.`,
+        message: `${creatorName}${creatorLegalName ? ` (${creatorLegalName})` : ""}${creatorEmail ? ` · ${creatorEmail}` : ""} requested KES ${amount.toLocaleString()} via ${method} to ${cleanPhone}.`,
         type: "system",
         link: "/admin/payouts",
         action_label: "Review Payout",
@@ -5824,7 +5840,7 @@ export const getAdminPayouts = async () => {
     const { data: payoutTxs, error } = await supabase
       .from("transactions")
       .select("*")
-      .eq("type", "payout")
+      .in("type", ["payout", "withdrawal"])
       .order("created_at", { ascending: false });
 
     if (!error && payoutTxs) {
@@ -5876,13 +5892,13 @@ export const getAdminPayouts = async () => {
     if (creatorIds.length > 0) {
       const { data: users } = await supabase
         .from("users")
-        .select("uid, name, email, phone, avatar")
+        .select("uid, name, legal_name, email, phone, avatar")
         .in("uid", creatorIds);
       (users || []).forEach((u) => userMap.set(u.uid, u));
 
       const { data: profiles } = await supabase
         .from("creator_profiles")
-        .select("user_id, display_name, avatar_url, avatar, total_earnings")
+        .select("user_id, display_name, legal_name, avatar_url, avatar")
         .in("user_id", creatorIds);
       (profiles || []).forEach((p) => profileMap.set(p.user_id, p));
     }
@@ -5894,16 +5910,25 @@ export const getAdminPayouts = async () => {
       const rawAmount = Number(tx.net_amount || tx.gross_amount || 0);
 
       let method = "M-Pesa";
-      let phone = u?.phone || "Not provided";
+      let submittedPhone = "";
       if (tx.reference_id && typeof tx.reference_id === "string") {
         if (tx.reference_id.includes("|")) {
           const parts = tx.reference_id.split("|").map((s: string) => s.trim());
           if (parts[0]) method = parts[0];
-          if (parts[1]) phone = parts[1];
-        } else {
-          phone = tx.reference_id;
+          if (parts[1] && parts[1].toLowerCase() !== "not specified") {
+            submittedPhone = parts[1];
+          }
+        } else if (tx.reference_id.trim().toLowerCase() !== "not specified") {
+          submittedPhone = tx.reference_id.trim();
         }
       }
+      const rawPhone = submittedPhone || u?.phone || "";
+      const phone =
+        normalizeKenyanMpesaPhone(rawPhone) || rawPhone || "Not provided";
+      const profilePhone = u?.phone
+        ? normalizeKenyanMpesaPhone(u.phone) || u.phone
+        : "";
+      const legalName = u?.legal_name || p?.legal_name || "";
 
       const rawStatus = String(tx.status || "pending").toLowerCase();
       const mappedStatus =
@@ -5919,11 +5944,14 @@ export const getAdminPayouts = async () => {
         id: tx.id,
         creatorId: cid,
         creator: displayName,
+        legalName,
         email: u?.email || "No email",
         amount: `KES ${rawAmount.toLocaleString()}`,
         rawAmount,
         method,
         phone,
+        profilePhone,
+        phoneSource: submittedPhone ? "withdrawal_form" : "profile_fallback",
         status: mappedStatus,
         requested: tx.created_at
           ? new Date(tx.created_at).toLocaleDateString("en-KE", {

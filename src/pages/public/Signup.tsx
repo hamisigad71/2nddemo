@@ -384,7 +384,6 @@ const Signup = () => {
         if (uid) {
           try {
             await supabase.from('users').update({
-              payout_kyc_required: true,
               ...(legalName ? { legal_name: legalName.trim() } : {}),
               ...(nationalId ? { national_id_number: nationalId.trim() } : {}),
               dob: dob,

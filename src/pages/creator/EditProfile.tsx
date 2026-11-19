@@ -97,7 +97,6 @@ const EditProfile = () => {
     selfieFile: null,
   });
   const [kycStatus, setKycStatus] = useState<string>("unverified");
-  const [payoutKycRequired, setPayoutKycRequired] = useState(false);
   const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
 
   const [payoutData, setPayoutData] = useState({
@@ -172,7 +171,6 @@ const EditProfile = () => {
         }
 
         if (profile) {
-          setPayoutKycRequired(Boolean(profile.payout_kyc_required));
           if (profile.kyc_status) {
             setKycStatus(profile.kyc_status);
           }
@@ -409,10 +407,12 @@ const EditProfile = () => {
       if (type === "id") {
         setKycFiles((prev) => ({ ...prev, idFile: file }));
         setKycData((prev) => ({ ...prev, idDocumentPreview: url }));
+        toast.success("National ID attached! Please also attach your selfie with ID, fill your details below, and click Submit.");
       }
       if (type === "selfie") {
         setKycFiles((prev) => ({ ...prev, selfieFile: file }));
         setKycData((prev) => ({ ...prev, selfiePreview: url }));
+        toast.success("Selfie attached! Fill your legal details below and click Submit KYC for Verification.");
       }
     }
   };
@@ -429,18 +429,6 @@ const EditProfile = () => {
       );
       return;
     }
-    if (payoutKycRequired && !kycFiles.idFile) {
-      toast.error(
-        "Please upload a fresh National ID or Passport document for withdrawal verification.",
-      );
-      return;
-    }
-    if (payoutKycRequired && !kycFiles.selfieFile) {
-      toast.error(
-        "Please upload a fresh selfie holding your ID for withdrawal verification.",
-      );
-      return;
-    }
     if (!kycFiles.idFile && !kycData.idDocumentPreview) {
       toast.error("Please upload your National ID or Passport document.");
       return;
@@ -454,70 +442,112 @@ const EditProfile = () => {
 
     setIsSubmittingKyc(true);
     try {
-      let idPath = payoutKycRequired ? "" : kycData.idDocumentPreview || "";
-      let selfiePath = payoutKycRequired ? "" : kycData.selfiePreview || "";
+      let idPath = kycData.idDocumentPreview || "";
+      let selfiePath = kycData.selfiePreview || "";
 
-      if (kycFiles.idFile) {
+      let fileToUploadId = kycFiles.idFile;
+      if (fileToUploadId) {
+        try {
+          const comp = await compressAvatarImage(fileToUploadId, 1200, 0.85);
+          fileToUploadId = comp.file;
+        } catch {}
         const ext =
-          kycFiles.idFile.name
+          fileToUploadId.name
             .split(".")
             .pop()
             ?.replace(/[^a-zA-Z0-9]/g, "") || "jpg";
         const targetPath = `${user.id}/${Date.now()}-id.${ext}`;
-        const { error: idError } = await supabase.storage
-          .from("kyc-documents")
-          .upload(targetPath, kycFiles.idFile, { upsert: true });
-        if (idError && payoutKycRequired) throw idError;
-        idPath = idError
-          ? (await uploadFileToSupabase(
-              kycFiles.idFile,
-              "Daysman Gad",
-              `kyc/${targetPath}`,
-            )) || targetPath
-          : targetPath;
+        try {
+          const { error: idError } = await supabase.storage
+            .from("kyc-documents")
+            .upload(targetPath, fileToUploadId, { upsert: true });
+          if (idError) throw idError;
+          idPath = targetPath;
+        } catch {
+          // Fallback to public/compressed storage if private bucket fails
+          const uploadedUrl = await uploadFileToSupabase(
+            fileToUploadId,
+            "Daysman Gad",
+            `kyc/${targetPath}`,
+          );
+          idPath = uploadedUrl || targetPath;
+        }
       }
 
-      if (kycFiles.selfieFile) {
+      let fileToUploadSelfie = kycFiles.selfieFile;
+      if (fileToUploadSelfie) {
+        try {
+          const comp = await compressAvatarImage(fileToUploadSelfie, 1200, 0.85);
+          fileToUploadSelfie = comp.file;
+        } catch {}
         const ext =
-          kycFiles.selfieFile.name
+          fileToUploadSelfie.name
             .split(".")
             .pop()
             ?.replace(/[^a-zA-Z0-9]/g, "") || "jpg";
         const targetPath = `${user.id}/${Date.now()}-selfie.${ext}`;
-        const { error: selfieError } = await supabase.storage
-          .from("kyc-documents")
-          .upload(targetPath, kycFiles.selfieFile, { upsert: true });
-        if (selfieError && payoutKycRequired) throw selfieError;
-        selfiePath = selfieError
-          ? (await uploadFileToSupabase(
-              kycFiles.selfieFile,
-              "Daysman Gad",
-              `kyc/${targetPath}`,
-            )) || targetPath
-          : targetPath;
+        try {
+          const { error: selfieError } = await supabase.storage
+            .from("kyc-documents")
+            .upload(targetPath, fileToUploadSelfie, { upsert: true });
+          if (selfieError) throw selfieError;
+          selfiePath = targetPath;
+        } catch {
+          // Fallback to public/compressed storage if private bucket fails
+          const uploadedUrl = await uploadFileToSupabase(
+            fileToUploadSelfie,
+            "Daysman Gad",
+            `kyc/${targetPath}`,
+          );
+          selfiePath = uploadedUrl || targetPath;
+        }
       }
 
-      const { error: userError } = await supabase
+      // Determine proper KYC status:
+      // If already verified, preserve verified.
+      // If unverified/pending/rejected, transition to pending for administrator review.
+      const isAlreadyVerified = kycStatus === "verified";
+      const targetKycStatus = isAlreadyVerified ? "verified" : "pending";
+
+      const userUpdatePayload: Record<string, any> = {
+        legal_name: kycData.legalName.trim(),
+        national_id_number: kycData.nationalId.trim(),
+        dob: kycData.dob,
+        ...(profileData.gender
+          ? {
+              gender: profileData.gender,
+              gender_description:
+                profileData.gender === "self_describe"
+                  ? profileData.genderDescription.trim()
+                  : null,
+            }
+          : {}),
+        kyc_id_url: idPath,
+        kyc_selfie_url: selfiePath,
+      };
+
+      // Only attempt to write kyc_status if transition is allowed
+      if (!isAlreadyVerified) {
+        userUpdatePayload.kyc_status = "pending";
+      }
+
+      let { error: userError } = await supabase
         .from("users")
-        .update({
-          legal_name: kycData.legalName.trim(),
-          national_id_number: kycData.nationalId.trim(),
-          dob: kycData.dob,
-          ...(profileData.gender
-            ? {
-                gender: profileData.gender,
-                gender_description:
-                  profileData.gender === "self_describe"
-                    ? profileData.genderDescription.trim()
-                    : null,
-              }
-            : {}),
-          kyc_id_url: idPath,
-          kyc_selfie_url: selfiePath,
-          kyc_status: payoutKycRequired ? "verified" : "pending",
-          ...(payoutKycRequired ? { is_verified: true } : {}),
-        })
+        .update(userUpdatePayload)
         .eq("uid", user.id);
+
+      // If database trigger restricts modifying kyc_status directly on users table,
+      // update details and document URLs without kyc_status to avoid unhandled exceptions
+      if (userError && (userError.message?.includes("verify") || userError.message?.includes("administrator") || userError.message?.includes("status"))) {
+        delete userUpdatePayload.kyc_status;
+        const retry = await supabase
+          .from("users")
+          .update(userUpdatePayload)
+          .eq("uid", user.id);
+        if (!retry.error) {
+          userError = null;
+        }
+      }
 
       if (userError) throw userError;
 
@@ -525,8 +555,7 @@ const EditProfile = () => {
         await supabase
           .from("creator_profiles")
           .update({
-            kyc_status: payoutKycRequired ? "verified" : "pending",
-            ...(payoutKycRequired ? { is_verified: true } : {}),
+            kyc_status: targetKycStatus,
             kyc_id_url: idPath,
             kyc_selfie_url: selfiePath,
             legal_name: kycData.legalName.trim(),
@@ -562,7 +591,7 @@ const EditProfile = () => {
         }
         local.kyc_id_url = idPath;
         local.kyc_selfie_url = selfiePath;
-        local.kyc_status = payoutKycRequired ? "verified" : "pending";
+        local.kyc_status = targetKycStatus;
         localStorage.setItem(
           `tgd_creator_profile_${user.id}`,
           JSON.stringify(local),
@@ -570,7 +599,7 @@ const EditProfile = () => {
       } catch {}
 
       // Dispatch notification directly to Platform Admins for KYC review with photos & ID
-      if (!payoutKycRequired) {
+      if (!isAlreadyVerified) {
         notifyAdmins(
           buildAdminKycSubmissionNotification({
             name:
@@ -583,20 +612,19 @@ const EditProfile = () => {
         ).catch(() => {});
       }
 
-      setKycStatus(payoutKycRequired ? "verified" : "pending");
+      setKycStatus(targetKycStatus);
       window.dispatchEvent(new CustomEvent("creators_updated"));
       window.dispatchEvent(new CustomEvent("profile_updated"));
-      if (payoutKycRequired) {
-        window.dispatchEvent(new CustomEvent("kyc_documents_updated"));
-      }
+      window.dispatchEvent(new CustomEvent("kyc_documents_updated"));
+
       toast.success(
-        payoutKycRequired
-          ? "Withdrawal documents saved securely."
-          : "KYC Submitted Successfully!",
+        isAlreadyVerified
+          ? "Documents updated successfully."
+          : "KYC Documents Submitted Successfully!",
         {
-          description: payoutKycRequired
-            ? "Your verified status is unchanged. You can now request a withdrawal."
-            : "Your documents have been submitted to admin for verification.",
+          description: isAlreadyVerified
+            ? "Your identity documents have been updated."
+            : "Your documents are now in review. Once approved by an administrator, you will receive the verified blue checkmark.",
         },
       );
     } catch (err: any) {
@@ -1586,6 +1614,7 @@ const EditProfile = () => {
                     Date of Birth <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="kycDobInput"
                     type="date"
                     name="dob"
                     value={kycData.dob}
@@ -1606,17 +1635,25 @@ const EditProfile = () => {
                     {/* ID Upload */}
                     <div className="relative border-2 border-dashed border-zinc-800 rounded-2xl p-6 text-center hover:bg-[#0d0e12] hover:border-red-500/50 transition-all cursor-pointer group flex flex-col items-center justify-center h-44 overflow-hidden">
                       <input
+                        id="kycIdUpload"
                         type="file"
                         accept="image/*"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         onChange={(e) => handleKycUpload(e, "id")}
                       />
                       {kycData.idDocumentPreview ? (
-                        <img
-                          src={kycData.idDocumentPreview}
-                          alt="ID Preview"
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
+                        <>
+                          <img
+                            src={kycData.idDocumentPreview}
+                            alt="ID Preview"
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 hover:bg-black/60 transition-colors flex items-center justify-center">
+                            <span className="bg-black/85 text-emerald-400 border border-emerald-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shadow-lg">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> ID Attached (Tap to change)
+                            </span>
+                          </div>
+                        </>
                       ) : (
                         <>
                           <div className="w-12 h-12 bg-red-950/60 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
@@ -1635,6 +1672,7 @@ const EditProfile = () => {
                     {/* Selfie Upload */}
                     <div className="relative border-2 border-dashed border-zinc-800 rounded-2xl p-6 text-center hover:bg-[#0d0e12] hover:border-red-500/50 transition-all cursor-pointer group flex flex-col items-center justify-center h-44 overflow-hidden">
                       <input
+                        id="kycSelfieUpload"
                         type="file"
                         accept="image/*"
                         capture="user"
@@ -1642,11 +1680,18 @@ const EditProfile = () => {
                         onChange={(e) => handleKycUpload(e, "selfie")}
                       />
                       {kycData.selfiePreview ? (
-                        <img
-                          src={kycData.selfiePreview}
-                          alt="Selfie Preview"
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
+                        <>
+                          <img
+                            src={kycData.selfiePreview}
+                            alt="Selfie Preview"
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 hover:bg-black/60 transition-colors flex items-center justify-center">
+                            <span className="bg-black/85 text-emerald-400 border border-emerald-500/40 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shadow-lg">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Selfie Attached (Tap to change)
+                            </span>
+                          </div>
+                        </>
                       ) : (
                         <>
                           <div className="w-12 h-12 bg-red-950/60 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
@@ -1664,11 +1709,67 @@ const EditProfile = () => {
                   </div>
                 </div>
 
+                {/* Live Checklist */}
+                <div className="p-5 bg-[#0d0e12] border border-zinc-800 rounded-2xl space-y-2.5 text-xs">
+                  <div className="font-black text-zinc-300 uppercase tracking-wider text-[11px] mb-3">
+                    Verification Checklist
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {kycData.legalName.trim() ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    )}
+                    <span className={kycData.legalName.trim() ? "text-zinc-300 font-medium" : "text-zinc-500 font-medium"}>
+                      Full Legal Name (must match M-Pesa & ID)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {kycData.nationalId.trim() ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    )}
+                    <span className={kycData.nationalId.trim() ? "text-zinc-300 font-medium" : "text-zinc-500 font-medium"}>
+                      National ID / Passport Number
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {kycData.dob ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    )}
+                    <span className={kycData.dob ? "text-zinc-300 font-medium" : "text-zinc-500 font-medium"}>
+                      Date of Birth (18+ verification)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {kycFiles.idFile || kycData.idDocumentPreview ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    )}
+                    <span className={kycFiles.idFile || kycData.idDocumentPreview ? "text-zinc-300 font-medium" : "text-zinc-500 font-medium"}>
+                      National ID / Passport Photo
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {kycFiles.selfieFile || kycData.selfiePreview ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    )}
+                    <span className={kycFiles.selfieFile || kycData.selfiePreview ? "text-zinc-300 font-medium" : "text-zinc-500 font-medium"}>
+                      Clear Selfie with ID
+                    </span>
+                  </div>
+                </div>
+
                 <button
                   onClick={handleKycSubmit}
                   disabled={
-                    isSubmittingKyc ||
-                    (kycStatus === "verified" && !payoutKycRequired)
+                    isSubmittingKyc || kycStatus === "verified"
                   }
                   className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-8 py-4 font-black rounded-2xl shadow-lg shadow-red-600/20 border border-red-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
@@ -1677,13 +1778,11 @@ const EditProfile = () => {
                       <Loader2 className="w-5 h-5 animate-spin" /> Submitting
                       Documents...
                     </>
-                  ) : kycStatus === "verified" && !payoutKycRequired ? (
+                  ) : kycStatus === "verified" ? (
                     <>
                       <CheckCircle2 className="w-5 h-5 text-white fill-blue-500" />{" "}
                       Identity Verified
                     </>
-                  ) : payoutKycRequired ? (
-                    "Save Documents for Withdrawal"
                   ) : kycStatus === "pending" ? (
                     "Update Submitted KYC Documents"
                   ) : (

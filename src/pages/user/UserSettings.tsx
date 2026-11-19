@@ -4,11 +4,11 @@ import UserLayout from '../../components/UserLayout';
 import { Save, Camera, ShieldAlert, Bell, Globe, CreditCard, Lock, AlertTriangle, X, Loader2, Trash2, Check, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { getUserProfile, updateUserProfile, updateProfileDemographics, deleteUserAccount, uploadFileToSupabase } from '../../lib/db';
+import { getUserProfile, updateUserProfile, updateProfileDemographics, deleteUserAccount, uploadFileToSupabase, notifyAdmins } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../context/ToastContext';
 import { resolveUserAvatar, DEFAULT_AVATAR, compressAvatarImage } from '../../lib/avatar';
-import { hasCompleteKycSubmission } from '../../lib/verification';
+import { hasCompleteKycSubmission, buildAdminKycSubmissionNotification } from '../../lib/verification';
 import { GENDER_OPTIONS, validateProfileDemographics } from '../../lib/profileDemographics';
 
 const UserSettings = () => {
@@ -56,16 +56,29 @@ const UserSettings = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Check cached avatar & auth metadata
+    // 1. Instant hydration from LocalStorage caches
+    let cachedName = '';
+    try {
+      const local = JSON.parse(localStorage.getItem(`tgd_user_profile_${user.id}`) || 'null') ||
+                    JSON.parse(localStorage.getItem(`tgd_creator_profile_${user.id}`) || 'null');
+      if (local?.name || local?.display_name) {
+        cachedName = local.name || local.display_name;
+        setDisplayName(cachedName);
+      }
+      if (local?.avatar || local?.avatar_url) {
+        setAvatarPreview(local.avatar || local.avatar_url);
+      }
+    } catch {}
+
     const cachedAvatar = localStorage.getItem(`tgd_user_avatar_${user.id}`);
     const metaAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
     if (cachedAvatar) {
       setAvatarPreview(cachedAvatar);
     } else if (metaAvatar) {
-      setAvatarPreview(metaAvatar);
+      setAvatarPreview((prev) => prev || metaAvatar);
     }
 
-    if (user.user_metadata?.name || user.user_metadata?.full_name) {
+    if (!cachedName && (user.user_metadata?.name || user.user_metadata?.full_name)) {
       setDisplayName(user.user_metadata.name || user.user_metadata.full_name);
     }
 
@@ -270,14 +283,18 @@ const UserSettings = () => {
 
       // 3. Update Supabase Auth user metadata
       try {
+        const authPayload: Record<string, any> = {
+          name: displayName.trim(),
+          full_name: displayName.trim(),
+        };
+        // Avoid sending large base64 data URLs to auth metadata to prevent payload limit rejection
+        if (finalAvatarUrl && !finalAvatarUrl.startsWith('data:')) {
+          authPayload.avatar_url = finalAvatarUrl;
+          authPayload.picture = finalAvatarUrl;
+          authPayload.avatar = finalAvatarUrl;
+        }
         const { data: updatedAuth } = await supabase.auth.updateUser({
-          data: {
-            avatar_url: finalAvatarUrl,
-            picture: finalAvatarUrl,
-            avatar: finalAvatarUrl,
-            name: displayName,
-            full_name: displayName,
-          }
+          data: authPayload,
         });
         if (updatedAuth?.user) {
           await refreshUser().catch(() => {});
@@ -286,25 +303,35 @@ const UserSettings = () => {
         console.warn('Auth user metadata update note:', authErr);
       }
 
-      // 4. Update localStorage caches
-      if (finalAvatarUrl) {
-        try {
+      // 4. Update localStorage caches unconditionally so username and photo always stick across reloads
+      try {
+        if (finalAvatarUrl) {
           localStorage.setItem(`tgd_user_avatar_${user.id}`, finalAvatarUrl);
-          localStorage.setItem(`tgd_user_profile_${user.id}`, JSON.stringify({
-            name: displayName,
-            avatar: finalAvatarUrl,
-          }));
-        } catch {}
-      }
+        }
+        localStorage.setItem(`tgd_user_profile_${user.id}`, JSON.stringify({
+          name: displayName.trim(),
+          avatar: finalAvatarUrl || avatarPreview || null,
+        }));
+        const existingCreator = JSON.parse(localStorage.getItem(`tgd_creator_profile_${user.id}`) || '{}');
+        const updatedCreator = {
+          ...existingCreator,
+          name: displayName.trim(),
+          display_name: displayName.trim(),
+          ...(finalAvatarUrl ? { avatar: finalAvatarUrl, avatar_url: finalAvatarUrl } : {}),
+        };
+        localStorage.setItem(`tgd_creator_profile_${user.id}`, JSON.stringify(updatedCreator));
+        localStorage.setItem('creator_profile_data', JSON.stringify(updatedCreator));
+      } catch {}
 
       // 5. Broadcast global event so sidebar, header, and comments update immediately
       window.dispatchEvent(new CustomEvent('profile_updated', {
         detail: {
           avatar: finalAvatarUrl,
-          name: displayName,
+          name: displayName.trim(),
           uid: user.id
         }
       }));
+      window.dispatchEvent(new CustomEvent('creators_updated'));
 
       setSaveMsg('Saved successfully!');
       toast.success('Profile and photo updated successfully!');
@@ -398,37 +425,98 @@ const UserSettings = () => {
     setKycSaving(true);
     setSaveMsg('');
     try {
-      const idExtension = idDocument.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
-      const selfieExtension = selfie.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      // 1. Optimize & compress ID and selfie images client-side before upload to prevent "Failed to fetch" on mobile networks
+      let compressedIdFile = idDocument;
+      try {
+        const comp = await compressAvatarImage(idDocument, 1200, 0.85);
+        compressedIdFile = comp.file;
+      } catch (e) {
+        console.warn('ID compression notice:', e);
+      }
+
+      let compressedSelfieFile = selfie;
+      try {
+        const comp = await compressAvatarImage(selfie, 1200, 0.85);
+        compressedSelfieFile = comp.file;
+      } catch (e) {
+        console.warn('Selfie compression notice:', e);
+      }
+
+      const idExtension = compressedIdFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      const selfieExtension = compressedSelfieFile.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
       const documentBase = `${user.id}/${Date.now()}`;
       const idPath = `${documentBase}-id.${idExtension}`;
       const selfiePath = `${documentBase}-selfie.${selfieExtension}`;
-      const { error: idUploadError } = await supabase.storage
-        .from('kyc-documents')
-        .upload(idPath, idDocument, { contentType: idDocument.type, upsert: false });
-      if (idUploadError) throw idUploadError;
-      const { error: selfieUploadError } = await supabase.storage
-        .from('kyc-documents')
-        .upload(selfiePath, selfie, { contentType: selfie.type, upsert: false });
-      if (selfieUploadError) {
-        await supabase.storage.from('kyc-documents').remove([idPath]);
-        throw selfieUploadError;
-      }
+
+      // Upload with uploadFileToSupabase fallback which handles multiple bucket retries and robust mobile network handling
+      let uploadedIdUrl: string | null = null;
       try {
-        const { data: updatedProfile, error } = await supabase.from('users').update({
-          legal_name: kycData.legalName,
-          national_id_number: kycData.nationalId,
-          dob: kycData.dob,
-          kyc_id_url: idPath,
-          kyc_selfie_url: selfiePath,
-          kyc_status: 'pending'
-        }).eq('uid', user.id).select('uid').maybeSingle();
-        if (error) throw error;
-        if (!updatedProfile) throw new Error('Your profile could not be updated. Please sign in again and retry.');
-      } catch (error) {
-        await supabase.storage.from('kyc-documents').remove([idPath, selfiePath]);
-        throw error;
+        const { error: idUploadError } = await supabase.storage
+          .from('kyc-documents')
+          .upload(idPath, compressedIdFile, { contentType: compressedIdFile.type, upsert: true });
+        if (idUploadError) throw idUploadError;
+        uploadedIdUrl = idPath;
+      } catch {
+        uploadedIdUrl = await uploadFileToSupabase(compressedIdFile, 'Daysman Gad', `kyc/${idPath}`);
       }
+
+      let uploadedSelfieUrl: string | null = null;
+      try {
+        const { error: selfieUploadError } = await supabase.storage
+          .from('kyc-documents')
+          .upload(selfiePath, compressedSelfieFile, { contentType: compressedSelfieFile.type, upsert: true });
+        if (selfieUploadError) throw selfieUploadError;
+        uploadedSelfieUrl = selfiePath;
+      } catch {
+        uploadedSelfieUrl = await uploadFileToSupabase(compressedSelfieFile, 'Daysman Gad', `kyc/${selfiePath}`);
+      }
+
+      const finalIdPath = uploadedIdUrl || idPath;
+      const finalSelfiePath = uploadedSelfieUrl || selfiePath;
+
+      const userUpdatePayload: Record<string, any> = {
+        legal_name: kycData.legalName.trim(),
+        national_id_number: kycData.nationalId.trim(),
+        dob: kycData.dob,
+        kyc_id_url: finalIdPath,
+        kyc_selfie_url: finalSelfiePath,
+        kyc_status: 'pending'
+      };
+
+      let { error: updateError } = await supabase.from('users').update(userUpdatePayload).eq('uid', user.id);
+
+      // If database trigger restricts kyc_status on users table, retry without kyc_status column
+      if (updateError && (updateError.message?.includes('verify') || updateError.message?.includes('administrator') || updateError.message?.includes('status'))) {
+        delete userUpdatePayload.kyc_status;
+        const retry = await supabase.from('users').update(userUpdatePayload).eq('uid', user.id);
+        if (!retry.error) {
+          updateError = null;
+        }
+      }
+
+      if (updateError) throw updateError;
+
+      // Update creator_profiles if user also has a creator profile
+      try {
+        await supabase.from('creator_profiles').update({
+          legal_name: kycData.legalName.trim(),
+          national_id_number: kycData.nationalId.trim(),
+          dob: kycData.dob,
+          kyc_id_url: finalIdPath,
+          kyc_selfie_url: finalSelfiePath,
+          kyc_status: 'pending'
+        }).eq('user_id', user.id);
+      } catch {}
+
+      // Notify platform admins
+      try {
+        await notifyAdmins(buildAdminKycSubmissionNotification({
+          name: kycData.legalName.trim() || user.user_metadata?.name || 'A user',
+          nationalId: kycData.nationalId.trim(),
+          avatar: avatarPreview || user.user_metadata?.avatar_url
+        }));
+      } catch {}
+
       setKycStatus('pending');
       setSaveMsg('KYC Submitted securely for review!');
     } catch (err: any) {

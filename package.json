@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "node --import tsx --test 'tests/**/*.test.ts'",
+    "test:kyc-payout": "npx cypress run --spec cypress/e2e/11-kyc-withdrawal-to-admin.cy.ts",
     "audit:workflows": "node --import tsx scripts/workflow-auditor.ts",
     "preview": "vite preview"
   },

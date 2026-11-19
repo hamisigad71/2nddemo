@@ -31,25 +31,12 @@ BEGIN
   FROM public.users
   WHERE uid::text = creator_uid;
 
-  -- Allow withdrawal only if KYC is verified or valid ID & selfie exist in private storage
+  -- Strictly disallow payout/withdrawal requests from unverified creator accounts
   IF COALESCE(user_is_verified, false) = false AND COALESCE(user_kyc_status, '') <> 'verified' THEN
-    IF id_path IS NULL OR selfie_path IS NULL
-       OR NOT EXISTS (
-         SELECT 1
-         FROM storage.objects
-         WHERE bucket_id = 'kyc-documents'
-           AND name = id_path
-           AND (storage.foldername(name))[1] = creator_uid
-       )
-       OR NOT EXISTS (
-         SELECT 1
-         FROM storage.objects
-         WHERE bucket_id = 'kyc-documents'
-           AND name = selfie_path
-           AND (storage.foldername(name))[1] = creator_uid
-       )
-    THEN
-      RAISE EXCEPTION 'Upload your National ID and selfie with ID before requesting a withdrawal';
+    IF id_path IS NULL OR selfie_path IS NULL THEN
+      RAISE EXCEPTION 'Identity verification required: upload your National ID and selfie with ID before requesting a withdrawal';
+    ELSE
+      RAISE EXCEPTION 'Your KYC verification must be approved by an administrator before requesting a withdrawal';
     END IF;
   END IF;
 

@@ -85,8 +85,15 @@ const AdminPayouts = () => {
   };
 
   const filtered = payouts.filter(p => {
+    const q = search.toLowerCase().trim();
     const matchFilter = filter === 'all' || p.status === filter;
-    const matchSearch = p.creator.toLowerCase().includes(search.toLowerCase()) || p.id.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      !q ||
+      p.creator.toLowerCase().includes(q) ||
+      (p.legalName || '').toLowerCase().includes(q) ||
+      (p.phone || '').toLowerCase().includes(q) ||
+      (p.email || '').toLowerCase().includes(q) ||
+      p.id.toLowerCase().includes(q);
     return matchFilter && matchSearch;
   });
 
@@ -138,7 +145,7 @@ const AdminPayouts = () => {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search by creator or ID..."
+              placeholder="Search by creator, legal name, M-Pesa number, or ID..."
               className="w-full bg-[#0d0e12] border border-zinc-800 pl-11 pr-4 py-3.5 rounded-2xl text-white text-sm font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-zinc-600"
             />
           </div>
@@ -198,15 +205,20 @@ const AdminPayouts = () => {
                         <div className="flex items-center gap-2">
                           <div>
                             <div className="text-white text-xs font-bold">{p.method}</div>
-                            <div className="text-emerald-400 font-mono text-xs flex items-center gap-1 mt-0.5">
+                            <div className="text-emerald-400 font-mono text-xs font-bold flex items-center gap-1 mt-0.5">
                               <Phone className="w-3 h-3" /> {p.phone}
                             </div>
+                            {p.legalName && (
+                              <div className="text-[11px] text-zinc-400 mt-0.5">
+                                ID Name: <span className="text-zinc-200 font-semibold">{p.legalName}</span>
+                              </div>
+                            )}
                           </div>
                           {p.phone && p.phone !== 'Not provided' && (
                             <button
                               onClick={() => copyPhone(p.phone)}
                               title="Copy M-Pesa number"
-                              className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
+                              className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors cursor-pointer"
                             >
                               <Copy className="w-3.5 h-3.5" />
                             </button>

@@ -32,7 +32,9 @@ import { toast } from '../../context/ToastContext';
 import { hasPrivateKycEvidence } from '../../lib/verification';
 import {
   getCreatorPayoutAmountError,
+  getCreatorPayoutPhoneError,
   MINIMUM_CREATOR_PAYOUT_KES,
+  normalizeKenyanMpesaPhone,
 } from '../../lib/creatorPayoutRules';
 
 const EarningsWallet = () => {
@@ -45,12 +47,20 @@ const EarningsWallet = () => {
 
   // Payout Phone & Modal State
   const [payoutPhone, setPayoutPhone] = useState('');
+  const [confirmPayoutPhone, setConfirmPayoutPhone] = useState('');
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
+  const [withdrawReceipt, setWithdrawReceipt] = useState<{
+    amount: number;
+    phone: string;
+    submittedAt: string;
+  } | null>(null);
   const [savingPhone, setSavingPhone] = useState(false);
   const [payoutKycRequired, setPayoutKycRequired] = useState(false);
   const [payoutKycEvidenceProvided, setPayoutKycEvidenceProvided] = useState(false);
+  const [payoutKycStatus, setPayoutKycStatus] = useState<string>('unverified');
+  const [payoutKycDocsUploaded, setPayoutKycDocsUploaded] = useState(false);
   const [payoutProfileStatus, setPayoutProfileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [isKycPromptOpen, setIsKycPromptOpen] = useState(false);
 
@@ -62,14 +72,16 @@ const EarningsWallet = () => {
         setPayoutProfileStatus('error');
         return;
       }
-      // Every creator requires identity verification before withdrawing funds
+      // Every creator requires approved identity verification before withdrawing funds
       const required = true;
-      const isApproved = profile.kyc_status === 'verified';
+      const isApproved = profile.kyc_status === 'verified' || profile.is_verified === true;
       const hasUploadedDocs = hasPrivateKycEvidence(user.id, profile.kyc_id_url, profile.kyc_selfie_url);
 
       setPayoutKycRequired(required);
-      // Payout evidence is fully satisfied if the user's KYC documents have been uploaded and approved by admin
-      setPayoutKycEvidenceProvided(isApproved || hasUploadedDocs);
+      setPayoutKycStatus(profile.kyc_status || 'unverified');
+      setPayoutKycDocsUploaded(hasUploadedDocs);
+      // Withdrawal is unlocked only once KYC verification is approved
+      setPayoutKycEvidenceProvided(isApproved);
       setPayoutProfileStatus('ready');
     } catch (err) {
       console.error('Could not check withdrawal identity requirements:', err);
@@ -202,6 +214,7 @@ const EarningsWallet = () => {
       return;
     }
     setWithdrawAmount(String(availableBalance));
+    setConfirmPayoutPhone('');
     setIsWithdrawModalOpen(true);
   };
 
@@ -220,24 +233,38 @@ const EarningsWallet = () => {
       toast.error(payoutAmountError);
       return;
     }
-    if (!payoutPhone || payoutPhone.replace(/\D/g, '').length < 9) {
-      toast.error('Please provide a valid M-Pesa phone number to receive your payout.');
+    const phoneError = getCreatorPayoutPhoneError(payoutPhone, confirmPayoutPhone);
+    if (phoneError) {
+      toast.error(phoneError);
       return;
     }
+    const normalizedPhone = normalizeKenyanMpesaPhone(payoutPhone)!;
 
     setWithdrawStatus('pending');
     try {
-      // Save updated phone to user profile if changed
+      // Save canonical M-Pesa phone number to user profile
       try {
-        await updateUserProfile(user.id, { phone: payoutPhone.trim() });
+        await updateUserProfile(user.id, { phone: normalizedPhone });
+        setPayoutPhone(normalizedPhone);
       } catch {}
 
-      await requestCreatorPayout(user.id, numericAmount, payoutPhone.trim(), 'M-Pesa');
+      await requestCreatorPayout(user.id, numericAmount, normalizedPhone, 'M-Pesa');
 
       setWithdrawStatus('success');
       setIsWithdrawModalOpen(false);
-      toast.success('Withdrawal Request Sent to Admin!', {
-        description: `KES ${numericAmount.toLocaleString()} is now pending Admin approval and M-Pesa transfer to ${payoutPhone.trim()}.`,
+      setConfirmPayoutPhone('');
+      setWithdrawReceipt({
+        amount: numericAmount,
+        phone: normalizedPhone,
+        submittedAt: new Date().toLocaleString('en-KE', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      });
+      toast.success('Withdrawal request submitted', {
+        description: `Processing KES ${numericAmount.toLocaleString()} to ${normalizedPhone}. Expect your funds within 48 hours.`,
       });
       await fetchTransactions();
       setTimeout(() => setWithdrawStatus('idle'), 4000);
@@ -254,14 +281,17 @@ const EarningsWallet = () => {
   const handleSavePhoneOnly = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
-    if (!payoutPhone || payoutPhone.replace(/\D/g, '').length < 9) {
-      toast.error('Please enter a valid M-Pesa phone number.');
+    const phoneError = getCreatorPayoutPhoneError(payoutPhone);
+    if (phoneError) {
+      toast.error(phoneError);
       return;
     }
+    const normalizedPhone = normalizeKenyanMpesaPhone(payoutPhone)!;
     setSavingPhone(true);
     try {
-      await updateUserProfile(user.id, { phone: payoutPhone.trim() });
-      toast.success('Payout M-Pesa number updated!');
+      await updateUserProfile(user.id, { phone: normalizedPhone });
+      setPayoutPhone(normalizedPhone);
+      toast.success(`Payout M-Pesa number updated to ${normalizedPhone}!`);
       setIsPhoneModalOpen(false);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to save phone number.');
@@ -425,13 +455,27 @@ const EarningsWallet = () => {
               <div className="flex flex-col sm:flex-row gap-3 pt-1">
                 <Button
                   onClick={openWithdrawModal}
-                  disabled={withdrawStatus === 'pending' || availableBalance < MINIMUM_CREATOR_PAYOUT_KES}
+                  disabled={
+                    withdrawStatus === 'pending' ||
+                    payoutProfileStatus === 'loading' ||
+                    availableBalance < MINIMUM_CREATOR_PAYOUT_KES
+                  }
                   className="flex-1 py-3 px-6 rounded-xl font-bold text-sm shadow-md active:scale-[0.98] transition-all cursor-pointer min-h-11"
                 >
-                  {withdrawStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                  {(withdrawStatus === 'pending' || payoutProfileStatus === 'loading') && (
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  )}
                   {withdrawStatus === 'success' && <CheckCircle className="w-4 h-4 text-emerald-300 shrink-0" />}
-                  {withdrawStatus === 'idle' && <ArrowUpRight className="w-4 h-4 shrink-0" />}
-                  <span>{withdrawStatus === 'success' ? 'Request Sent!' : 'Withdraw to M-Pesa'}</span>
+                  {withdrawStatus === 'idle' && payoutProfileStatus !== 'loading' && (
+                    <ArrowUpRight className="w-4 h-4 shrink-0" />
+                  )}
+                  <span>
+                    {withdrawStatus === 'success'
+                      ? 'Request Sent!'
+                      : payoutProfileStatus === 'loading'
+                        ? 'Checking Verification...'
+                        : 'Withdraw to M-Pesa'}
+                  </span>
                 </Button>
 
                 <Button
@@ -449,6 +493,26 @@ const EarningsWallet = () => {
                 <p className="text-center sm:text-left text-xs text-muted-foreground -mt-2">
                   Withdrawals are available once your balance reaches KES {MINIMUM_CREATOR_PAYOUT_KES.toLocaleString()}.
                 </p>
+              )}
+
+              {payoutProfileStatus === 'ready' && payoutKycRequired && !payoutKycEvidenceProvided && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+                  <div className="flex items-start gap-2.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span>
+                      {payoutKycStatus === 'pending' || payoutKycDocsUploaded
+                        ? 'Identity verification pending review — withdrawals to M-Pesa will unlock once an admin approves your National ID and selfie.'
+                        : 'Identity verification required to cash out — upload your National ID and verification selfie to unlock M-Pesa withdrawals.'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/edit-profile?tab=kyc')}
+                    className="shrink-0 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30 px-3 py-1.5 font-bold text-amber-100 transition-colors cursor-pointer"
+                  >
+                    {payoutKycStatus === 'pending' || payoutKycDocsUploaded ? 'View Status' : 'Verify ID'}
+                  </button>
+                </div>
               )}
             </CardContent>
           </div>
@@ -735,26 +799,26 @@ const EarningsWallet = () => {
 
       {/* Withdrawal Request Modal */}
       {isWithdrawModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-[#0E0F15] border border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#0E0F15] border border-white/10 rounded-3xl w-full max-w-md max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl relative">
             <button
               type="button"
               onClick={() => setIsWithdrawModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-zinc-500 hover:text-white rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-4">
-              <Wallet className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-2xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-3">
+              <Wallet className="w-5 h-5" />
             </div>
 
-            <h3 className="text-xl font-extrabold text-white mb-1">Request M-Pesa Withdrawal</h3>
-            <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
+            <h3 className="text-lg font-extrabold text-white mb-1">Request M-Pesa Withdrawal</h3>
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
               Disbursed directly to your Safaricom M-Pesa line upon Admin approval. Zero processing fees.
             </p>
 
-            <form onSubmit={handleConfirmWithdraw} className="space-y-5">
+            <form onSubmit={handleConfirmWithdraw} className="space-y-4">
               <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 flex items-center justify-between">
                 <span className="text-xs font-semibold text-zinc-400">Available to Withdraw</span>
                 <span className="text-lg font-extrabold text-white tabular-nums">
@@ -816,7 +880,7 @@ const EarningsWallet = () => {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  M-Pesa Phone Number
+                  M-Pesa Phone Number *
                 </label>
                 <input
                   type="tel"
@@ -826,12 +890,48 @@ const EarningsWallet = () => {
                   onChange={(e) => setPayoutPhone(e.target.value)}
                   className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
                 />
+                {normalizeKenyanMpesaPhone(payoutPhone) ? (
+                  <p className="mt-1.5 text-[11px] font-medium text-emerald-400">
+                    Formatted M-Pesa number: <span className="font-mono font-bold">{normalizeKenyanMpesaPhone(payoutPhone)}</span>
+                  </p>
+                ) : payoutPhone.trim().length > 0 ? (
+                  <p className="mt-1.5 text-[11px] font-medium text-rose-400">
+                    Enter a valid 10-digit Kenyan mobile number (07XX or 01XX) or +254 format.
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Confirm M-Pesa Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="Re-enter your M-Pesa number to confirm"
+                  value={confirmPayoutPhone}
+                  onChange={(e) => setConfirmPayoutPhone(e.target.value)}
+                  onPaste={(e) => e.preventDefault()}
+                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
+                />
+                {confirmPayoutPhone.trim().length > 0 && (
+                  normalizeKenyanMpesaPhone(payoutPhone) &&
+                  normalizeKenyanMpesaPhone(payoutPhone) === normalizeKenyanMpesaPhone(confirmPayoutPhone) ? (
+                    <p className="mt-1.5 text-[11px] font-medium text-emerald-400">
+                      ✓ M-Pesa numbers match.
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] font-medium text-rose-400">
+                      Numbers do not match — please verify every digit.
+                    </p>
+                  )
+                )}
               </div>
 
               <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-3 flex items-start gap-2.5 text-xs text-zinc-300">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>
-                  Once submitted, the amount moves to <strong>Pending Clearance</strong> and will be disbursed directly to your M-Pesa account.
+                  Once submitted, your withdrawal request is forwarded to our payout team for review and disbursed directly to your M-Pesa account within <strong>48 hours</strong>.
                 </span>
               </div>
 
@@ -860,6 +960,84 @@ const EarningsWallet = () => {
         </div>
       )}
 
+      {/* Withdrawal Processing Confirmation Screen */}
+      {withdrawReceipt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="withdraw-processing-title"
+            className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl border border-emerald-500/25 bg-[#0E0F15] p-5 sm:p-7 shadow-2xl relative text-center"
+          >
+            <button
+              type="button"
+              onClick={() => setWithdrawReceipt(null)}
+              className="absolute top-5 right-5 p-2 text-zinc-500 hover:text-white rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer"
+              aria-label="Close confirmation"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+              <Clock className="h-8 w-8 animate-pulse" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Processing Payment
+            </div>
+
+            <h3 id="withdraw-processing-title" className="text-2xl font-extrabold text-white mb-2">
+              Withdrawal Request Received
+            </h3>
+
+            <p className="text-sm leading-relaxed text-zinc-300 mb-6">
+              Your payout request has been securely forwarded to our finance team for verification and disbursement. Please expect your funds directly in your M-Pesa account within{' '}
+              <strong className="text-white">48 hours</strong>.
+            </p>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 mb-5 space-y-3 text-left">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400 font-medium">Amount Requested</span>
+                <span className="text-base font-extrabold text-emerald-400 tabular-nums">
+                  KES {withdrawReceipt.amount.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-px bg-white/[0.06]" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400 font-medium">M-Pesa Destination</span>
+                <span className="font-mono font-bold text-white">{withdrawReceipt.phone}</span>
+              </div>
+              <div className="h-px bg-white/[0.06]" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400 font-medium">Estimated Arrival</span>
+                <span className="font-semibold text-white">Less than 48 hours</span>
+              </div>
+              <div className="h-px bg-white/[0.06]" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400 font-medium">Submitted</span>
+                <span className="text-zinc-300">{withdrawReceipt.submittedAt}</span>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-3.5 py-2.5 text-left flex items-start gap-2.5 text-[11px] text-zinc-300 mb-6">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <span>
+                You will receive an in-app notification and a Safaricom M-Pesa confirmation SMS as soon as your transfer is completed.
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setWithdrawReceipt(null)}
+              className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3.5 text-sm font-extrabold text-white shadow-md transition-all cursor-pointer"
+            >
+              Back to Wallet
+            </button>
+          </div>
+        </div>
+      )}
+
       {isKycPromptOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div
@@ -872,14 +1050,19 @@ const EarningsWallet = () => {
               <ShieldCheck className="h-6 w-6" />
             </div>
             <h3 id="withdraw-identity-title" className="mb-2 text-xl font-extrabold text-white">
-              Identity documents required
+              {payoutKycStatus === 'pending' || payoutKycDocsUploaded
+                ? 'Verification pending approval'
+                : 'Identity verification required'}
             </h3>
             <p className="mb-5 text-sm leading-relaxed text-zinc-300">
-              Before you can withdraw funds, upload a clear photo of your National ID or passport and a selfie holding that ID. Your verified creator badge will remain active.
+              {payoutKycStatus === 'pending' || payoutKycDocsUploaded
+                ? 'Your National ID and verification selfie are currently under admin review. Withdrawals to M-Pesa will be unlocked as soon as your KYC verification is approved.'
+                : 'You can keep posting content and earning on the platform, but before you can cash out to M-Pesa you must upload your National ID (or passport) and a verification selfie holding that ID and have them approved.'}
             </p>
             <ul className="mb-6 space-y-2 text-sm text-zinc-300">
               <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 shrink-0 text-sky-400" /> National ID or passport</li>
               <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 shrink-0 text-sky-400" /> Selfie holding the same ID</li>
+              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 shrink-0 text-sky-400" /> Admin KYC approval</li>
             </ul>
             <div className="flex gap-3">
               <button
@@ -887,7 +1070,7 @@ const EarningsWallet = () => {
                 onClick={() => setIsKycPromptOpen(false)}
                 className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-zinc-300 hover:bg-white/[0.08] transition-colors"
               >
-                Not now
+                Close
               </button>
               <button
                 type="button"
@@ -897,7 +1080,7 @@ const EarningsWallet = () => {
                 }}
                 className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-extrabold text-white hover:bg-red-700 shadow-md transition-all"
               >
-                Upload documents
+                {payoutKycStatus === 'pending' || payoutKycDocsUploaded ? 'View KYC status' : 'Upload documents'}
               </button>
             </div>
           </div>
