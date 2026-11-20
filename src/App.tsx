@@ -67,6 +67,10 @@ const LiveStudio = lazy(() => import("./pages/creator/LiveStudio"));
 const LiveRoom = lazy(() => import("./pages/user/LiveRoom"));
 const UserAds = lazy(() => import("./pages/user/UserAds"));
 const CreatorAds = lazy(() => import("./pages/creator/CreatorAds"));
+const NotFound = lazy(() => import("./pages/public/NotFound"));
+
+// Set to false once subscription is paid to restore the original Landing page & site routes
+const SITE_UNREACHABLE_MODE = true;
 
 const RouteLoading = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
@@ -77,20 +81,29 @@ const RouteLoading = () => (
 const AppRoutes = () => {
   const location = useLocation();
   const [initialLoad, setInitialLoad] = useState(true);
+  const is404Route = SITE_UNREACHABLE_MODE || location.pathname === "/404";
 
   const handleLoaderComplete = useCallback(() => {
     setInitialLoad(false);
   }, []);
 
+  if (SITE_UNREACHABLE_MODE) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-white" />}>
+        <NotFound />
+      </Suspense>
+    );
+  }
+
   return (
     <>
-      {initialLoad && (
+      {initialLoad && !is404Route && (
         <PageLoader onComplete={handleLoaderComplete} />
       )}
       <div className="min-h-screen bg-background text-foreground font-sans">
-        <AgeVerificationModal />
-        <InstallAppPrompt />
-        <CreatorSupportChat />
+        {!is404Route && <AgeVerificationModal />}
+        {!is404Route && <InstallAppPrompt />}
+        {!is404Route && <CreatorSupportChat />}
         <ErrorBoundary>
           <Suspense fallback={<RouteLoading />}>
             <Routes location={location}>
@@ -101,6 +114,7 @@ const AppRoutes = () => {
               <Route path="/signup" element={<Signup />} />
               <Route path="/creator/:id" element={<CreatorProfile />} />
               <Route path="/live/:id" element={<LiveRoom />} />
+              <Route path="/404" element={<NotFound />} />
               
               {/* Protected Routes */ }
               <Route element={<ProtectedRoute />}>
@@ -155,6 +169,7 @@ const AppRoutes = () => {
                   <Route path="/admin/escorts/hardcoded" element={<AdminHardcodedEscorts />} />
                 </Route>
               </Route>
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </ErrorBoundary>
