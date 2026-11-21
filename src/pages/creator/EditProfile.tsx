@@ -1279,14 +1279,14 @@ const EditProfile = () => {
                   </div>
 
                   {/* Limited-Time Promotional Discount Offer */}
-                  <div className="p-5 rounded-2xl bg-black/60 border border-white/10 space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="p-5 rounded-2xl bg-muted/40 border border-border space-y-4">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
-                        <h4 className="font-bold text-sm text-white flex items-center gap-2">
-                          <Flame className="w-4 h-4 text-red-500" />{" "}
+                        <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                          <Flame className="w-4 h-4 text-red-500 shrink-0" />{" "}
                           Limited-Time Promo Offer
                         </h4>
-                        <p className="text-xs text-zinc-400">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           Display a high-converting discount banner on your
                           public profile page.
                         </p>
@@ -1299,17 +1299,23 @@ const EditProfile = () => {
                             promoActive: !p.promoActive,
                           }))
                         }
-                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${profileData.promoActive ? "bg-red-600" : "bg-zinc-800"}`}
+                        className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                          profileData.promoActive
+                            ? "bg-red-600"
+                            : "bg-zinc-300 dark:bg-zinc-800"
+                        }`}
                       >
                         <span
-                          className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${profileData.promoActive ? "left-7" : "left-1"}`}
+                          className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${
+                            profileData.promoActive ? "left-7" : "left-1"
+                          }`}
                         />
                       </button>
                     </div>
 
                     {profileData.promoActive && (
-                      <div className="flex items-center gap-2 sm:gap-3 pt-2 border-t border-white/5 flex-wrap">
-                        <span className="text-xs font-bold text-zinc-400">
+                      <div className="flex items-center gap-2 sm:gap-2.5 pt-3 border-t border-border flex-wrap">
+                        <span className="text-xs font-bold text-muted-foreground mr-1">
                           Discount:
                         </span>
                         {[15, 25, 35, 50, 70].map((pct) => (
@@ -1322,10 +1328,10 @@ const EditProfile = () => {
                                 promoDiscount: pct,
                               }))
                             }
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
                               profileData.promoDiscount === pct
-                                ? "bg-red-600 text-white shadow-md shadow-red-600/30"
-                                : "bg-zinc-900 text-zinc-400 hover:text-white border border-white/10"
+                                ? "bg-red-600 text-white shadow-sm shadow-red-600/25 border border-red-600"
+                                : "bg-card text-foreground hover:bg-muted border border-border shadow-xs"
                             }`}
                           >
                             {pct}% OFF
