@@ -66,6 +66,29 @@ CREATE POLICY "Admins can delete users"
   TO authenticated
   USING (public.is_admin());
 
+-- Allow admins to update creator_profiles (for KYC approval & badge sync)
+DROP POLICY IF EXISTS "Users can upsert own creator profile" ON public.creator_profiles;
+CREATE POLICY "Users can upsert own creator profile"
+  ON public.creator_profiles
+  FOR ALL
+  TO authenticated
+  USING (auth.uid()::text = user_id::text OR public.is_admin())
+  WITH CHECK (auth.uid()::text = user_id::text OR public.is_admin());
+
+-- Allow admins to view private KYC documents without triggering users RLS recursion
+DROP POLICY IF EXISTS "Owners and admins view KYC documents" ON storage.objects;
+CREATE POLICY "Owners and admins view KYC documents"
+  ON storage.objects
+  FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'kyc-documents'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR public.is_admin()
+    )
+  );
+
 -- ============================================================================
 -- 2. APPROVE & SYNC NIMO (Kikonde Brenda Wali - nimoblip@gmail.com) KYC
 -- ============================================================================

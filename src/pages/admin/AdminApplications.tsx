@@ -414,9 +414,10 @@ const AdminApplications = () => {
                     {/* Approve as VIP Creator */}
                     <button
                       type="button"
-                      disabled={isWorking}
+                      disabled={isWorking || !app.hasBothDocs}
+                      title={!app.hasBothDocs ? 'Applicant must upload both National ID and selfie before approval' : 'Approve as VIP Creator'}
                       onClick={() => handleApprove(app, 'vip')}
-                      className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-black font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20 disabled:opacity-40 cursor-pointer"
+                      className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-black font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {actionLoading === `${app.uid}-vip` ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -429,9 +430,10 @@ const AdminApplications = () => {
                     {/* Approve as Regular Creator */}
                     <button
                       type="button"
-                      disabled={isWorking}
+                      disabled={isWorking || !app.hasBothDocs}
+                      title={!app.hasBothDocs ? 'Applicant must upload both National ID and selfie before approval' : 'Approve as Verified Creator'}
                       onClick={() => handleApprove(app, 'creator')}
-                      className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 disabled:opacity-40 cursor-pointer"
+                      className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {actionLoading === `${app.uid}-creator` ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -600,16 +602,20 @@ const AdminApplications = () => {
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                   <button
                     type="button"
+                    disabled={!inspectItem.hasBothDocs}
+                    title={!inspectItem.hasBothDocs ? 'Applicant must upload both National ID and selfie before approval' : 'Approve as Verified Creator'}
                     onClick={() => handleApprove(inspectItem, 'creator')}
-                    className="flex-1 sm:flex-initial px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer"
+                    className="flex-1 sm:flex-initial px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <Check className="w-4 h-4" /> Approve as Creator
                   </button>
 
                   <button
                     type="button"
+                    disabled={!inspectItem.hasBothDocs}
+                    title={!inspectItem.hasBothDocs ? 'Applicant must upload both National ID and selfie before approval' : 'Approve as VIP Creator'}
                     onClick={() => handleApprove(inspectItem, 'vip')}
-                    className="flex-1 sm:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-black font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 cursor-pointer"
+                    className="flex-1 sm:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-black font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <Crown className="w-4 h-4" /> Approve as VIP
                   </button>

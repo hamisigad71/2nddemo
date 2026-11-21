@@ -4833,13 +4833,20 @@ export const resolveStorageDocUrl = async (
     const { data, error } = await supabase.storage
       .from("kyc-documents")
       .createSignedUrl(cleanPath, 60 * 60);
-    if (error) {
-      const { data: pubData } = supabase.storage
-        .from("kyc-documents")
-        .getPublicUrl(cleanPath);
-      return pubData?.publicUrl || null;
+    if (!error && data?.signedUrl) {
+      return data.signedUrl;
     }
-    return data?.signedUrl || null;
+    // Fallback: check 'Daysman Gad' bucket where fallback KYC uploads are stored
+    const fallbackPath = rawUrl.startsWith("kyc/") ? rawUrl : `kyc/${cleanPath}`;
+    const { data: dgSigned } = await supabase.storage
+      .from("Daysman Gad")
+      .createSignedUrl(fallbackPath, 60 * 60);
+    if (dgSigned?.signedUrl) return dgSigned.signedUrl;
+
+    const { data: pubData } = supabase.storage
+      .from("Daysman Gad")
+      .getPublicUrl(fallbackPath);
+    return pubData?.publicUrl || null;
   } catch {
     const { data: pubData } = supabase.storage
       .from("kyc-documents")
@@ -5057,51 +5064,75 @@ export const getAdminApplications = async (): Promise<
 export const approveCreatorApplication = async (
   applicantId: string,
   approvalType: "creator" | "vip",
-  options?: { category?: string; niche?: string; notes?: string },
+  _options?: { category?: string; niche?: string; notes?: string },
 ): Promise<boolean> => {
   if (!applicantId) throw new Error("Applicant ID is required.");
 
   const isVip = approvalType === "vip";
 
-  // 1. Update public.users
+  // 0. Verify the creator actually submitted both National ID and verification selfie
+  const [{ data: existingUser }, { data: existingProfile }] = await Promise.all([
+    supabase.from("users").select("*").eq("uid", applicantId).maybeSingle(),
+    supabase
+      .from("creator_profiles")
+      .select("*")
+      .eq("user_id", applicantId)
+      .maybeSingle(),
+  ]);
+  const local = getStoredCreatorProfile(applicantId);
+  const hasIdDoc = Boolean(
+    existingUser?.kyc_id_url ||
+      existingProfile?.kyc_id_url ||
+      (local as any)?.kyc_id_url ||
+      (local as any)?.idDocument,
+  );
+  const hasSelfieDoc = Boolean(
+    existingUser?.kyc_selfie_url ||
+      existingProfile?.kyc_selfie_url ||
+      (local as any)?.kyc_selfie_url ||
+      (local as any)?.selfie,
+  );
+  if (!hasIdDoc || !hasSelfieDoc) {
+    throw new Error(
+      "Cannot approve KYC until the creator has uploaded both their National ID and verification selfie.",
+    );
+  }
+
+  // 1. Update public.users (using uid, which is the primary key column on public.users)
   const userUpdates: Record<string, any> = {
     role: "creator",
     status: "active",
     kyc_status: "verified",
+    is_verified: true,
   };
 
   const { error: userError } = await supabase
     .from("users")
     .update(userUpdates)
-    .or(`uid.eq.${applicantId},id.eq.${applicantId}`);
+    .eq("uid", applicantId);
 
   if (userError) {
-    console.warn(
-      "approveCreatorApplication users update note:",
-      userError.message,
-    );
+    throw new Error(`Failed to update user KYC status: ${userError.message}`);
   }
 
-  // 2. Upsert creator_profiles
+  // 2. Upsert creator_profiles (only writing columns that exist in public.creator_profiles)
   try {
     const profileUpdates: Record<string, any> = {
       user_id: applicantId,
-      is_active: true,
       kyc_status: "verified",
+      is_verified: true,
       updated_at: new Date().toISOString(),
     };
     if (isVip) {
-      profileUpdates.is_featured = true;
-      profileUpdates.niche = "VIP Creator";
       profileUpdates.tags = ["VIP Creator", "Exclusive Access", "Direct Chat"];
     }
-    if (options?.category) {
-      profileUpdates.category = options.category;
-    }
 
-    await supabase
+    const { error: cpErr } = await supabase
       .from("creator_profiles")
       .upsert(profileUpdates, { onConflict: "user_id" });
+    if (cpErr) {
+      console.warn("creator_profiles upsert note:", cpErr.message);
+    }
   } catch (err) {
     console.warn("creator_profiles upsert note:", err);
   }
@@ -5193,7 +5224,7 @@ export const approveCreatorApplication = async (
     const { data: u } = await supabase
       .from("users")
       .select("name, avatar")
-      .or(`uid.eq.${applicantId},id.eq.${applicantId}`)
+      .eq("uid", applicantId)
       .maybeSingle();
     notifySubscribersOfNewCreator(
       applicantId,
@@ -5211,11 +5242,22 @@ export const rejectCreatorApplication = async (
 ): Promise<boolean> => {
   if (!applicantId) throw new Error("Applicant ID is required.");
 
-  // 1. Update public.users
+  // 1. Update public.users and creator_profiles
   await supabase
     .from("users")
-    .update({ kyc_status: "rejected" })
-    .or(`uid.eq.${applicantId},id.eq.${applicantId}`);
+    .update({ kyc_status: "rejected", is_verified: false })
+    .eq("uid", applicantId);
+
+  try {
+    await supabase
+      .from("creator_profiles")
+      .update({
+        kyc_status: "rejected",
+        is_verified: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", applicantId);
+  } catch {}
 
   // 2. Update local storage
   if (typeof window !== "undefined") {
@@ -5282,14 +5324,14 @@ export const updateCreatorStatus = async (
     const { error } = await supabase
       .from("users")
       .update(userUpdates)
-      .or(`uid.eq.${creatorId},id.eq.${creatorId}`);
+      .eq("uid", creatorId);
 
     if (error) {
       // Fallback if status column is not in users table
       const { error: roleErr } = await supabase
         .from("users")
         .update({ role: roleMap[newStatus] as string })
-        .or(`uid.eq.${creatorId},id.eq.${creatorId}`);
+        .eq("uid", creatorId);
       if (roleErr)
         console.warn(
           "updateCreatorStatus role update notice:",
@@ -5304,10 +5346,9 @@ export const updateCreatorStatus = async (
     await supabase
       .from("creator_profiles")
       .update({
-        status: newStatus,
-        is_active: newStatus === "active",
+        updated_at: new Date().toISOString(),
       })
-      .or(`user_id.eq.${creatorId},id.eq.${creatorId}`);
+      .eq("user_id", creatorId);
   } catch (err) {
     console.warn("updateCreatorStatus creator_profiles table error:", err);
   }
@@ -5351,12 +5392,12 @@ export const updateCreatorStatus = async (
         supabase
           .from("users")
           .select("*")
-          .or(`uid.eq.${creatorId},id.eq.${creatorId}`)
+          .eq("uid", creatorId)
           .maybeSingle(),
         supabase
           .from("creator_profiles")
           .select("*")
-          .or(`user_id.eq.${creatorId},id.eq.${creatorId}`)
+          .eq("user_id", creatorId)
           .maybeSingle(),
       ]);
 
@@ -5373,18 +5414,23 @@ export const updateCreatorStatus = async (
         (local as any)?.kyc_selfie_url ||
         (local as any)?.selfie,
       );
-      const hasFilledKyc =
-        (hasId && hasSelfie) ||
-        user?.kyc_status === "pending" ||
-        profile?.kyc_status === "pending" ||
-        (local as any)?.kyc_status === "pending";
+      const hasFilledKyc = Boolean(hasId && hasSelfie);
 
-      // When the admin approves any account that has filled KYC, grant them the blue verified badge!
+      // When the admin approves any account that has uploaded both ID & selfie, grant them the blue verified badge!
       if (hasFilledKyc) {
         await supabase
           .from("users")
-          .update({ kyc_status: "verified" })
-          .or(`uid.eq.${creatorId},id.eq.${creatorId}`);
+          .update({ kyc_status: "verified", is_verified: true })
+          .eq("uid", creatorId);
+
+        await supabase
+          .from("creator_profiles")
+          .update({
+            kyc_status: "verified",
+            is_verified: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", creatorId);
 
         if (typeof window !== "undefined") {
           try {
