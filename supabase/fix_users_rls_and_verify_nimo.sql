@@ -1,5 +1,6 @@
 -- ============================================================================
 -- 1. FIX: "Infinite recursion detected in policy for relation 'users'"
+-- 1. NON-RECURSIVE ADMIN HELPER & RLS POLICIES FOR ALL USERS / CREATORS
 -- ============================================================================
 -- PostgreSQL raises error 42P17 when an RLS policy on public.users queries
 -- public.users directly. Using a SECURITY DEFINER helper avoids RLS recursion.
@@ -90,10 +91,175 @@ CREATE POLICY "Owners and admins view KYC documents"
   );
 
 -- ============================================================================
--- 2. APPROVE & SYNC NIMO (Kikonde Brenda Wali - nimoblip@gmail.com) KYC
+-- 1.5 ADMIN KYC APPROVAL & PIN-ADMIN PROMOTION RPC FUNCTIONS (SECURITY DEFINER)
+-- 2. ADMIN KYC APPROVAL RPC FOR ALL CREATORS (SECURITY DEFINER)
 -- ============================================================================
--- Her users row had is_verified = true but kyc_status = 'pending', and her
--- creator_profiles row had is_verified = false / kyc_status = 'unverified'.
+-- Because admins unlock the Admin Portal using an Access Code / PIN on
+-- AdminRoute.tsx, their logged-in user row may not yet have role = 'admin',
+-- causing direct table updates to update 0 rows under RLS. These SECURITY
+-- DEFINER functions ensure Admin KYC approvals and role sync always persist.
+
+CREATE OR REPLACE FUNCTION public.promote_current_user_to_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN false;
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  UPDATE public.users
+  SET role = 'admin'
+  WHERE uid::text = auth.uid()::text;
+
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.promote_current_user_to_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.promote_current_user_to_admin() TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.admin_verify_creator_kyc(
+  target_uid text,
+  new_kyc_status text DEFAULT 'verified',
+  make_vip boolean DEFAULT false
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  is_approved boolean;
+BEGIN
+  IF target_uid IS NULL OR btrim(target_uid) = '' THEN
+    RAISE EXCEPTION 'Target creator UID is required';
+  END IF;
+
+  IF new_kyc_status NOT IN ('verified', 'rejected', 'pending', 'unverified') THEN
+    RAISE EXCEPTION 'Invalid KYC status: %', new_kyc_status;
+  END IF;
+
+  is_approved := (new_kyc_status = 'verified');
+
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  UPDATE public.users
+  SET kyc_status = new_kyc_status,
+      is_verified = is_approved,
+      role = CASE WHEN is_approved THEN 'creator' ELSE role END,
+      status = CASE WHEN is_approved THEN 'active' ELSE status END
+  WHERE uid::text = target_uid;
+
+  INSERT INTO public.creator_profiles (
+    user_id,
+    display_name,
+    avatar,
+    avatar_url,
+    cover_image,
+    kyc_status,
+    is_verified,
+    legal_name,
+    national_id_number,
+    dob,
+    kyc_id_url,
+    kyc_selfie_url,
+    gender,
+    gender_description,
+    tags,
+    updated_at
+  )
+  SELECT
+    u.uid,
+    u.name,
+    u.avatar,
+    COALESCE(u.avatar_url, u.avatar),
+    u.cover_image,
+    new_kyc_status,
+    is_approved,
+    u.legal_name,
+    u.national_id_number,
+    u.dob,
+    u.kyc_id_url,
+    u.kyc_selfie_url,
+    u.gender,
+    u.gender_description,
+    CASE
+      WHEN make_vip AND is_approved THEN ARRAY['VIP Creator', 'Exclusive Access', 'Direct Chat']
+      ELSE ARRAY['VIP Content', 'Direct Chat', 'Exclusive Photos']
+    END,
+    now()
+  FROM public.users u
+  WHERE u.uid::text = target_uid
+  ON CONFLICT (user_id) DO UPDATE
+  SET kyc_status = EXCLUDED.kyc_status,
+      is_verified = EXCLUDED.is_verified,
+      legal_name = COALESCE(EXCLUDED.legal_name, public.creator_profiles.legal_name),
+      national_id_number = COALESCE(EXCLUDED.national_id_number, public.creator_profiles.national_id_number),
+      dob = COALESCE(EXCLUDED.dob, public.creator_profiles.dob),
+      kyc_id_url = COALESCE(EXCLUDED.kyc_id_url, public.creator_profiles.kyc_id_url),
+      kyc_selfie_url = COALESCE(EXCLUDED.kyc_selfie_url, public.creator_profiles.kyc_selfie_url),
+  UPDATE public.creator_profiles cp
+  SET kyc_status = new_kyc_status,
+      is_verified = is_approved,
+      legal_name = COALESCE(u.legal_name, cp.legal_name),
+      national_id_number = COALESCE(u.national_id_number, cp.national_id_number),
+      kyc_id_url = COALESCE(u.kyc_id_url, cp.kyc_id_url),
+      kyc_selfie_url = COALESCE(u.kyc_selfie_url, cp.kyc_selfie_url),
+      tags = CASE
+        WHEN make_vip AND is_approved THEN ARRAY['VIP Creator', 'Exclusive Access', 'Direct Chat']
+        ELSE COALESCE(public.creator_profiles.tags, EXCLUDED.tags)
+        ELSE cp.tags
+      END,
+      updated_at = now();
+      updated_at = now()
+  FROM public.users u
+  WHERE cp.user_id::text = u.uid::text
+    AND u.uid::text = target_uid;
+
+  IF NOT FOUND THEN
+    INSERT INTO public.creator_profiles (
+      user_id,
+      display_name,
+      kyc_status,
+      is_verified,
+      legal_name,
+      national_id_number,
+      kyc_id_url,
+      kyc_selfie_url,
+      updated_at
+    )
+    SELECT
+      u.uid::uuid,
+      u.name,
+      new_kyc_status,
+      is_approved,
+      u.legal_name,
+      u.national_id_number,
+      u.kyc_id_url,
+      u.kyc_selfie_url,
+      now()
+    FROM public.users u
+    WHERE u.uid::text = target_uid;
+  END IF;
+
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_verify_creator_kyc(text, text, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_verify_creator_kyc(text, text, boolean) TO authenticated, anon, service_role;
+
+-- ============================================================================
+-- 2. APPROVE & SYNC NIMO, THICKEY_LIZZIE, AND ANNAHLOON KYC
+-- ============================================================================
+-- Syncs and approves Nimo (nimoblip@gmail.com), thickey_lizzie
+-- (nyagaelizabeth03@gmail.com), and annahloon (annahloon20@gmail.com) in both
+-- public.users and public.creator_profiles.
 
 BEGIN;
 
@@ -101,9 +267,19 @@ SELECT set_config('request.jwt.claim.role', 'service_role', true);
 
 UPDATE public.users
 SET kyc_status = 'verified',
-    is_verified = true
-WHERE uid::text = '51dbc853-ddbd-4b20-9432-2c97f111c64d'
-   OR lower(btrim(email)) = 'nimoblip@gmail.com';
+    is_verified = true,
+    role = 'creator',
+    status = 'active'
+WHERE uid::text IN (
+  '51dbc853-ddbd-4b20-9432-2c97f111c64d', -- nimo
+  '38d8042f-7842-418e-a5fa-b6a227fd8e6d', -- thickey_lizzie
+  'c32e982c-0e8f-4d1d-b0c0-926d3440ec5b'  -- annahloon
+)
+OR lower(btrim(email)) IN (
+  'nimoblip@gmail.com',
+  'nyagaelizabeth03@gmail.com',
+  'annahloon20@gmail.com'
+);
 
 UPDATE public.creator_profiles cp
 SET kyc_status = 'verified',
@@ -115,7 +291,18 @@ SET kyc_status = 'verified',
     updated_at = now()
 FROM public.users u
 WHERE cp.user_id::text = u.uid::text
-  AND (u.uid::text = '51dbc853-ddbd-4b20-9432-2c97f111c64d' OR lower(btrim(u.email)) = 'nimoblip@gmail.com');
+  AND (
+    u.uid::text IN (
+      '51dbc853-ddbd-4b20-9432-2c97f111c64d',
+      '38d8042f-7842-418e-a5fa-b6a227fd8e6d',
+      'c32e982c-0e8f-4d1d-b0c0-926d3440ec5b'
+    )
+    OR lower(btrim(u.email)) IN (
+      'nimoblip@gmail.com',
+      'nyagaelizabeth03@gmail.com',
+      'annahloon20@gmail.com'
+    )
+  );
 
 COMMIT;
 

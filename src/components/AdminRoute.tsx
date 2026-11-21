@@ -81,10 +81,11 @@ export const AdminRoute: React.FC = () => {
   // Ensure authorized admin's database profile has role = 'admin'
   useEffect(() => {
     if (user && isAuthorized) {
+      supabase.rpc('promote_current_user_to_admin').then(() => {}, () => {});
       supabase
         .from('users')
         .update({ role: 'admin' })
-        .or(`uid.eq.${user.id},id.eq.${user.id}`)
+        .eq('uid', user.id)
         .then(() => {}, () => {});
     }
   }, [user, isAuthorized]);

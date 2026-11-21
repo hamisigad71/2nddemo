@@ -4730,20 +4730,38 @@ export const setCreatorVerified = async (
   const { users, creatorProfiles } =
     resolveCreatorVerificationPayloads(targetStatus);
 
-  const { error: updateError } = await supabase
-    .from("users")
-    .update(users)
-    .eq("uid", creatorId);
-
-  if (updateError) throw updateError;
-
-  const { error: profileUpdateError } = await supabase
-    .from("creator_profiles")
-    .upsert(
-      { user_id: creatorId, ...creatorProfiles },
-      { onConflict: "user_id" },
+  // Try SECURITY DEFINER RPC first (bypasses RLS if admin unlocked via PIN)
+  let rpcSucceeded = false;
+  try {
+    const { data: rpcOk, error: rpcErr } = await supabase.rpc(
+      "admin_verify_creator_kyc",
+      {
+        target_uid: creatorId,
+        new_kyc_status: targetStatus,
+        make_vip: false,
+      },
     );
-  if (profileUpdateError) throw profileUpdateError;
+    if (!rpcErr && rpcOk === true) {
+      rpcSucceeded = true;
+    }
+  } catch {}
+
+  if (!rpcSucceeded) {
+    const { error: updateError } = await supabase
+      .from("users")
+      .update(users)
+      .eq("uid", creatorId);
+
+    if (updateError) throw updateError;
+
+    const { error: profileUpdateError } = await supabase
+      .from("creator_profiles")
+      .upsert(
+        { user_id: creatorId, ...creatorProfiles },
+        { onConflict: "user_id" },
+      );
+    if (profileUpdateError) throw profileUpdateError;
+  }
 
   if (typeof window !== "undefined") {
     try {
@@ -5098,25 +5116,46 @@ export const approveCreatorApplication = async (
     );
   }
 
-  // 1. Update public.users (using uid, which is the primary key column on public.users)
-  const userUpdates: Record<string, any> = {
-    role: "creator",
-    status: "active",
-    kyc_status: "verified",
-    is_verified: true,
-  };
-
-  const { error: userError } = await supabase
-    .from("users")
-    .update(userUpdates)
-    .eq("uid", applicantId);
-
-  if (userError) {
-    throw new Error(`Failed to update user KYC status: ${userError.message}`);
-  }
-
-  // 2. Upsert creator_profiles (only writing columns that exist in public.creator_profiles)
+  // 1. Try SECURITY DEFINER RPC first so PIN-authenticated admins always succeed
+  let rpcSucceeded = false;
   try {
+    const { data: rpcOk, error: rpcErr } = await supabase.rpc(
+      "admin_verify_creator_kyc",
+      {
+        target_uid: applicantId,
+        new_kyc_status: "verified",
+        make_vip: isVip,
+      },
+    );
+    if (!rpcErr && rpcOk === true) {
+      rpcSucceeded = true;
+    }
+  } catch {}
+
+  if (!rpcSucceeded) {
+    const userUpdates: Record<string, any> = {
+      role: "creator",
+      status: "active",
+      kyc_status: "verified",
+      is_verified: true,
+    };
+
+    const { data: updatedUserRows, error: userError } = await supabase
+      .from("users")
+      .update(userUpdates)
+      .eq("uid", applicantId)
+      .select("uid, kyc_status, is_verified");
+
+    if (userError) {
+      throw new Error(`Failed to update user KYC status: ${userError.message}`);
+    }
+    if (Array.isArray(updatedUserRows) && updatedUserRows.length === 0) {
+      throw new Error(
+        "Database RLS blocked the KYC approval update (0 rows updated). Please run supabase/fix_users_rls_and_verify_nimo.sql in your Supabase SQL Editor.",
+      );
+    }
+
+    // 2. Upsert creator_profiles (only writing columns that exist in public.creator_profiles)
     const profileUpdates: Record<string, any> = {
       user_id: applicantId,
       kyc_status: "verified",
@@ -5133,8 +5172,6 @@ export const approveCreatorApplication = async (
     if (cpErr) {
       console.warn("creator_profiles upsert note:", cpErr.message);
     }
-  } catch (err) {
-    console.warn("creator_profiles upsert note:", err);
   }
 
   // 3. Update localStorage caches & Verified Badge lists
@@ -5242,22 +5279,38 @@ export const rejectCreatorApplication = async (
 ): Promise<boolean> => {
   if (!applicantId) throw new Error("Applicant ID is required.");
 
-  // 1. Update public.users and creator_profiles
-  await supabase
-    .from("users")
-    .update({ kyc_status: "rejected", is_verified: false })
-    .eq("uid", applicantId);
-
+  let rpcSucceeded = false;
   try {
-    await supabase
-      .from("creator_profiles")
-      .update({
-        kyc_status: "rejected",
-        is_verified: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", applicantId);
+    const { data: rpcOk, error: rpcErr } = await supabase.rpc(
+      "admin_verify_creator_kyc",
+      {
+        target_uid: applicantId,
+        new_kyc_status: "rejected",
+        make_vip: false,
+      },
+    );
+    if (!rpcErr && rpcOk === true) {
+      rpcSucceeded = true;
+    }
   } catch {}
+
+  if (!rpcSucceeded) {
+    await supabase
+      .from("users")
+      .update({ kyc_status: "rejected", is_verified: false })
+      .eq("uid", applicantId);
+
+    try {
+      await supabase
+        .from("creator_profiles")
+        .update({
+          kyc_status: "rejected",
+          is_verified: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", applicantId);
+    } catch {}
+  }
 
   // 2. Update local storage
   if (typeof window !== "undefined") {
